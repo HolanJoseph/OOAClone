@@ -1,6 +1,9 @@
 #include <windows.h>
-#include "Types.h"
 
+//#define NDEBUG
+#include <cassert>
+
+#include "Types.h"
 
 
 LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam )    
@@ -57,6 +60,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_DESTROY: // Clean up window-specific data objects. 
 	{
+		PostQuitMessage(0);
 		return 0;
 		break;
 	}
@@ -115,8 +119,15 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		return 1;
 	}
 
-
-
+	ShowWindow(windowHandle, showOnStartup);
+	UpdateWindow(windowHandle);
 	
+	MSG windowsMessage;
+	while (GetMessage(&windowsMessage, NULL, 0, 0))
+	{
+		TranslateMessage(&windowsMessage);
+		DispatchMessage(&windowsMessage);
+	}
+
 	return 0;
 }
