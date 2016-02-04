@@ -91,15 +91,32 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	windowClass.lpszMenuName = NULL;
 	windowClass.lpszClassName = "OracleOfAgesCloneMainWindow";
 	windowClass.hIconSm = LoadIcon(instanceHandle, MAKEINTRESOURCE(IDI_APPLICATION));
-
 	if (!RegisterClassEx(&windowClass))
 	{
 		OutputDebugString("Was not able to register the window class.");
 		return 1;
 	}
 
-	I32 x;
-	x = 5;
+	HWND windowHandle = CreateWindow(
+		"OracleOfAgesCloneMainWindow",
+		"Oracle of Ages Clone",
+		WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_OVERLAPPED | WS_SIZEBOX | WS_VISIBLE,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		600, // Client or total?????
+		500,
+		NULL,
+		NULL,
+		instanceHandle,
+		NULL);
+	if (!windowHandle)
+	{
+		OutputDebugString("Was not able to register the window class.");
+		return 1;
+	}
 
+
+
+	
 	return 0;
 }
