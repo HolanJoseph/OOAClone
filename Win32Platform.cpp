@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <stdio.h>
 
 //#define NDEBUG
 #include <cassert>
@@ -8,178 +9,87 @@
 
 LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam )    
 {
-	/* Window Messages to investigate
-
-	   WM_NCCREATE
-	   WM_CREATE
-	   WM_CLOSE
-	   WM_DESTROY
-	   WM_NCDESTROY
-	   WM_QUIT
-
-	   WM_ACTIVATEAPP
-	   WM_ENABLE
-	   WM_QUERYOPEN
-	   WM_SHOWWINDOW
-	   
-	   WM_SETICON
-	   WM_SETTEXT
-	   WM_SETFONT
-	   WM_GETICON
-	   WM_QUERYDRAGICON
-
-	   WM_DPICHANGED
-	   WM_MOVE
-	   WM_SIZE
-	   WM_SIZING
-	   WM_WIONDOWPOSCHANGED
-	   WM_WINDOWPOSCHANGING
-	   WM_ENTERSIZEMOVE
-	   WM_EXITSIZEMOVE
-	*/
-
 	switch (message)
 	{
 	/*
 		Window lifetime messages.
+
+		NOTE: Pass through cases are pulled out for consistency and later work
 	*/
 	case WM_NCCREATE:
-	OutputDebugString("WM_NCCREATE\n");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
+		// NOTE: icon, min, max, close already present
+		// NOTE: Shows the window title
+		return DefWindowProc(windowHandle, message, wParam, lParam);
+		break;
 	
 	case WM_CREATE:
-	OutputDebugString("WM_CREATE\n");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
+		// NOTE: no visual cue as to what this does
+		return DefWindowProc(windowHandle, message, wParam, lParam);
+		break;
 	
 	case WM_CLOSE:
-	OutputDebugString("WM_CLOSE\n");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
+		// NOTE: message sent when the close button is clicked 
+		// NOTE: consider prompting the user for confirmation prior to destroying a window
+		// NOTE: sends WM_DESTROY message to the app
+		// NOTE: Is this correct? I cannot seem to find any documentation on what WM_CLOSE should return on success
+		return DestroyWindow(windowHandle); 
+		break;
 	
 	case WM_DESTROY:
-	OutputDebugString("WM_DESTROY\n");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
+		PostQuitMessage(0);
+		return 0;
+		break;
 	
 	case WM_NCDESTROY:
-	OutputDebugString("WM_NCDESTROY\n");
-	PostQuitMessage(0);
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
+		// NOTE: Why do we get this message?
+		return DefWindowProc(windowHandle, message, wParam, lParam);
+		break;
 
 	case WM_QUIT:
-	// NOTE: This message is never received by the wndproc as it is intercepted by the system.
-	break;
+		// NOTE: This message is never received by the wndproc as it is intercepted by the system.
+		break;
 
 
 
 	/*
 		Window show state messages
+
+		WM_ACTIVATEAPP
+		WM_ENABLE
+		WM_QUERYOPEN
+		WM_SHOWWINDOW
 	*/
-	case WM_ACTIVATEAPP:
-	OutputDebugString("WM_ACTIVEAPP");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-	
-	case WM_ENABLE:
-	OutputDebugString("WM_ENABLE");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_QUERYOPEN:
-	OutputDebugString("WM_QUERYOPEN");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_SHOWWINDOW:
-	OutputDebugString("WM_SHOWWINDOW");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
 
 
 
 	/*
 		Window resource messages
+		
+		WM_SETICON
+		WM_GETICON
+		WM_QUERYDRAGICON
 	*/
-	case WM_SETICON:
-	OutputDebugString("WM_SETICON");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_SETTEXT:
-	OutputDebugString("WM_SETTEXT");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_SETFONT:
-	OutputDebugString("WM_SETFONT");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_GETICON:
-	OutputDebugString("WM_GETICON");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_QUERYDRAGICON:
-	OutputDebugString("WM_QUERYDRAGICON");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
 
 
 
 	/*
 		Window sizing messages
+		
+		WM_DPICHANGED
+		WM_SIZING
+		WM_WINDOWPOSCHANGING
+		WM_WINDOWPOSCHANGED
+		WM_MOVE
+		WM_ENTERSIZEMOVE
+		WM_EXITSIZEMOVE
 	*/
-	case WM_DPICHANGED:
-	OutputDebugString("WM_DPICHANGED");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_MOVE:
-	OutputDebugString("WM_MOVE");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_SIZE:
-	OutputDebugString("WM_SIZE");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_SIZING:
-	OutputDebugString("WM_SIZING");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_WINDOWPOSCHANGED:
-	OutputDebugString("WM_WINDOWPOSCHANGED");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_WINDOWPOSCHANGING:
-	OutputDebugString("WM_WINDOWPOSCHANGING");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_ENTERSIZEMOVE:
-	OutputDebugString("WM_ENTERSIZEMOVE");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
-	case WM_EXITSIZEMOVE:
-	OutputDebugString("WM_EXITSIZEMOVE");
-	return DefWindowProc(windowHandle, message, wParam, lParam);
-	break;
-
+	
 
 
 	default:
 		return DefWindowProc(windowHandle, message, wParam, lParam);
 		break;
 	}
-
 	return 0; // NOTE: This should never be reached.
 }
 
