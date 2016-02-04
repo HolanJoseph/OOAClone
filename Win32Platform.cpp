@@ -101,14 +101,28 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		return 1;
 	}
 
+	U32 windowWidth = 600;
+	U32 windowHeight = 500;
+
+	RECT windowRect;
+	windowRect.left = 0; //UL x
+	windowRect.top = 0; //UL y
+	windowRect.right = windowWidth; //BR x
+	windowRect.bottom = windowHeight; //BR y
+	AdjustWindowRect(&windowRect, WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_OVERLAPPED | WS_SIZEBOX | WS_VISIBLE, FALSE);
+	U32 adjustedWidth = windowRect.right - windowRect.left;
+	U32 adjustedHeight = windowRect.bottom - windowRect.top;
+	assert(adjustedWidth > windowWidth);
+	assert(adjustedHeight > windowHeight);
+
 	HWND windowHandle = CreateWindow(
 		"OracleOfAgesCloneMainWindow",
 		"Oracle of Ages Clone",
 		WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_OVERLAPPED | WS_SIZEBOX | WS_VISIBLE,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		600, // Client or total?????
-		500,
+		adjustedWidth, // total sizes
+		adjustedHeight,
 		NULL,
 		NULL,
 		instanceHandle,
