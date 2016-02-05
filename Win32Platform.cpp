@@ -11,20 +11,66 @@ U8 inputBuffer;
 U8 inputBackBuffer;
 enum InputCode
 {
-	InputCode_W = 1 << 0,
-	InputCode_A = 1 << 1,
-	InputCode_S = 1 << 2,
-	InputCode_D = 1 << 3
+	InputCode_NULL = 0,
+	InputCode_W = 1,
+	InputCode_A = 2,
+	InputCode_S = 3,
+	InputCode_D = 4,
+	InputCode_LeftMouse = 5,
+	InputCode_RightMouse = 6
 };
+
+InputCode translateVKCodeToInputCode(UINT_PTR vkCode)
+{
+	InputCode code;
+	switch (vkCode)
+	{
+	case 0x57:
+	code = InputCode_W;
+	break;
+
+	case 0x41:
+	code = InputCode_A;
+	break;
+
+	case 0x53:
+	code = InputCode_S;
+	break;
+
+	case 0x44:
+	code = InputCode_D;
+	break;
+
+	case VK_LBUTTON:
+	code = InputCode_LeftMouse;
+	break;
+
+	case VK_RBUTTON:
+	code = InputCode_RightMouse;
+	break;
+
+	default:
+	code = InputCode_NULL;
+	break;
+	}
+	return code;
+}
+
+void setBit(U8* buffer, InputCode code, U8 val)
+{
+	(*buffer) = (*buffer) ^ ((-val ^ (*buffer)) & (1 << code));
+}
 
 void setDown(U8* buffer, InputCode code)
 {
-	(*buffer) = (*buffer) | code;
+	//(*buffer) = (*buffer) | (1 << code);
+	setBit(buffer, code, 1);
 }
 
 void setUp(U8* buffer, InputCode code)
 {
-	(*buffer) = (*buffer) & ~code;
+	//(*buffer) = (*buffer) & ~(1 << code);
+	setBit(buffer, code, 0);
 }
 
 bool checkDown(U8* buffer, InputCode code)
@@ -33,21 +79,24 @@ bool checkDown(U8* buffer, InputCode code)
 	return result;
 }
 
-bool getKeyDown(U8* buffer, U8* backBuffer, InputCode code)
+
+
+// NOTE: getKeyDown, getKey, getKeyUp are referring to the current frame.
+bool getKeyDown(InputCode code)
 {
-	bool result = checkDown(buffer, code) && !checkDown(backBuffer, code);
+	bool result = checkDown(&inputBuffer, code) && !checkDown(&inputBackBuffer, code);
 	return result;
 }
 
-bool getKey(U8* buffer, InputCode code)
+bool getKey(InputCode code)
 {
-	bool result = checkDown(buffer, code);
+	bool result = checkDown(&inputBuffer, code);
 	return result;
 }
 
-bool getKeyUp(U8* buffer, U8* backBuffer, InputCode code)
+bool getKeyUp(InputCode code)
 {
-	bool result = !checkDown(buffer, code) && checkDown(backBuffer, code);
+	bool result = !checkDown(&inputBuffer, code) && checkDown(&inputBackBuffer, code);
 	return result;
 }
 
@@ -63,42 +112,54 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 		NOTE: Pass through cases are pulled out for consistency and later work
 	*/
 	case WM_NCCREATE:
-		OutputDebugString("WM_NCCREATE\n");
-		// NOTE: icon, min, max, close already present
-		// NOTE: Shows the window title
-		return DefWindowProc(windowHandle, message, wParam, lParam);
-		break;
-	
+	{
+						OutputDebugString("WM_NCCREATE\n");
+						// NOTE: icon, min, max, close already present
+						// NOTE: Shows the window title
+						return DefWindowProc(windowHandle, message, wParam, lParam);
+						break;
+	}
+
 	case WM_CREATE:
-		OutputDebugString("WM_CREATE\n");
-		// NOTE: no visual cue as to what this does
-		return DefWindowProc(windowHandle, message, wParam, lParam);
-		break;
-	
+	{
+					  OutputDebugString("WM_CREATE\n");
+					  // NOTE: no visual cue as to what this does
+					  return DefWindowProc(windowHandle, message, wParam, lParam);
+					  break;
+	}
+
 	case WM_CLOSE:
-		OutputDebugString("WM_CLOSE\n");
-		// NOTE: message sent when the close button is clicked 
-		// NOTE: consider prompting the user for confirmation prior to destroying a window
-		// NOTE: sends WM_DESTROY message to the app
-		// NOTE: Is this correct? I cannot seem to find any documentation on what WM_CLOSE should return on success
-		return DestroyWindow(windowHandle); 
-		break;
-	
+	{
+					 OutputDebugString("WM_CLOSE\n");
+					 // NOTE: message sent when the close button is clicked 
+					 // NOTE: consider prompting the user for confirmation prior to destroying a window
+					 // NOTE: sends WM_DESTROY message to the app
+					 // NOTE: Is this correct? I cannot seem to find any documentation on what WM_CLOSE should return on success
+					 return DestroyWindow(windowHandle);
+					 break;
+	}
+
 	case WM_DESTROY:
-		OutputDebugString("WM_DESTROY\n");
-		PostQuitMessage(0);
-		return 0;
-		break;
-	
+	{
+					   OutputDebugString("WM_DESTROY\n");
+					   PostQuitMessage(0);
+					   return 0;
+					   break;
+	}
+
 	case WM_NCDESTROY:
-		OutputDebugString("WM_NCDESTROY\n");
-		// NOTE: Why do we get this message?
-		return DefWindowProc(windowHandle, message, wParam, lParam);
-		break;
+	{
+						 OutputDebugString("WM_NCDESTROY\n");
+						 // NOTE: Why do we get this message?
+						 return DefWindowProc(windowHandle, message, wParam, lParam);
+						 break;
+	}
 
 	case WM_QUIT:
-		// NOTE: This message is never received by the wndproc as it is intercepted by the system.
-		break;
+	{
+					// NOTE: This message is never received by the wndproc as it is intercepted by the system.
+					break;
+	}
 
 
 
@@ -115,7 +176,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	/*
 		Window resource messages
-		
+
 		WM_SETICON
 		WM_GETICON
 		WM_QUERYDRAGICON
@@ -125,7 +186,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	/*
 		Window sizing messages
-		
+
 		WM_DPICHANGED
 		WM_SIZING
 		WM_WINDOWPOSCHANGING
@@ -136,11 +197,29 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 		WM_EXITSIZEMOVE
 	*/
 
-	
+
+
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	{
+						  setBit(&inputBuffer, translateVKCodeToInputCode(wParam), 1);
+						  return 0;
+						  break;
+	}
+
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+	{
+						setBit(&inputBuffer, translateVKCodeToInputCode(wParam), 0);
+						return 0;
+						break;
+	}
 
 	default:
-		return DefWindowProc(windowHandle, message, wParam, lParam);
-		break;
+	{
+			   return DefWindowProc(windowHandle, message, wParam, lParam);
+			   break;
+	}
 	}
 	return 0; // NOTE: This should never be reached.
 }
@@ -206,28 +285,13 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	inputBuffer = 0;
 	inputBackBuffer = 0;
 
-
-	setDown(&inputBuffer, InputCode_W);
-	setDown(&inputBuffer, InputCode_D);
-	// run
-	inputBackBuffer = inputBuffer;
-	inputBuffer = inputBuffer;
-
-	setDown(&inputBuffer, InputCode_S);
-	//run
-	inputBackBuffer = inputBuffer;
-	inputBuffer = inputBuffer;
-
-	setUp(&inputBuffer, InputCode_W);
-	// run
-	inputBackBuffer = inputBuffer;
-	inputBuffer = inputBuffer;
-
-
 	bool running = true;
 	MSG windowsMessage;
 	while (running)
 	{
+		// NOTE: Copy over last frames data, so key up/ key down can be queried
+		inputBackBuffer = inputBuffer;
+
 		// look at all of the messages in the message queue
 		while (PeekMessage(&windowsMessage, NULL, 0, 0, PM_REMOVE))
 		{
@@ -242,6 +306,19 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 				TranslateMessage(&windowsMessage);
 				DispatchMessage(&windowsMessage);
 			}
+		}
+
+		if (getKeyDown(InputCode_W))
+		{
+			OutputDebugString("W down this frame\n");
+		}
+		if (getKey(InputCode_W))
+		{
+			OutputDebugString("W down\n");
+		}
+		if (getKeyUp(InputCode_W))
+		{
+			OutputDebugString("W up this frame\n");
 		}
 	}
 
