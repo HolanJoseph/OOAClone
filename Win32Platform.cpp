@@ -17,17 +17,20 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 		NOTE: Pass through cases are pulled out for consistency and later work
 	*/
 	case WM_NCCREATE:
+		OutputDebugString("WM_NCCREATE\n");
 		// NOTE: icon, min, max, close already present
 		// NOTE: Shows the window title
 		return DefWindowProc(windowHandle, message, wParam, lParam);
 		break;
 	
 	case WM_CREATE:
+		OutputDebugString("WM_CREATE\n");
 		// NOTE: no visual cue as to what this does
 		return DefWindowProc(windowHandle, message, wParam, lParam);
 		break;
 	
 	case WM_CLOSE:
+		OutputDebugString("WM_CLOSE\n");
 		// NOTE: message sent when the close button is clicked 
 		// NOTE: consider prompting the user for confirmation prior to destroying a window
 		// NOTE: sends WM_DESTROY message to the app
@@ -36,11 +39,13 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 		break;
 	
 	case WM_DESTROY:
+		OutputDebugString("WM_DESTROY\n");
 		PostQuitMessage(0);
 		return 0;
 		break;
 	
 	case WM_NCDESTROY:
+		OutputDebugString("WM_NCDESTROY\n");
 		// NOTE: Why do we get this message?
 		return DefWindowProc(windowHandle, message, wParam, lParam);
 		break;
@@ -79,12 +84,13 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 		WM_SIZING
 		WM_WINDOWPOSCHANGING
 		WM_WINDOWPOSCHANGED
+		WM_SIZE
 		WM_MOVE
 		WM_ENTERSIZEMOVE
 		WM_EXITSIZEMOVE
 	*/
-	
 
+	
 
 	default:
 		return DefWindowProc(windowHandle, message, wParam, lParam);
@@ -151,11 +157,48 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	UpdateWindow(windowHandle);
 	
 	// NOTE: message loop replace with message pump
-	MSG windowsMessage;
-	while (GetMessage(&windowsMessage, NULL, 0, 0))
+// 	MSG windowsMessage;
+// 	while (GetMessage(&windowsMessage, NULL, 0, 0))
+// 	{
+// 		TranslateMessage(&windowsMessage);
+// 		DispatchMessage(&windowsMessage);
+// 	}
+
+	I32 x = 0;
+	I32 y = 0;
+	for (; x < 10; ++x)
 	{
-		TranslateMessage(&windowsMessage);
-		DispatchMessage(&windowsMessage);
+		for (; y < 10; ++y)
+		{
+			if (y == 7)
+			{
+				break;
+			}
+		}
+	}
+
+	bool running = true;
+	MSG windowsMessage;
+	while (running)
+	{
+		// look at all of the messages in the message queue
+		while (PeekMessage(&windowsMessage, NULL, 0, 0, PM_REMOVE))
+		{
+			//process the message
+			// how to handle the WM_QUIT message
+			// NOTE: WM_QUIT is kept in the message queue until it is the last message,
+			//			because of this 
+			if (windowsMessage.message == WM_QUIT)
+			{
+				running = false;
+				break;
+			}
+			else
+			{
+				TranslateMessage(&windowsMessage);
+				DispatchMessage(&windowsMessage);
+			}
+		}
 	}
 
 	return 0;
