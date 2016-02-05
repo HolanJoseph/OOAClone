@@ -7,6 +7,52 @@
 #include "Types.h"
 
 
+U8 inputBuffer;
+U8 inputBackBuffer;
+enum InputCode
+{
+	InputCode_W = 1 << 0,
+	InputCode_A = 1 << 1,
+	InputCode_S = 1 << 2,
+	InputCode_D = 1 << 3
+};
+
+void setDown(U8* buffer, InputCode code)
+{
+	(*buffer) = (*buffer) | code;
+}
+
+void setUp(U8* buffer, InputCode code)
+{
+	(*buffer) = (*buffer) & ~code;
+}
+
+bool checkDown(U8* buffer, InputCode code)
+{
+	bool result = ((*buffer) >> code) & 1;
+	return result;
+}
+
+bool getKeyDown(U8* buffer, U8* backBuffer, InputCode code)
+{
+	bool result = checkDown(buffer, code) && !checkDown(backBuffer, code);
+	return result;
+}
+
+bool getKey(U8* buffer, InputCode code)
+{
+	bool result = checkDown(buffer, code);
+	return result;
+}
+
+bool getKeyUp(U8* buffer, U8* backBuffer, InputCode code)
+{
+	bool result = !checkDown(buffer, code) && checkDown(backBuffer, code);
+	return result;
+}
+
+
+
 LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam )    
 {
 	switch (message)
@@ -155,27 +201,28 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 	ShowWindow(windowHandle, showOnStartup);
 	UpdateWindow(windowHandle);
-	
-	// NOTE: message loop replace with message pump
-// 	MSG windowsMessage;
-// 	while (GetMessage(&windowsMessage, NULL, 0, 0))
-// 	{
-// 		TranslateMessage(&windowsMessage);
-// 		DispatchMessage(&windowsMessage);
-// 	}
 
-	I32 x = 0;
-	I32 y = 0;
-	for (; x < 10; ++x)
-	{
-		for (; y < 10; ++y)
-		{
-			if (y == 7)
-			{
-				break;
-			}
-		}
-	}
+
+	inputBuffer = 0;
+	inputBackBuffer = 0;
+
+
+	setDown(&inputBuffer, InputCode_W);
+	setDown(&inputBuffer, InputCode_D);
+	// run
+	inputBackBuffer = inputBuffer;
+	inputBuffer = inputBuffer;
+
+	setDown(&inputBuffer, InputCode_S);
+	//run
+	inputBackBuffer = inputBuffer;
+	inputBuffer = inputBuffer;
+
+	setUp(&inputBuffer, InputCode_W);
+	// run
+	inputBackBuffer = inputBuffer;
+	inputBuffer = inputBuffer;
+
 
 	bool running = true;
 	MSG windowsMessage;
@@ -184,10 +231,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		// look at all of the messages in the message queue
 		while (PeekMessage(&windowsMessage, NULL, 0, 0, PM_REMOVE))
 		{
-			//process the message
-			// how to handle the WM_QUIT message
-			// NOTE: WM_QUIT is kept in the message queue until it is the last message,
-			//			because of this 
+			// NOTE: WM_QUIT is kept in the message queue until it is the last message
 			if (windowsMessage.message == WM_QUIT)
 			{
 				running = false;
