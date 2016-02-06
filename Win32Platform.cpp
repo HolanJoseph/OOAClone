@@ -61,18 +61,6 @@ void setBit(U8* buffer, InputCode code, U8 val)
 	(*buffer) = (*buffer) ^ ((-val ^ (*buffer)) & (1 << code));
 }
 
-void setDown(U8* buffer, InputCode code)
-{
-	//(*buffer) = (*buffer) | (1 << code);
-	setBit(buffer, code, 1);
-}
-
-void setUp(U8* buffer, InputCode code)
-{
-	//(*buffer) = (*buffer) & ~(1 << code);
-	setBit(buffer, code, 0);
-}
-
 bool checkDown(U8* buffer, InputCode code)
 {
 	bool result = ((*buffer) >> code) & 1;
@@ -215,6 +203,13 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 						break;
 	}
 
+	case WM_INPUT:
+	{
+					 OutputDebugString("WM_INPUT\n");
+					 return DefWindowProc(windowHandle, message, wParam, lParam);
+					 break;
+	}
+
 	default:
 	{
 			   return DefWindowProc(windowHandle, message, wParam, lParam);
@@ -282,8 +277,23 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	UpdateWindow(windowHandle);
 
 
+
+	// NOTE: Buttons Yo
 	inputBuffer = 0;
 	inputBackBuffer = 0;
+
+	RAWINPUTDEVICE rawMouse;
+	rawMouse.usUsagePage = 0x01;
+	rawMouse.usUsage = 0x02;
+	rawMouse.dwFlags = 0;
+	rawMouse.hwndTarget = 0;
+	if (RegisterRawInputDevices(&rawMouse, 1, sizeof(rawMouse)) == FALSE)
+	{
+		OutputDebugString("Was not able to set up raw mouse input");
+		return 1;
+	}
+
+
 
 	bool running = true;
 	MSG windowsMessage;
