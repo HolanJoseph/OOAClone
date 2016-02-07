@@ -20,6 +20,9 @@ enum InputCode
 	InputCode_RightMouse = 6
 };
 
+I32 hdMouseDeltaX;
+I32 hdMouseDeltaY;
+
 InputCode translateVKCodeToInputCode(UINT_PTR vkCode)
 {
 	InputCode code;
@@ -228,8 +231,18 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_INPUT:
 	{
-					 //OutputDebugString("WM_INPUT\n");
-					 return DefWindowProc(windowHandle, message, wParam, lParam);
+
+
+					 UINT riSize = sizeof(RAWINPUT);
+					 RAWINPUT ri;
+					 I32 retval = GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &ri, &riSize, sizeof(RAWINPUTHEADER));
+					 if (ri.header.dwType == RIM_TYPEMOUSE)
+					 {
+						 hdMouseDeltaX += ri.data.mouse.lLastX;
+						 hdMouseDeltaY += ri.data.mouse.lLastY;
+					 }
+
+					 return 0;
 					 break;
 	}
 
@@ -306,6 +319,8 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	inputBackBuffer = 0;
 
 	// Register for raw mouse messages
+	hdMouseDeltaX = 0;
+	hdMouseDeltaY = 0;
 	RAWINPUTDEVICE rawMouse;
 	rawMouse.usUsagePage = 0x01;
 	rawMouse.usUsage = 0x02;
@@ -322,6 +337,11 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 	// Center the mouse in the window
 
+	if (timeBeginPeriod(1) == TIMERR_NOCANDO)
+	{
+		OutputDebugString("Was not able to set timer granularity");
+		return 1;
+	}
 
 	bool running = true;
 	MSG windowsMessage;
@@ -329,6 +349,10 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	{
 		// NOTE: Copy over last frames data, so key up/ key down can be queried
 		inputBackBuffer = inputBuffer;
+
+		// NOTE: Reset the HD mouse delta for the frame
+		hdMouseDeltaX = 0;
+		hdMouseDeltaY = 0;
 
 		// look at all of the messages in the message queue
 		while (PeekMessage(&windowsMessage, NULL, 0, 0, PM_REMOVE))
@@ -357,7 +381,16 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		{
 			ShowCursor(TRUE);
 		}
+
+		char hdBuff[256];
+		sprintf_s(hdBuff, 256, "hd movement per frame (%i, %i)\n", hdMouseDeltaX, hdMouseDeltaY);
+		OutputDebugString(hdBuff);
+
+		Sleep(16);
 	}
+
+	// 
+	timeEndPeriod(1);
 
 	return 0;
 }
