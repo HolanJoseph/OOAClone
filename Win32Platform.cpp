@@ -323,7 +323,6 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	// Center the mouse in the window
 
 
-
 	bool running = true;
 	MSG windowsMessage;
 	while (running)
@@ -349,15 +348,14 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 		if (getKeyDown(InputCode_W))
 		{
-			OutputDebugString("W down this frame\n");
+			ShowCursor(FALSE);
 		}
 		if (getKey(InputCode_W))
 		{
-			OutputDebugString("W down\n");
 		}
 		if (getKeyUp(InputCode_W))
 		{
-			OutputDebugString("W up this frame\n");
+			ShowCursor(TRUE);
 		}
 	}
 
