@@ -159,6 +159,29 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 		WM_QUERYOPEN
 		WM_SHOWWINDOW
 	*/
+	case WM_ACTIVATEAPP:
+	{
+						   // Confine the mouse cursor to the window when the app is active,
+						   //	and release it when it is inactive
+						   OutputDebugString("WM_ACTIVATEAPP\n");
+						   if (wParam == TRUE)
+						   {
+							   // Clip
+							   RECT windowPos;
+							   GetWindowRect(windowHandle, &windowPos);
+							   ClipCursor(&windowPos);
+
+							   // Center
+							   I32 middleX = windowPos.left + ((windowPos.right - windowPos.left)/2.0f);
+							   I32 middleY = windowPos.top + ((windowPos.bottom - windowPos.top)/2.0f);
+							   SetCursorPos(middleX, middleY);
+						   }
+						   else
+						   {
+							   ClipCursor(NULL);
+						   }
+						   break;
+	}
 
 
 
@@ -205,7 +228,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_INPUT:
 	{
-					 OutputDebugString("WM_INPUT\n");
+					 //OutputDebugString("WM_INPUT\n");
 					 return DefWindowProc(windowHandle, message, wParam, lParam);
 					 break;
 	}
@@ -282,6 +305,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	inputBuffer = 0;
 	inputBackBuffer = 0;
 
+	// Register for raw mouse messages
 	RAWINPUTDEVICE rawMouse;
 	rawMouse.usUsagePage = 0x01;
 	rawMouse.usUsage = 0x02;
@@ -292,6 +316,11 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		OutputDebugString("Was not able to set up raw mouse input");
 		return 1;
 	}
+
+	// Clip mouse movement to the window
+	// NOTE: Account for the borders so the cursor can only move in the client area?
+
+	// Center the mouse in the window
 
 
 
