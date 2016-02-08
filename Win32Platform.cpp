@@ -108,11 +108,11 @@ bool getKeyUp(InputCode code)
 
 struct Gamepad
 {
-	U8 rightTrigger;
-	U8 leftTrigger;
 	U16 buttons;
 	vec2 leftThumbstick;
 	vec2 rightThumbstick;
+	F32 leftTrigger;
+	F32 rightTrigger;
 };
 
 enum GamepadCode
@@ -265,8 +265,8 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 							   ClipCursor(&windowPos);
 
 							   // Center
-							   I32 middleX = windowPos.left + ((windowPos.right - windowPos.left)/2.0f);
-							   I32 middleY = windowPos.top + ((windowPos.bottom - windowPos.top)/2.0f);
+							   I32 middleX = windowPos.left + ((windowPos.right - windowPos.left)/2);
+							   I32 middleY = windowPos.top + ((windowPos.bottom - windowPos.top)/2);
 							   SetCursorPos(middleX, middleY);
 						   }
 						   else
@@ -625,11 +625,160 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 			rightStickMagnitude -= XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE;
 			rightStickMagnitude /= (I16_MAX - XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 			gamepad.rightThumbstick = normalize(gamepad.rightThumbstick) * rightStickMagnitude;
+
+			// Triggers
+			gamepad.leftTrigger = clampRange(controllerState.Gamepad.bLeftTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
+			gamepad.leftTrigger -= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+			gamepad.leftTrigger /= (U8_MAX - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+
+			gamepad.rightTrigger = clampRange(controllerState.Gamepad.bRightTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
+			gamepad.rightTrigger -= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+			gamepad.rightTrigger /= (U8_MAX - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+
 		}
 		else
 		{
 			controllerConnected = false;
 		}
+
+		if (getButtonDown(GamepadCode_A))
+		{
+			OutputDebugString("Gamepad A Down\n");
+		}
+		if (getButtonUp(GamepadCode_A))
+		{
+			OutputDebugString("Gamepad A Up\n");
+		}
+		if (getButtonDown(GamepadCode_B))
+		{
+			OutputDebugString("Gamepad B Down\n");
+		}
+		if (getButtonUp(GamepadCode_B))
+		{
+			OutputDebugString("Gamepad B Up\n");
+		}
+		if (getButtonDown(GamepadCode_X))
+		{
+			OutputDebugString("Gamepad X Down\n");
+		}
+		if (getButtonUp(GamepadCode_X))
+		{
+			OutputDebugString("Gamepad X Up\n");
+		}
+		if (getButtonDown(GamepadCode_Y))
+		{
+			OutputDebugString("Gamepad Y Down\n");
+		}
+		if (getButtonUp(GamepadCode_Y))
+		{
+			OutputDebugString("Gamepad Y Up\n");
+		}
+		if (getButtonDown(GamepadCode_Up))
+		{
+			OutputDebugString("Gamepad up Down\n");
+		}
+		if (getButtonUp(GamepadCode_Up))
+		{
+			OutputDebugString("Gamepad up Up\n");
+		}
+		if (getButtonDown(GamepadCode_Right))
+		{
+			OutputDebugString("Gamepad right Down\n");
+		}
+		if (getButtonUp(GamepadCode_Right))
+		{
+			OutputDebugString("Gamepad right Up\n");
+		}
+		if (getButtonDown(GamepadCode_Down))
+		{
+			OutputDebugString("Gamepad down Down\n");
+		}
+		if (getButtonUp(GamepadCode_Down))
+		{
+			OutputDebugString("Gamepad down Up\n");
+		}
+		if (getButtonDown(GamepadCode_Left))
+		{
+			OutputDebugString("Gamepad left Down\n");
+		}
+		if (getButtonUp(GamepadCode_Left))
+		{
+			OutputDebugString("Gamepad left Up\n");
+		}
+
+		if (getButtonDown(GamepadCode_Start))
+		{
+			OutputDebugString("Gamepad start Down\n");
+		}
+		if (getButtonUp(GamepadCode_Start))
+		{
+			OutputDebugString("Gamepad start Up\n");
+		}
+		if (getButtonDown(GamepadCode_Back))
+		{
+			OutputDebugString("Gamepad Back Down\n");
+		}
+		if (getButtonUp(GamepadCode_Back))
+		{
+			OutputDebugString("Gamepad Back Up\n");
+		}
+
+		if (getButtonDown(GamepadCode_L3))
+		{
+			OutputDebugString("Gamepad L3 Down\n");
+		}
+		if (getButtonUp(GamepadCode_L3))
+		{
+			OutputDebugString("Gamepad L3 Up\n");
+		}
+		if (getButtonDown(GamepadCode_R3))
+		{
+			OutputDebugString("Gamepad R3 Down\n");
+		}
+		if (getButtonUp(GamepadCode_R3))
+		{
+			OutputDebugString("Gamepad R3 Up\n");
+		}
+
+		if (getButtonDown(GamepadCode_RightBumper))
+		{
+			OutputDebugString("Gamepad rb Down\n");
+		}
+		if (getButtonUp(GamepadCode_RightBumper))
+		{
+			OutputDebugString("Gamepad rb Up\n");
+		}
+		if (getButtonDown(GamepadCode_LeftBumper))
+		{
+			OutputDebugString("Gamepad lb Down\n");
+		}
+		if (getButtonUp(GamepadCode_LeftBumper))
+		{
+			OutputDebugString("Gamepad lb Up\n");
+		}
+
+		if (gamepad.leftTrigger)
+		{
+			char buff[256];
+			sprintf_s(buff, 256, "Left Trigger: %f\n", gamepad.leftTrigger);
+			OutputDebugString(buff);
+		}
+
+		if (gamepad.rightTrigger)
+		{
+			char buff[256];
+			sprintf_s(buff, 256, "Right Trigger: %f\n", gamepad.rightTrigger);
+			OutputDebugString(buff);
+		}
+
+
+		if (gamepad.leftThumbstick != vec2(0,0))
+		{
+			char buff[256];
+			sprintf_s(buff, 256, "Left Stick: (%f, %f)\n", gamepad.leftThumbstick.x, gamepad.leftThumbstick.y);
+			OutputDebugString(buff);
+		}
+
 
 		Sleep(16);
 
@@ -640,7 +789,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 		char buff[512];
 		sprintf_s(buff, 512, "frame time %fms\n", frameElapsedTime);
-		OutputDebugString(buff);
+		//OutputDebugString(buff); 
 	}
 
 	// 
