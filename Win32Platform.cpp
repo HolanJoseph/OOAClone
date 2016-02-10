@@ -1,5 +1,8 @@
 #include <windows.h>
 #include <Xinput.h>
+#include "glew/GL/glew.h"
+#include "glew/GL/wglew.h"
+#include <gl/GL.h>
 
 #include <stdio.h>
 //#define NDEBUG
@@ -17,10 +20,11 @@
 
 
 // NOTE: Windows stuff
-HWND windowHandle;
+HWND  windowHandle;
+HDC   windowDC;
+HGLRC windowOpenGLContext;
 
-
-
+// NOTE: Input globals
 U16 inputBuffer;
 U16 inputBackBuffer;
 
@@ -302,6 +306,62 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		return 1;
 	}
 
+	windowDC = GetDC(windowHandle);
+	PIXELFORMATDESCRIPTOR pfd =
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),
+		1,
+		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    //Flags
+		PFD_TYPE_RGBA,            //The kind of framebuffer. RGBA or palette.
+		32,                        //Colordepth of the framebuffer.
+		0, 0, 0, 0, 0, 0,
+		0,
+		0,
+		0,
+		0, 0, 0, 0,
+		24,                        //Number of bits for the depthbuffer
+		8,                        //Number of bits for the stencilbuffer
+		0,                        //Number of Aux buffers in the framebuffer.
+		PFD_MAIN_PLANE,
+		0,
+		0, 0, 0
+	};
+	I32 pixelFormat = ChoosePixelFormat(windowDC, &pfd);
+	SetPixelFormat(windowDC, pixelFormat, &pfd);
+	HGLRC tempOpenGLContext = wglCreateContext(windowDC);
+	wglMakeCurrent(windowDC, tempOpenGLContext);
+	glewExperimental=GL_TRUE;
+	GLenum error = glewInit();
+	if (error != GLEW_OK)
+	{
+		char fuckglew[512];
+		sprintf_s(fuckglew, 512, "GLEW Error: %s", glewGetErrorString(error));
+		OutputDebugString(fuckglew);
+		return 1;
+	}
+	I32 openglCreationAttributes[] = {
+										WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+										WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+										WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+										0
+									};
+	if (wglewIsSupported("WGL_ARB_create_context") != 1)
+	{
+		OutputDebugString("GLEW could not support creation of a higher level OpenGL context");
+		return 1;
+	}
+	windowOpenGLContext = wglCreateContextAttribsARB(windowDC, NULL, openglCreationAttributes);
+	wglMakeCurrent(NULL, NULL);
+	wglDeleteContext(tempOpenGLContext);
+	wglMakeCurrent(windowDC, windowOpenGLContext);
+	I32 glMajor; 
+	I32 glMinor;
+	glGetIntegerv(GL_MAJOR_VERSION, &glMajor);
+	glGetIntegerv(GL_MINOR_VERSION, &glMinor);
+	char glbuff[256];
+	sprintf_s(glbuff, 256, "GL Version %i.%i\n", glMajor, glMinor);
+	OutputDebugString(glbuff);
+
 	ShowWindow(windowHandle, showOnStartup);
 	UpdateWindow(windowHandle);
 
@@ -452,6 +512,10 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 	// 
 	timeEndPeriod(1);
+
+	wglMakeCurrent(windowDC, NULL);
+	wglDeleteContext(windowOpenGLContext);
+	ReleaseDC(windowHandle, windowDC);
 
 	return 0;
 }
