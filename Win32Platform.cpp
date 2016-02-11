@@ -16,6 +16,7 @@
 
 // NOTE: Functions from these files must be implemented in this file
 #include "InputAPI.h"
+#include "FileAPI.h"
 
 
 
@@ -404,11 +405,10 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		OutputDebugString("invalid vertex shader filename\n");
 		return 1;
 	}
-	LARGE_INTEGER vertexShaderFileSize;
-	GetFileSizeEx( vertexShaderFileHandle, &vertexShaderFileSize );
-	char* vertexShaderSource = (char *)malloc(sizeof(char) * vertexShaderFileSize.QuadPart);
+	U64 vsFS = GetFileSize(vertexShaderFile).fileSize;
+	char* vertexShaderSource = (char *)malloc(sizeof(char) * vsFS);
 	DWORD numBytesRead = 0;
-	ReadFile(vertexShaderFileHandle, vertexShaderSource, vertexShaderFileSize.QuadPart, &numBytesRead, NULL);
+	ReadFile(vertexShaderFileHandle, vertexShaderSource, vsFS, &numBytesRead, NULL);
 	CloseHandle(vertexShaderFileHandle);
 	const GLint glSizeRead = numBytesRead;
 	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
@@ -441,10 +441,9 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		OutputDebugString("invalid fragment shader filename\n");
 		return 1;
 	}
-	LARGE_INTEGER fragmentShaderFileSize;
-	GetFileSizeEx(fragmentShaderFileHandle, &fragmentShaderFileSize);
-	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize.QuadPart);
-	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fragmentShaderFileSize.QuadPart, &numBytesRead, NULL);
+	U64 fsFS = GetFileSize(fragmentShaderFile).fileSize;
+	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fsFS);
+	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fsFS, &numBytesRead, NULL);
 	CloseHandle(fragmentShaderFileHandle);
 	const GLint glFragmentShaderSize = numBytesRead;
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
@@ -652,6 +651,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 	return 0;
 }
+
 
 
 
@@ -972,4 +972,71 @@ void queryController()
 		sprintf_s(buff, 256, "Right Stick: (%f, %f)\n", gamepad.rightThumbstick.x, gamepad.rightThumbstick.y);
 		OutputDebugString(buff);
 	}
+}
+
+
+
+
+
+
+/*
+  File API Implementation
+ */
+
+GetFileSizeReturnType GetFileSize(char* filename)
+{
+	GetFileSizeReturnType result = {0};
+	HANDLE fileHandle = CreateFile(
+		filename,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL
+		);
+	if (fileHandle == INVALID_HANDLE_VALUE)
+	{
+		result.fileExists = false;
+	}
+	else
+	{
+		LARGE_INTEGER fileSizeLI;
+		GetFileSizeEx(fileHandle, &fileSizeLI);
+		result.fileSize = fileSizeLI.QuadPart;
+		result.fileExists = true;
+	}
+	CloseHandle(fileHandle);
+
+	return result;
+}
+
+ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition)
+{
+	ReadFileReturnType result = {0};
+
+	HANDLE fileHandle = CreateFile(
+		filename,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL
+		);
+	if (fileHandle == INVALID_HANDLE_VALUE)
+	{
+		result.numberOfBytesRead = 0;
+		result.errorEncountered = true;
+	}
+	else
+	{
+		DWORD numBytesRead = 0;
+		ReadFile(fileHandle, fileBuffer, numberOfBytesToRead, &numBytesRead, NULL);
+		result.numberOfBytesRead = (U64)numBytesRead;
+		result.errorEncountered = false;
+	}
+	CloseHandle(fileHandle);
+
+	return result;
 }
