@@ -20,6 +20,22 @@
 
 
 
+
+
+struct verifyShaderReturnResult
+{
+	bool compiled;
+	char* infoLog;
+	I64 infoLogLength;
+
+};
+verifyShaderReturnResult verifyShader(GLuint shader);
+
+
+
+
+
+
 // NOTE: Windows stuff
 HWND  windowHandle;
 HDC   windowDC;
@@ -387,44 +403,32 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	glGenBuffers(1, Buffers);
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	char* vertexShaderFile = "triangles.vert";
-	char* fragmentShaderFile = "triangles.frag";
 
+	char* vertexShaderFile = "triangles.vert";
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	U64 vertexShaderFileSize = GetFileSize(vertexShaderFile).fileSize;
 	char* vertexShaderSource = (char *)malloc(sizeof(char) * vertexShaderFileSize);
 	const GLint glSizeRead = ReadFile(vertexShaderFile, vertexShaderSource, vertexShaderFileSize).numberOfBytesRead;
 	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
 	glCompileShader(vertexShader);
-	GLint vertexCompileStatus = 0;
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vertexCompileStatus);
-	if (vertexCompileStatus != GL_TRUE)
+	verifyShaderReturnResult vertexVerification = verifyShader(vertexShader);
+	if (!vertexVerification.compiled)
 	{
-		GLint infoLogLength = 0;
-		glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-		GLsizei returnedInfoLogLength = 0;
-		GLchar* infoLog = (GLchar *)malloc(sizeof(GLchar) * infoLogLength);
-		glGetShaderInfoLog(vertexShader, infoLogLength, &returnedInfoLogLength, infoLog);
-		OutputDebugString(infoLog);
+		OutputDebugString(vertexVerification.infoLog);
 		return 1;
 	}
 
+	char* fragmentShaderFile = "triangles.frag";
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFile).fileSize;
 	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize);
 	const GLint glFragmentShaderSize = ReadFile(fragmentShaderFile, fragmentShaderSource, fragmentShaderFileSize).numberOfBytesRead;
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
 	glCompileShader(fragmentShader);
-	GLint fragmentShaderCompileStatus = 0;
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fragmentShaderCompileStatus);
-	if (fragmentShaderCompileStatus != GL_TRUE)
+	verifyShaderReturnResult fragmentVerification = verifyShader(fragmentShader);
+	if (!fragmentVerification.compiled)
 	{
-		GLint infoLogLength = 0;
-		glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-		GLsizei returnedInfoLogLength = 0;
-		GLchar *infoLog = (GLchar *)malloc(sizeof(GLchar) * infoLogLength);
-		glGetShaderInfoLog(fragmentShader, infoLogLength, &returnedInfoLogLength, infoLog);
-		OutputDebugString(infoLog);
+		OutputDebugString(fragmentVerification.infoLog);
 		return 1;
 	}
 
@@ -619,6 +623,38 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	return 0;
 }
 
+
+
+
+
+
+verifyShaderReturnResult verifyShader(GLuint shader)
+{
+	verifyShaderReturnResult result = {0};
+
+	GLint shaderCompileStatus = 0;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &shaderCompileStatus);
+	if (shaderCompileStatus != GL_TRUE)
+	{
+		GLint infoLogLength = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+		GLsizei returnedInfoLogLength = 0;
+		GLchar *infoLog = (GLchar *)malloc(sizeof(GLchar)* infoLogLength);
+		glGetShaderInfoLog(shader, infoLogLength, &returnedInfoLogLength, infoLog);
+
+		result.compiled = false;
+		result.infoLog = infoLog;
+		result.infoLogLength = returnedInfoLogLength;
+	}
+	else
+	{
+		result.compiled = true;
+		result.infoLog = NULL;
+		result.infoLogLength = 0;
+	}
+
+	return result;
+}
 
 
 
