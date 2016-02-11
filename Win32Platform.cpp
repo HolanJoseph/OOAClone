@@ -31,6 +31,15 @@ struct verifyShaderReturnResult
 };
 verifyShaderReturnResult verifyShader(GLuint shader);
 
+struct verifyProgramReturnResult
+{
+	bool compiled;
+	char* infoLog;
+	I64 infoLogLength;
+
+};
+verifyProgramReturnResult verifyProgram(GLuint program);
+
 
 
 
@@ -436,16 +445,10 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 	glLinkProgram(shaderProgram);
-	GLint programCompileStatus = 0;
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &programCompileStatus);
-	if (programCompileStatus != GL_TRUE)
+	verifyProgramReturnResult programVerification = verifyProgram(shaderProgram);
+	if (!programVerification.compiled)
 	{
-		GLint infoLogLength = 0;
-		glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &infoLogLength);
-		GLsizei returnedInfoLogLength = 0;
-		GLchar* infoLog = (GLchar*)malloc(sizeof(GLchar) * infoLogLength);
-		glGetProgramInfoLog(shaderProgram, infoLogLength, &returnedInfoLogLength, infoLog);
-		OutputDebugString(infoLog);
+		OutputDebugString(programVerification.infoLog);
 		return 1;
 	}
 	glUseProgram(shaderProgram);
@@ -630,7 +633,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 verifyShaderReturnResult verifyShader(GLuint shader)
 {
-	verifyShaderReturnResult result = {0};
+	verifyShaderReturnResult result = { true, NULL, 0};
 
 	GLint shaderCompileStatus = 0;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &shaderCompileStatus);
@@ -646,11 +649,27 @@ verifyShaderReturnResult verifyShader(GLuint shader)
 		result.infoLog = infoLog;
 		result.infoLogLength = returnedInfoLogLength;
 	}
-	else
+
+	return result;
+}
+
+verifyProgramReturnResult verifyProgram(GLuint program)
+{
+	verifyProgramReturnResult result = { true, NULL, 0 };
+
+	GLint programLinkStatus = 0;
+	glGetProgramiv(program, GL_LINK_STATUS, &programLinkStatus);
+	if (programLinkStatus != GL_TRUE)
 	{
-		result.compiled = true;
-		result.infoLog = NULL;
-		result.infoLogLength = 0;
+		GLint infoLogLength = 0;
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
+		GLsizei returnedInfoLogLength = 0;
+		GLchar *infoLog = (GLchar *)malloc(sizeof(GLchar)* infoLogLength);
+		glGetShaderInfoLog(program, infoLogLength, &returnedInfoLogLength, infoLog);
+
+		result.compiled = false;
+		result.infoLog = infoLog;
+		result.infoLogLength = returnedInfoLogLength;
 	}
 
 	return result;
