@@ -417,7 +417,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	U64 vertexShaderFileSize = GetFileSize(vertexShaderFile).fileSize;
 	char* vertexShaderSource = (char *)malloc(sizeof(char) * vertexShaderFileSize);
-	const GLint glSizeRead = ReadFile(vertexShaderFile, vertexShaderSource, vertexShaderFileSize).numberOfBytesRead;
+	const GLint glSizeRead = ReadFile(vertexShaderFile, vertexShaderSource, vertexShaderFileSize, 0).numberOfBytesRead;
 	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
 	glCompileShader(vertexShader);
 	verifyShaderReturnResult vertexVerification = verifyShader(vertexShader);
@@ -431,7 +431,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFile).fileSize;
 	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize);
-	const GLint glFragmentShaderSize = ReadFile(fragmentShaderFile, fragmentShaderSource, fragmentShaderFileSize).numberOfBytesRead;
+	const GLint glFragmentShaderSize = ReadFile(fragmentShaderFile, fragmentShaderSource, fragmentShaderFileSize, 0).numberOfBytesRead;
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
 	glCompileShader(fragmentShader);
 	verifyShaderReturnResult fragmentVerification = verifyShader(fragmentShader);
@@ -1005,6 +1005,29 @@ void queryController()
   File API Implementation
  */
 
+bool CreateFile(char* filename, bool overwriteIfExists)
+{
+	bool result = true;
+	DWORD creationDisposition = (overwriteIfExists) ? CREATE_ALWAYS : CREATE_NEW;
+	HANDLE fileHandle = CreateFile(
+		filename,
+		GENERIC_READ,
+		0,
+		NULL,
+		creationDisposition,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL
+		);
+	if (fileHandle == INVALID_HANDLE_VALUE)
+	{
+		result = false;
+	}
+
+	CloseHandle(fileHandle);
+
+	return result;
+}
+
 GetFileSizeReturnType GetFileSize(char* filename)
 {
 	GetFileSizeReturnType result = {0};
@@ -1054,8 +1077,46 @@ ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesT
 	else
 	{
 		DWORD numBytesRead = 0;
-		ReadFile(fileHandle, fileBuffer, numberOfBytesToRead, &numBytesRead, NULL);
+		DWORD* offsetList = (DWORD*)&readPosition;
+		OVERLAPPED ol = {0};
+		ol.OffsetHigh = *(offsetList + 1);
+		ol.Offset = *(offsetList + 0);
+		ReadFile(fileHandle, fileBuffer, numberOfBytesToRead, &numBytesRead, &ol);
 		result.numberOfBytesRead = (U64)numBytesRead;
+		result.errorEncountered = false;
+	}
+	CloseHandle(fileHandle);
+
+	return result;
+}
+
+WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition)
+{
+	WriteFileReturnType result = {0};
+
+	HANDLE fileHandle = CreateFile(
+		filename,
+		GENERIC_WRITE,
+		0,
+		NULL,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL
+		);
+	if (fileHandle == INVALID_HANDLE_VALUE)
+	{
+		result.numberOfBytesWritten = 0;
+		result.errorEncountered = true;
+	}
+	else
+	{
+		DWORD numBytesWritten = 0;
+		DWORD* offsetList = (DWORD*)&writePosition;
+		OVERLAPPED ol = { 0 };
+		ol.OffsetHigh = *(offsetList + 1);
+		ol.Offset = *(offsetList + 0);
+		WriteFile(fileHandle, fileBuffer, numberOfBytesToWrite, &numBytesWritten, &ol);
+		result.numberOfBytesWritten = (U64)numBytesWritten;
 		result.errorEncountered = false;
 	}
 	CloseHandle(fileHandle);
