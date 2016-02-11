@@ -405,10 +405,10 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		OutputDebugString("invalid vertex shader filename\n");
 		return 1;
 	}
-	U64 vsFS = GetFileSize(vertexShaderFile).fileSize;
-	char* vertexShaderSource = (char *)malloc(sizeof(char) * vsFS);
+	U64 vertexShaderFileSize = GetFileSize(vertexShaderFile).fileSize;
+	char* vertexShaderSource = (char *)malloc(sizeof(char) * vertexShaderFileSize);
 	DWORD numBytesRead = 0;
-	ReadFile(vertexShaderFileHandle, vertexShaderSource, vsFS, &numBytesRead, NULL);
+	ReadFile(vertexShaderFileHandle, vertexShaderSource, vertexShaderFileSize, &numBytesRead, NULL);
 	CloseHandle(vertexShaderFileHandle);
 	const GLint glSizeRead = numBytesRead;
 	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
@@ -441,9 +441,9 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		OutputDebugString("invalid fragment shader filename\n");
 		return 1;
 	}
-	U64 fsFS = GetFileSize(fragmentShaderFile).fileSize;
-	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fsFS);
-	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fsFS, &numBytesRead, NULL);
+	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFile).fileSize;
+	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize);
+	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fragmentShaderFileSize, &numBytesRead, NULL);
 	CloseHandle(fragmentShaderFileHandle);
 	const GLint glFragmentShaderSize = numBytesRead;
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
