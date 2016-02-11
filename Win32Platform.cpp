@@ -391,26 +391,9 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	char* fragmentShaderFile = "triangles.frag";
 
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	HANDLE vertexShaderFileHandle = CreateFile(
-		vertexShaderFile,
-		GENERIC_READ,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL
-		);
-	if (vertexShaderFileHandle == INVALID_HANDLE_VALUE)
-	{
-		OutputDebugString("invalid vertex shader filename\n");
-		return 1;
-	}
 	U64 vertexShaderFileSize = GetFileSize(vertexShaderFile).fileSize;
 	char* vertexShaderSource = (char *)malloc(sizeof(char) * vertexShaderFileSize);
-	DWORD numBytesRead = 0;
-	ReadFile(vertexShaderFileHandle, vertexShaderSource, vertexShaderFileSize, &numBytesRead, NULL);
-	CloseHandle(vertexShaderFileHandle);
-	const GLint glSizeRead = numBytesRead;
+	const GLint glSizeRead = ReadFile(vertexShaderFile, vertexShaderSource, vertexShaderFileSize).numberOfBytesRead;
 	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
 	glCompileShader(vertexShader);
 	GLint vertexCompileStatus = 0;
