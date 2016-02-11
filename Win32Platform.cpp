@@ -340,8 +340,8 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		return 1;
 	}
 	I32 openglCreationAttributes[] = {
-										WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-										WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+										WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+										WGL_CONTEXT_MINOR_VERSION_ARB, 3,
 										WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 										0
 									};
@@ -356,16 +356,136 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	wglMakeCurrent(windowDC, windowOpenGLContext);
 	I32 glMajor; 
 	I32 glMinor;
+	GLboolean glDoublebuffered;
 	glGetIntegerv(GL_MAJOR_VERSION, &glMajor);
 	glGetIntegerv(GL_MINOR_VERSION, &glMinor);
+	glGetBooleanv(GL_DOUBLEBUFFER, &glDoublebuffered);
 	char glbuff[256];
-	sprintf_s(glbuff, 256, "GL Version %i.%i\n", glMajor, glMinor);
+	sprintf_s(glbuff, 256, "GL Version %i.%i\nIs doublebuffered: %i", glMajor, glMinor, glDoublebuffered);
 	OutputDebugString(glbuff);
+
+	F32 r = 0.32f;
+	F32 g = 0.18f;
+	F32 b = 0.66f;
+	glClearColor(r, g, b, 0.0f);
+
+	GLuint VAOs[1];
+	GLuint Buffers[1];
+	const GLuint numVertices = 6;
+	glGenVertexArrays(1, VAOs);
+	glBindVertexArray(VAOs[0]);
+	GLfloat vertices[numVertices][2] =
+	{
+		{ -0.90f, -0.90f },
+		{  0.85f, -0.90f },
+		{ -0.90f,  0.85f },
+		{  0.90f, -0.85f },
+		{  0.90f,  0.90f },
+		{ -0.85f,  0.90f }
+	};
+	glGenBuffers(1, Buffers);
+	glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	char* vertexShaderFile = "triangles.vert";
+	char* fragmentShaderFile = "triangles.frag";
+
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	HANDLE vertexShaderFileHandle = CreateFile(
+		vertexShaderFile,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL
+		);
+	if (vertexShaderFileHandle == INVALID_HANDLE_VALUE)
+	{
+		OutputDebugString("invalid vertex shader filename\n");
+		return 1;
+	}
+	LARGE_INTEGER vertexShaderFileSize;
+	GetFileSizeEx( vertexShaderFileHandle, &vertexShaderFileSize );
+	char* vertexShaderSource = (char *)malloc(sizeof(char) * vertexShaderFileSize.QuadPart);
+	DWORD numBytesRead = 0;
+	ReadFile(vertexShaderFileHandle, vertexShaderSource, vertexShaderFileSize.QuadPart, &numBytesRead, NULL);
+	CloseHandle(vertexShaderFileHandle);
+	const GLint glSizeRead = numBytesRead;
+	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
+	glCompileShader(vertexShader);
+	GLint vertexCompileStatus = 0;
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vertexCompileStatus);
+	if (vertexCompileStatus != GL_TRUE)
+	{
+		GLint infoLogLength = 0;
+		glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
+		GLsizei returnedInfoLogLength = 0;
+		GLchar* infoLog = (GLchar *)malloc(sizeof(GLchar) * infoLogLength);
+		glGetShaderInfoLog(vertexShader, infoLogLength, &returnedInfoLogLength, infoLog);
+		OutputDebugString(infoLog);
+		return 1;
+	}
+
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	HANDLE fragmentShaderFileHandle = CreateFile(
+		fragmentShaderFile,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL
+		);
+	if (fragmentShaderFileHandle == INVALID_HANDLE_VALUE)
+	{
+		OutputDebugString("invalid fragment shader filename\n");
+		return 1;
+	}
+	LARGE_INTEGER fragmentShaderFileSize;
+	GetFileSizeEx(fragmentShaderFileHandle, &fragmentShaderFileSize);
+	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize.QuadPart);
+	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fragmentShaderFileSize.QuadPart, &numBytesRead, NULL);
+	CloseHandle(fragmentShaderFileHandle);
+	const GLint glFragmentShaderSize = numBytesRead;
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
+	glCompileShader(fragmentShader);
+	GLint fragmentShaderCompileStatus = 0;
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fragmentShaderCompileStatus);
+	if (fragmentShaderCompileStatus != GL_TRUE)
+	{
+		GLint infoLogLength = 0;
+		glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLogLength);
+		GLsizei returnedInfoLogLength = 0;
+		GLchar *infoLog = (GLchar *)malloc(sizeof(GLchar) * infoLogLength);
+		glGetShaderInfoLog(fragmentShader, infoLogLength, &returnedInfoLogLength, infoLog);
+		OutputDebugString(infoLog);
+		return 1;
+	}
+
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+	GLint programCompileStatus = 0;
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &programCompileStatus);
+	if (programCompileStatus != GL_TRUE)
+	{
+		GLint infoLogLength = 0;
+		glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &infoLogLength);
+		GLsizei returnedInfoLogLength = 0;
+		GLchar* infoLog = (GLchar*)malloc(sizeof(GLchar) * infoLogLength);
+		glGetProgramInfoLog(shaderProgram, infoLogLength, &returnedInfoLogLength, infoLog);
+		OutputDebugString(infoLog);
+		return 1;
+	}
+	glUseProgram(shaderProgram);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+
+
 
 	ShowWindow(windowHandle, showOnStartup);
 	UpdateWindow(windowHandle);
-
-
 
 	// NOTE: Buttons Yo
 	inputBuffer = 0;
@@ -498,7 +618,15 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		sprintf_s(mpbuff, 512, "mousepos %f, %f\n", mp.x, mp.y);
 		//OutputDebugString(mpbuff);
 
-		Sleep(16);
+		//Sleep(16);
+
+		glViewport(0, 0, 600, 500);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glBindVertexArray(VAOs[0]);
+		glDrawArrays(GL_TRIANGLES, 0, numVertices);
+
+		glFlush(); // NOTE: Necessary???
+		SwapBuffers(windowDC);
 
 		LARGE_INTEGER frameEndLI;
 		QueryPerformanceCounter(&frameEndLI);
@@ -512,6 +640,11 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 	// 
 	timeEndPeriod(1);
+
+	
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+	glDeleteProgram(shaderProgram);
 
 	wglMakeCurrent(windowDC, NULL);
 	wglDeleteContext(windowOpenGLContext);
