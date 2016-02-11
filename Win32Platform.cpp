@@ -443,9 +443,10 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	}
 	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFile).fileSize;
 	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize);
-	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fragmentShaderFileSize, &numBytesRead, NULL);
+	DWORD numBytesReadFS = 0;
+	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fragmentShaderFileSize, &numBytesReadFS, NULL);
 	CloseHandle(fragmentShaderFileHandle);
-	const GLint glFragmentShaderSize = numBytesRead;
+	const GLint glFragmentShaderSize = numBytesReadFS;
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
 	glCompileShader(fragmentShader);
 	GLint fragmentShaderCompileStatus = 0;
