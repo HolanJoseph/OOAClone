@@ -410,26 +410,9 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	}
 
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	HANDLE fragmentShaderFileHandle = CreateFile(
-		fragmentShaderFile,
-		GENERIC_READ,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL
-		);
-	if (fragmentShaderFileHandle == INVALID_HANDLE_VALUE)
-	{
-		OutputDebugString("invalid fragment shader filename\n");
-		return 1;
-	}
 	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFile).fileSize;
 	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize);
-	DWORD numBytesReadFS = 0;
-	ReadFile(fragmentShaderFileHandle, fragmentShaderSource, fragmentShaderFileSize, &numBytesReadFS, NULL);
-	CloseHandle(fragmentShaderFileHandle);
-	const GLint glFragmentShaderSize = numBytesReadFS;
+	const GLint glFragmentShaderSize = ReadFile(fragmentShaderFile, fragmentShaderSource, fragmentShaderFileSize).numberOfBytesRead;
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
 	glCompileShader(fragmentShader);
 	GLint fragmentShaderCompileStatus = 0;
