@@ -484,7 +484,8 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-
+	GLuint spriteSamplerLocation = glGetUniformLocation(shaderProgram, "spriteSampler");
+	glUniform1i(spriteSamplerLocation, 0);
 
 
 
