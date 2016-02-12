@@ -1,8 +1,12 @@
 #version 430 core
 
+uniform sampler2D spriteSampler;
+
+in vec2 textureCoordinates;
+
 out vec4 fColor;
 
 void main() 
 {
-	fColor = vec4(1.0, 1.0, 0.0, 1.0);
+	fColor = texture(spriteSampler, textureCoordinates);
 }

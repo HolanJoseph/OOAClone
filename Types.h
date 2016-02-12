@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+typedef unsigned char uchar;
+
 typedef int8_t I8;
 typedef int16_t I16;
 typedef int32_t I32;

@@ -3,6 +3,9 @@
 #include "glew/GL/glew.h"
 #include "glew/GL/wglew.h"
 #include <gl/GL.h>
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_BMP
+#include "stb_image.h"
 
 #include <stdio.h>
 //#define NDEBUG
@@ -397,21 +400,32 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 	GLuint VAOs[1];
 	GLuint Buffers[1];
-	const GLuint numVertices = 6;
+	const GLuint numVertices = 4;
 	glGenVertexArrays(1, VAOs);
 	glBindVertexArray(VAOs[0]);
+	// NOTE: quad for testing, corrected for aspect ratio
+	F32 p66 = 400.0f / 600.0f;
 	GLfloat vertices[numVertices][2] =
 	{
-		{ -0.90f, -0.90f },
-		{  0.85f, -0.90f },
-		{ -0.90f,  0.85f },
-		{  0.90f, -0.85f },
-		{  0.90f,  0.90f },
-		{ -0.85f,  0.90f }
+		{ -p66, -0.80f },
+		{  p66, -0.80f },
+		{  p66,  0.80f },
+		{ -p66,  0.80f }
+	};
+
+	// NOTE: because stb loads bottom to top
+	GLfloat textureCoordinates[numVertices][2] = 
+	{
+		{1.0f, 1.0f},
+		{0.0f, 1.0f},
+		{0.0f, 0.0f},
+		{1.0f, 0.0f}
 	};
 	glGenBuffers(1, Buffers);
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(textureCoordinates), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(textureCoordinates), textureCoordinates);
 
 	char* vertexShaderFile = "triangles.vert";
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -454,6 +468,23 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	glUseProgram(shaderProgram);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)sizeof(vertices) /* NOTE: THIS IS A BYTE OFFSET*/);
+	glEnableVertexAttribArray(1);
+
+	// textures
+	I32 textureWidth = 0;
+	I32 textureHeight = 0;
+	I32 textureImageComponents = 0;
+	I32 textureNumImageComponentsDesired = 4;
+	U8 * textureData = stbi_load("Assets/tile1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	GLuint texture;
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
 
 
 
@@ -596,7 +627,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		glViewport(0, 0, 600, 500);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glBindVertexArray(VAOs[0]);
-		glDrawArrays(GL_TRIANGLES, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 
 		glFlush(); // NOTE: Necessary???
 		SwapBuffers(windowDC);
