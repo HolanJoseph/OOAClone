@@ -10,6 +10,7 @@
 #include <stdio.h>
 //#define NDEBUG
 #include <cassert>
+#include <stdarg.h>
 
 #include "Types.h"
 #include "Math.h"
@@ -20,31 +21,13 @@
 // NOTE: Functions from these files must be implemented in this file
 #include "InputAPI.h"
 #include "FileAPI.h"
+#include "DebugAPI.h"
 
 
 
-
-
-struct verifyShaderReturnResult
-{
-	bool compiled;
-	char* infoLog;
-	I64 infoLogLength;
-
-};
-verifyShaderReturnResult verifyShader(GLuint shader);
-
-struct verifyProgramReturnResult
-{
-	bool compiled;
-	char* infoLog;
-	I64 infoLogLength;
-
-};
-verifyProgramReturnResult verifyProgram(GLuint program);
-
-
-
+// NOTE: These functions are NOT implemented in this file, they
+//			are called to let the game do what it needs to do.
+#include "GameAPI.h"
 
 
 
@@ -87,7 +70,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 	*/
 	case WM_NCCREATE:
 	{
-						OutputDebugString("WM_NCCREATE\n");
+						DebugPrint("WM_NCCREATE\n");
 						// NOTE: icon, min, max, close already present
 						// NOTE: Shows the window title
 						return DefWindowProc(windowHandle, message, wParam, lParam);
@@ -96,7 +79,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_CREATE:
 	{
-					  OutputDebugString("WM_CREATE\n");
+					  DebugPrint("WM_CREATE\n");
 					  // NOTE: no visual cue as to what this does
 					  return DefWindowProc(windowHandle, message, wParam, lParam);
 					  break;
@@ -104,7 +87,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_CLOSE:
 	{
-					 OutputDebugString("WM_CLOSE\n");
+					 DebugPrint("WM_CLOSE\n");
 					 // NOTE: message sent when the close button is clicked 
 					 // NOTE: consider prompting the user for confirmation prior to destroying a window
 					 // NOTE: sends WM_DESTROY message to the app
@@ -115,7 +98,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_DESTROY:
 	{
-					   OutputDebugString("WM_DESTROY\n");
+					   DebugPrint("WM_DESTROY\n");
 					   PostQuitMessage(0);
 					   return 0;
 					   break;
@@ -123,7 +106,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_NCDESTROY:
 	{
-						 OutputDebugString("WM_NCDESTROY\n");
+						 DebugPrint("WM_NCDESTROY\n");
 						 // NOTE: Why do we get this message?
 						 return DefWindowProc(windowHandle, message, wParam, lParam);
 						 break;
@@ -149,7 +132,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 	{
 						   // Confine the mouse cursor to the window when the app is active,
 						   //	and release it when it is inactive
-						   OutputDebugString("WM_ACTIVATEAPP\n");
+						   DebugPrint("WM_ACTIVATEAPP\n");
 						   if (wParam == TRUE)
 						   {
 							   // Capture mouse
@@ -306,7 +289,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	windowClass.hIconSm = LoadIcon(instanceHandle, MAKEINTRESOURCE(IDI_APPLICATION));
 	if (!RegisterClassEx(&windowClass))
 	{
-		OutputDebugString("Was not able to register the window class.");
+		DebugPrint("Was not able to register the window class.");
 		return 1;
 	}
 
@@ -331,7 +314,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		NULL);
 	if (!windowHandle)
 	{
-		OutputDebugString("Was not able to register the window class.");
+		DebugPrint("Was not able to register the window class.");
 		return 1;
 	}
 
@@ -363,9 +346,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	GLenum error = glewInit();
 	if (error != GLEW_OK)
 	{
-		char fuckglew[512];
-		sprintf_s(fuckglew, 512, "GLEW Error: %s", glewGetErrorString(error));
-		OutputDebugString(fuckglew);
+		DebugPrintf(512, "GLEW Error: %s", glewGetErrorString(error));
 		return 1;
 	}
 	I32 openglCreationAttributes[] = {
@@ -376,7 +357,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 									};
 	if (wglewIsSupported("WGL_ARB_create_context") != 1)
 	{
-		OutputDebugString("GLEW could not support creation of a higher level OpenGL context");
+		DebugPrint("GLEW could not support creation of a higher level OpenGL context");
 		return 1;
 	}
 	windowOpenGLContext = wglCreateContextAttribsARB(windowDC, NULL, openglCreationAttributes);
@@ -389,103 +370,16 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	glGetIntegerv(GL_MAJOR_VERSION, &glMajor);
 	glGetIntegerv(GL_MINOR_VERSION, &glMinor);
 	glGetBooleanv(GL_DOUBLEBUFFER, &glDoublebuffered);
-	char glbuff[256];
-	sprintf_s(glbuff, 256, "GL Version %i.%i\nIs doublebuffered: %i", glMajor, glMinor, glDoublebuffered);
-	OutputDebugString(glbuff);
+	DebugPrintf(256, "GL Version %i.%i\nIs doublebuffered: %i\n", glMajor, glMinor, glDoublebuffered);
 
-	F32 r = 0.32f;
-	F32 g = 0.18f;
-	F32 b = 0.66f;
-	glClearColor(r, g, b, 0.0f);
 
-	GLuint VAOs[1];
-	GLuint Buffers[1];
-	const GLuint numVertices = 4;
-	glGenVertexArrays(1, VAOs);
-	glBindVertexArray(VAOs[0]);
-	// NOTE: quad for testing, corrected for aspect ratio
-	F32 p66 = 400.0f / 600.0f;
-	GLfloat vertices[numVertices][2] =
+
+	bool gameSetup = GameInit();
+	if (!gameSetup)
 	{
-		{ -p66, -0.80f },
-		{  p66, -0.80f },
-		{  p66,  0.80f },
-		{ -p66,  0.80f }
-	};
-
-	// NOTE: because stb loads bottom to top
-	GLfloat textureCoordinates[numVertices][2] = 
-	{
-		{1.0f, 1.0f},
-		{0.0f, 1.0f},
-		{0.0f, 0.0f},
-		{1.0f, 0.0f}
-	};
-	glGenBuffers(1, Buffers);
-	glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(textureCoordinates), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(textureCoordinates), textureCoordinates);
-
-	char* vertexShaderFile = "triangles.vert";
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	U64 vertexShaderFileSize = GetFileSize(vertexShaderFile).fileSize;
-	char* vertexShaderSource = (char *)malloc(sizeof(char) * vertexShaderFileSize);
-	const GLint glSizeRead = ReadFile(vertexShaderFile, vertexShaderSource, vertexShaderFileSize, 0).numberOfBytesRead;
-	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
-	glCompileShader(vertexShader);
-	verifyShaderReturnResult vertexVerification = verifyShader(vertexShader);
-	if (!vertexVerification.compiled)
-	{
-		OutputDebugString(vertexVerification.infoLog);
+		DebugPrint("Couldn't set up game state\n");
 		return 1;
 	}
-
-	char* fragmentShaderFile = "triangles.frag";
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFile).fileSize;
-	char* fragmentShaderSource = (char *)malloc(sizeof(char) * fragmentShaderFileSize);
-	const GLint glFragmentShaderSize = ReadFile(fragmentShaderFile, fragmentShaderSource, fragmentShaderFileSize, 0).numberOfBytesRead;
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
-	glCompileShader(fragmentShader);
-	verifyShaderReturnResult fragmentVerification = verifyShader(fragmentShader);
-	if (!fragmentVerification.compiled)
-	{
-		OutputDebugString(fragmentVerification.infoLog);
-		return 1;
-	}
-
-	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	verifyProgramReturnResult programVerification = verifyProgram(shaderProgram);
-	if (!programVerification.compiled)
-	{
-		OutputDebugString(programVerification.infoLog);
-		return 1;
-	}
-	glUseProgram(shaderProgram);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)sizeof(vertices) /* NOTE: THIS IS A BYTE OFFSET*/);
-	glEnableVertexAttribArray(1);
-
-	// textures
-	I32 textureWidth = 0;
-	I32 textureHeight = 0;
-	I32 textureImageComponents = 0;
-	I32 textureNumImageComponentsDesired = 4;
-	U8 * textureData = stbi_load("Assets/tile1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
-	GLuint texture;
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	GLuint spriteSamplerLocation = glGetUniformLocation(shaderProgram, "spriteSampler");
-	glUniform1i(spriteSamplerLocation, 0);
 
 
 
@@ -505,7 +399,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	rawMouse.hwndTarget = 0;
 	if (RegisterRawInputDevices(&rawMouse, 1, sizeof(rawMouse)) == FALSE)
 	{
-		OutputDebugString("Was not able to set up raw mouse input");
+		DebugPrint("Was not able to set up raw mouse input");
 		return 1;
 	}
 	cursorVisibility = true;
@@ -521,7 +415,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 	if (timeBeginPeriod(1) == TIMERR_NOCANDO)
 	{
-		OutputDebugString("Was not able to set timer granularity");
+		DebugPrint("Was not able to set timer granularity");
 		return 1;
 	}
 
@@ -531,6 +425,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	I64 performanceFrequency = (I64)qpf.QuadPart; // This is number of counts per second
 
 	LARGE_INTEGER frameStartLI;
+	F32 frameElapsedTime = 1000.0f/60.0f;
 	QueryPerformanceCounter(&frameStartLI);
 
 	bool running = true;
@@ -616,40 +511,22 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		}
 
 		
-
-		queryController();
-		vec2 mp = getMousePosition();
-		char mpbuff[512];
-		sprintf_s(mpbuff, 512, "mousepos %f, %f\n", mp.x, mp.y);
-		//OutputDebugString(mpbuff);
-
-		//Sleep(16);
-
-		glViewport(0, 0, 600, 500);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		glBindVertexArray(VAOs[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		
+		GameUpdate(frameElapsedTime);
 
 		glFlush(); // NOTE: Necessary???
 		SwapBuffers(windowDC);
 
 		LARGE_INTEGER frameEndLI;
 		QueryPerformanceCounter(&frameEndLI);
-		F32 frameElapsedTime = (F32)((frameEndLI.QuadPart - frameStartLI.QuadPart) * 1000) / performanceFrequency;
+		frameElapsedTime = (F32)((frameEndLI.QuadPart - frameStartLI.QuadPart) * 1000) / performanceFrequency;
 		frameStartLI = frameEndLI;
-
-		char buff[512];
-		sprintf_s(buff, 512, "frame time %fms\n", frameElapsedTime);
-		//OutputDebugString(buff); 
 	}
 
 	// 
 	timeEndPeriod(1);
 
-	
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-	glDeleteProgram(shaderProgram);
+	GameShutdown();
 
 	wglMakeCurrent(windowDC, NULL);
 	wglDeleteContext(windowOpenGLContext);
@@ -658,54 +535,6 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	return 0;
 }
 
-
-
-
-
-
-verifyShaderReturnResult verifyShader(GLuint shader)
-{
-	verifyShaderReturnResult result = { true, NULL, 0};
-
-	GLint shaderCompileStatus = 0;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &shaderCompileStatus);
-	if (shaderCompileStatus != GL_TRUE)
-	{
-		GLint infoLogLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
-		GLsizei returnedInfoLogLength = 0;
-		GLchar *infoLog = (GLchar *)malloc(sizeof(GLchar)* infoLogLength);
-		glGetShaderInfoLog(shader, infoLogLength, &returnedInfoLogLength, infoLog);
-
-		result.compiled = false;
-		result.infoLog = infoLog;
-		result.infoLogLength = returnedInfoLogLength;
-	}
-
-	return result;
-}
-
-verifyProgramReturnResult verifyProgram(GLuint program)
-{
-	verifyProgramReturnResult result = { true, NULL, 0 };
-
-	GLint programLinkStatus = 0;
-	glGetProgramiv(program, GL_LINK_STATUS, &programLinkStatus);
-	if (programLinkStatus != GL_TRUE)
-	{
-		GLint infoLogLength = 0;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-		GLsizei returnedInfoLogLength = 0;
-		GLchar *infoLog = (GLchar *)malloc(sizeof(GLchar)* infoLogLength);
-		glGetShaderInfoLog(program, infoLogLength, &returnedInfoLogLength, infoLog);
-
-		result.compiled = false;
-		result.infoLog = infoLog;
-		result.infoLogLength = returnedInfoLogLength;
-	}
-
-	return result;
-}
 
 
 
@@ -884,147 +713,139 @@ void queryController()
 {
 	if (getGamepadButtonDown(GamepadCode_A))
 	{
-		OutputDebugString("Gamepad A Down\n");
+		DebugPrint("Gamepad A Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_A))
 	{
-		OutputDebugString("Gamepad A Up\n");
+		DebugPrint("Gamepad A Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_B))
 	{
-		OutputDebugString("Gamepad B Down\n");
+		DebugPrint("Gamepad B Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_B))
 	{
-		OutputDebugString("Gamepad B Up\n");
+		DebugPrint("Gamepad B Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_X))
 	{
-		OutputDebugString("Gamepad X Down\n");
+		DebugPrint("Gamepad X Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_X))
 	{
-		OutputDebugString("Gamepad X Up\n");
+		DebugPrint("Gamepad X Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_Y))
 	{
-		OutputDebugString("Gamepad Y Down\n");
+		DebugPrint("Gamepad Y Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_Y))
 	{
-		OutputDebugString("Gamepad Y Up\n");
+		DebugPrint("Gamepad Y Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_Up))
 	{
-		OutputDebugString("Gamepad up Down\n");
+		DebugPrint("Gamepad up Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_Up))
 	{
-		OutputDebugString("Gamepad up Up\n");
+		DebugPrint("Gamepad up Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_Right))
 	{
-		OutputDebugString("Gamepad right Down\n");
+		DebugPrint("Gamepad right Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_Right))
 	{
-		OutputDebugString("Gamepad right Up\n");
+		DebugPrint("Gamepad right Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_Down))
 	{
-		OutputDebugString("Gamepad down Down\n");
+		DebugPrint("Gamepad down Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_Down))
 	{
-		OutputDebugString("Gamepad down Up\n");
+		DebugPrint("Gamepad down Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_Left))
 	{
-		OutputDebugString("Gamepad left Down\n");
+		DebugPrint("Gamepad left Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_Left))
 	{
-		OutputDebugString("Gamepad left Up\n");
+		DebugPrint("Gamepad left Up\n");
 	}
 
 	if (getGamepadButtonDown(GamepadCode_Start))
 	{
-		OutputDebugString("Gamepad start Down\n");
+		DebugPrint("Gamepad start Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_Start))
 	{
-		OutputDebugString("Gamepad start Up\n");
+		DebugPrint("Gamepad start Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_Back))
 	{
-		OutputDebugString("Gamepad Back Down\n");
+		DebugPrint("Gamepad Back Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_Back))
 	{
-		OutputDebugString("Gamepad Back Up\n");
+		DebugPrint("Gamepad Back Up\n");
 	}
 
 	if (getGamepadButtonDown(GamepadCode_L3))
 	{
-		OutputDebugString("Gamepad L3 Down\n");
+		DebugPrint("Gamepad L3 Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_L3))
 	{
-		OutputDebugString("Gamepad L3 Up\n");
+		DebugPrint("Gamepad L3 Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_R3))
 	{
-		OutputDebugString("Gamepad R3 Down\n");
+		DebugPrint("Gamepad R3 Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_R3))
 	{
-		OutputDebugString("Gamepad R3 Up\n");
+		DebugPrint("Gamepad R3 Up\n");
 	}
 
 	if (getGamepadButtonDown(GamepadCode_RightBumper))
 	{
-		OutputDebugString("Gamepad rb Down\n");
+		DebugPrint("Gamepad rb Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_RightBumper))
 	{
-		OutputDebugString("Gamepad rb Up\n");
+		DebugPrint("Gamepad rb Up\n");
 	}
 	if (getGamepadButtonDown(GamepadCode_LeftBumper))
 	{
-		OutputDebugString("Gamepad lb Down\n");
+		DebugPrint("Gamepad lb Down\n");
 	}
 	if (getGamepadButtonUp(GamepadCode_LeftBumper))
 	{
-		OutputDebugString("Gamepad lb Up\n");
+		DebugPrint("Gamepad lb Up\n");
 	}
 
 	if (gamepad.leftTrigger)
 	{
-		char buff[256];
-		sprintf_s(buff, 256, "Left Trigger: %f\n", gamepad.leftTrigger);
-		OutputDebugString(buff);
+		DebugPrintf(256, "Left Trigger: %f\n", gamepad.leftTrigger);
 	}
 
 	if (gamepad.rightTrigger)
 	{
-		char buff[256];
-		sprintf_s(buff, 256, "Right Trigger: %f\n", gamepad.rightTrigger);
-		OutputDebugString(buff);
+		DebugPrintf(256, "Right Trigger: %f\n", gamepad.rightTrigger);
 	}
 
 
 	if (gamepad.leftThumbstick != vec2(0, 0))
 	{
-		char buff[256];
-		sprintf_s(buff, 256, "Left Stick: (%f, %f)\n", gamepad.leftThumbstick.x, gamepad.leftThumbstick.y);
-		OutputDebugString(buff);
+		DebugPrintf(256, "Left Stick: (%f, %f)\n", gamepad.leftThumbstick.x, gamepad.leftThumbstick.y);
 	}
 
 	if (gamepad.rightThumbstick != vec2(0, 0))
 	{
-		char buff[256];
-		sprintf_s(buff, 256, "Right Stick: (%f, %f)\n", gamepad.rightThumbstick.x, gamepad.rightThumbstick.y);
-		OutputDebugString(buff);
+		DebugPrintf(256, "Right Stick: (%f, %f)\n", gamepad.rightThumbstick.x, gamepad.rightThumbstick.y);
 	}
 }
 
@@ -1154,4 +975,28 @@ WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfByte
 	CloseHandle(fileHandle);
 
 	return result;
+}
+
+
+
+
+
+
+/*
+	Debug API
+*/
+void DebugPrint(char* outputString)
+{
+	OutputDebugString(outputString);
+}
+
+void DebugPrintf(U32 size, char* formatString, ...)
+{
+	va_list vl;
+	va_start(vl, formatString);
+	char* buff = (char*)malloc(sizeof(char) * size);
+	vsprintf_s(buff, size, formatString, vl);
+	OutputDebugString(buff);
+	va_end(vl);
+	free(buff);
 }
