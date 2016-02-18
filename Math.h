@@ -1,5 +1,9 @@
 #include "glm/glm.hpp"
 //#include "glm/vec2.hpp"
 using glm::vec2;
+using glm::vec3;
+using glm::mat3;
+using glm::mat4;
 using glm::length;
 using glm::normalize;
+using glm::inverse;
