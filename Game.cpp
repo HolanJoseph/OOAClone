@@ -13,6 +13,165 @@
 #include "InputAPI.h"
 #include "FileAPI.h"
 
+
+struct Square
+{
+	vec2 origin;
+	vec2 radius;
+};
+
+enum SimplexType
+{
+	Simplex_Point = 1,
+	Simplex_Line = 2,
+	Simplex_Triangle = 3,
+	Simplex_Tetrahedron = 4
+};
+
+
+vec2 Support(Square* A, Square* B, vec2* direction)
+{
+	// find the point in A that has the largest value with dot(Ai, Direction)
+	vec2 AiPoints[4] = { vec2(A->origin.x - A->radius.x, A->origin.y - A->radius.y),
+		vec2(A->origin.x - A->radius.x, A->origin.y + A->radius.y),
+		vec2(A->origin.x + A->radius.x, A->origin.y - A->radius.y),
+		vec2(A->origin.x + A->radius.x, A->origin.y + A->radius.y) };
+	F32 AiDots[4] = { dot(*direction, AiPoints[0]),
+		dot(*direction, AiPoints[1]),
+		dot(*direction, AiPoints[2]),
+		dot(*direction, AiPoints[3])
+	};
+	U32 maxPositionAi = 0;
+	F32 maxDotAi = -1000000.0f;
+	for (U32 i = 0; i < 4; ++i)
+	{
+		if (AiDots[i] > maxDotAi)
+		{
+			maxPositionAi = i;
+			maxDotAi = AiDots[i];
+		}
+	}
+	vec2 maxA = AiPoints[maxPositionAi];
+
+
+	// find the point in B that has the largest value with dot(Bj, Direction)
+	vec2 BjPoints[4] = { vec2(B->origin.x - B->radius.x, B->origin.y - B->radius.y),
+		vec2(B->origin.x - B->radius.x, B->origin.y + B->radius.y),
+		vec2(B->origin.x + B->radius.x, B->origin.y - B->radius.y),
+		vec2(B->origin.x + B->radius.x, B->origin.y + B->radius.y) };
+	F32 BjDots[4] = { dot(-*direction, BjPoints[0]),
+		dot(-*direction, BjPoints[1]),
+		dot(-*direction, BjPoints[2]),
+		dot(-*direction, BjPoints[3])
+	};
+	U32 maxPositionBj = 0;
+	F32 maxDotBj = -1000000.0f;
+	for (U32 i = 0; i < 4; ++i)
+	{
+		if (AiDots[i] > maxDotBj)
+		{
+			maxPositionBj = i;
+			maxDotBj = AiDots[i];
+		}
+	}
+	vec2 maxB = BjPoints[maxPositionBj];
+
+	vec2 result = maxA - maxB;
+	return result;
+}
+
+bool DoSimplexLine(vec2* simplex, vec2* D)
+{
+	bool result = false;
+
+	return result;
+}
+
+bool DoSimplexTriangle(vec2* simplex, vec2* D)
+{
+	bool result = false;
+
+	return result;
+}
+
+bool DoSimplexTetrahedron(vec2* simplex, vec2* D)
+{
+	bool result = false;
+
+	return result;
+}
+
+bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
+{
+	bool result = false;
+
+	switch (*simplexType)
+	{
+	case Simplex_Line:
+	{
+						 result = DoSimplexLine(simplex, D);
+						 break;
+	}
+
+	case Simplex_Triangle:
+	{
+							 result = DoSimplexTriangle(simplex, D);
+							 break;
+	}
+
+	case Simplex_Tetrahedron:
+	{
+								result = DoSimplexTetrahedron(simplex, D);
+								break;
+	}
+
+	default:
+	{
+			   break;
+	}
+	}
+
+	return result;
+}
+
+void CollisionDetection()
+{
+	bool collisionDetected = false;
+
+	Square shapeA;
+	shapeA.origin = vec2(2.0f, 2.0f);
+	shapeA.radius = vec2(1.0f, 1.0f);
+
+	Square shapeB;
+	shapeB.origin = vec2(3.0f, 3.0f);
+	shapeB.radius = vec2(1.0f, 1.0f);
+
+	vec2 S = Support(&shapeA, &shapeB, &vec2(1.0f, 1.0f));
+	vec2 simplex[4];
+	SimplexType simplexType = Simplex_Point;
+	simplex[0] = S;
+	vec2 D = -S;
+
+	for (;;)
+	{
+		vec2 A = Support(&shapeA, &shapeB, &D);
+		if (dot(A, D) < 0)
+		{
+			collisionDetected = false;
+			break;
+		}
+		simplexType = Simplex_Line;
+		simplex[1] = A;
+		if (DoSimplex(simplex, &simplexType, &D))
+		{
+			collisionDetected = true;
+			break;
+		}
+	}
+}
+
+
+
 struct verifyShaderReturnResult
 {
 	bool compiled;
@@ -44,9 +203,12 @@ GLuint PCMLocation;
 
 GLuint texture;
 
+GLuint textureSampler;
+
 struct Entity
 {
 	vec2 position;
+	vec2 scale;
 	GLuint texture;
 };
 
@@ -56,8 +218,10 @@ struct Camera
 	vec2 viewArea;
 };
 
+U32 numEntities = (10 * 9) + 1;
 Entity* entities;
 Camera  camera;
+U32 linkEntityLocation = numEntities - 1;
 
 void InitScene()
 {
@@ -65,126 +229,129 @@ void InitScene()
 	camera.viewArea.x = 10;
 	camera.viewArea.y = 9;
 
-	entities = (Entity*)malloc(sizeof(Entity) * (10*9));
+	entities = (Entity*)malloc(sizeof(Entity) * ((10*9)+1));
 
 	char* tileFilenames[] = {
 		// System Bar
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
-		"Assets/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
+		"Assets/x60/sysBar.bmp",
 
 		// row 1
-		"Assets/treeLowRight.bmp",
-		"Assets/treeLowLeft.bmp",
-		"Assets/treeLowRight.bmp",
-		"Assets/yellow.bmp",
-		"Assets/yellow.bmp",
-		"Assets/greenFringeBL.bmp",
-		"Assets/green.bmp",
-		"Assets/greenFringeR.bmp",
-		"Assets/treeLowLeft.bmp",
-		"Assets/treeLowRight.bmp",
+		"Assets/x60/treeLowRight.bmp",
+		"Assets/x60/treeLowLeft.bmp",
+		"Assets/x60/treeLowRight.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/greenFringeBL.bmp",
+		"Assets/x60/green.bmp",
+		"Assets/x60/greenFringeR.bmp",
+		"Assets/x60/treeLowLeft.bmp",
+		"Assets/x60/treeLowRight.bmp",
 
 		// row 2
-		"Assets/treeHighRight.bmp",
-		"Assets/greenFringeUL.bmp",
-		"Assets/greenFringeU.bmp",
-		"Assets/greenFringeUR.bmp",
-		"Assets/yellow.bmp",
-		"Assets/yellow.bmp",
-		"Assets/greenFringeL.bmp",
-		"Assets/greenFringeR.bmp",
-		"Assets/treeHighLeft.bmp",
-		"Assets/treeHighRight.bmp",
+		"Assets/x60/treeHighRight.bmp",
+		"Assets/x60/greenFringeUL.bmp",
+		"Assets/x60/greenFringeU.bmp",
+		"Assets/x60/greenFringeUR.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/greenFringeL.bmp",
+		"Assets/x60/greenFringeR.bmp",
+		"Assets/x60/treeHighLeft.bmp",
+		"Assets/x60/treeHighRight.bmp",
 
 		// row 3
-		"Assets/treeLowRight.bmp",
-		"Assets/greenFringeL.bmp",
-		"Assets/greenFlowers.bmp",
-		"Assets/greenFringeR.bmp",
-		"Assets/yellow.bmp",
-		"Assets/greenFringeUL.bmp",
-		"Assets/greenWeeds.bmp",
-		"Assets/greenFringeBR.bmp",
-		"Assets/treeLowLeft.bmp",
-		"Assets/treeLowRight.bmp",
+		"Assets/x60/treeLowRight.bmp",
+		"Assets/x60/greenFringeL.bmp",
+		"Assets/x60/greenFlowers.bmp",
+		"Assets/x60/greenFringeR.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/greenFringeUL.bmp",
+		"Assets/x60/greenWeeds.bmp",
+		"Assets/x60/greenFringeBR.bmp",
+		"Assets/x60/treeLowLeft.bmp",
+		"Assets/x60/treeLowRight.bmp",
 		
 		// row 4
-		"Assets/treeHighRight.bmp",
-		"Assets/greenFringeBL.bmp",
-		"Assets/greenFringeB.bmp",
-		"Assets/greenWeeds.bmp",
-		"Assets/greenFringeU.bmp",
-		"Assets/green.bmp",
-		"Assets/greenFringeBR.bmp",
-		"Assets/yellow.bmp",
-		"Assets/treeHighLeft.bmp",
-		"Assets/treeHighRight.bmp",
+		"Assets/x60/treeHighRight.bmp",
+		"Assets/x60/greenFringeBL.bmp",
+		"Assets/x60/greenFringeB.bmp",
+		"Assets/x60/greenWeeds.bmp",
+		"Assets/x60/greenFringeU.bmp",
+		"Assets/x60/green.bmp",
+		"Assets/x60/greenFringeBR.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/treeHighLeft.bmp",
+		"Assets/x60/treeHighRight.bmp",
 		
 		// row 5
-		"Assets/treeLowRight.bmp",
-		"Assets/weed.bmp",
-		"Assets/weed.bmp",
-		"Assets/greenFringeL.bmp",
-		"Assets/green.bmp",
-		"Assets/greenFringeR.bmp",
-		"Assets/yellow.bmp",
-		"Assets/weed.bmp",
-		"Assets/treeLowLeft.bmp",
-		"Assets/treeLowRight.bmp",
+		"Assets/x60/treeLowRight.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/greenFringeL.bmp",
+		"Assets/x60/green.bmp",
+		"Assets/x60/greenFringeR.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/treeLowLeft.bmp",
+		"Assets/x60/treeLowRight.bmp",
 
 		// row 6
-		"Assets/treeHighRight.bmp",
-		"Assets/weed.bmp",
-		"Assets/greenFringeUL.bmp",
-		"Assets/green.bmp",
-		"Assets/greenFlowers.bmp",
-		"Assets/greenFringeR.bmp",
-		"Assets/weed.bmp",
-		"Assets/weed.bmp",
-		"Assets/treeHighLeft.bmp",
-		"Assets/treeHighRight.bmp",
+		"Assets/x60/treeHighRight.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/greenFringeUL.bmp",
+		"Assets/x60/green.bmp",
+		"Assets/x60/greenFlowers.bmp",
+		"Assets/x60/greenFringeR.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/treeHighLeft.bmp",
+		"Assets/x60/treeHighRight.bmp",
 
 		// row 7
-		"Assets/treeLowRight.bmp",
-		"Assets/yellow.bmp",
-		"Assets/greenFringeBL.bmp",
-		"Assets/greenFringeB.bmp",
-		"Assets/greenFringeB.bmp",
-		"Assets/greenFringeBR.bmp",
-		"Assets/weed.bmp",
-		"Assets/weed.bmp",
-		"Assets/treeLowLeft.bmp",
-		"Assets/treeLowRight.bmp",
+		"Assets/x60/treeLowRight.bmp",
+		"Assets/x60/yellow.bmp",
+		"Assets/x60/greenFringeBL.bmp",
+		"Assets/x60/greenFringeB.bmp",
+		"Assets/x60/greenFringeB.bmp",
+		"Assets/x60/greenFringeBR.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/weed.bmp",
+		"Assets/x60/treeLowLeft.bmp",
+		"Assets/x60/treeLowRight.bmp",
 
 		// row 8
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
-		"Assets/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
+		"Assets/x60/rails.bmp",
 	};
 
 	for (U32 j = 0; j < 9; ++j)
 	{
 		for (U32 i = 0; i < 10; ++i)
 		{
-			vec2 pos(30.5f + i, -8.5f - j);
-			char* filename = tileFilenames[10 * j + i];
+			U32 entityLocation = 10 * j + i;
 
-			entities[10 * j + i].position = pos;
+			vec2 pos(30.5f + i, -8.5f - j);
+			char* filename = tileFilenames[entityLocation];
+
+			entities[entityLocation].position = pos;
+			entities[entityLocation].scale = vec2(1.0f, 1.0f);
 
 			I32 textureWidth = 0;
 			I32 textureHeight = 0;
@@ -193,17 +360,35 @@ void InitScene()
 			U8 * textureData = stbi_load(filename, &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
 
 			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &(entities[10 * j + i].texture));
-			glBindTexture(GL_TEXTURE_2D, entities[10 * j + i].texture);
+			glGenTextures(1, &(entities[entityLocation].texture));
+			glBindTexture(GL_TEXTURE_2D, entities[entityLocation].texture);
 			glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 		}
 	}
 
+	
+	entities[linkEntityLocation].position = camera.position;
+	entities[linkEntityLocation].scale = vec2(0.75f, 1.0f);
+
+	I32 textureWidth = 0;
+	I32 textureHeight = 0;
+	I32 textureImageComponents = 0;
+	I32 textureNumImageComponentsDesired = 4;
+	U8 * textureData = stbi_load("Assets/x60/link.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &(entities[linkEntityLocation].texture));
+	glBindTexture(GL_TEXTURE_2D, entities[linkEntityLocation].texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
 }
 
 bool GameInit()
 {
+	CollisionDetection();
+
 	glClearColor(0.32f, 0.18f, 0.66f, 0.0f);
 
 	glGenVertexArrays(1, &texturedQuadVAO);
@@ -298,7 +483,12 @@ bool GameInit()
 	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 
-	
+	glGenSamplers(1, &textureSampler);
+	glBindSampler(0, textureSampler);
+	glSamplerParameteri(textureSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glSamplerParameteri(textureSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glSamplerParameteri(textureSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glSamplerParameteri(textureSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	// Set the spriteSampler sampler variable in the shader to fetch data from the 0th texture location
 	spriteSamplerLocation = glGetUniformLocation(shaderProgram, "spriteSampler");
@@ -312,11 +502,32 @@ bool GameInit()
 	return true;
 }
 
+
+
 void GameUpdate(F32 deltaTime)
 {
+	if (getKey(KeyCode_W))
+	{
+		entities[linkEntityLocation].position += vec2(0.0f, 2*deltaTime);
+	}
+	if (getKey(KeyCode_S))
+	{
+		entities[linkEntityLocation].position += vec2(0.0f, 2 * -deltaTime);
+	}
+	if (getKey(KeyCode_A))
+	{
+		entities[linkEntityLocation].position += vec2(2 * -deltaTime, 0.0f);
+	}
+	if (getKey(KeyCode_D))
+	{
+		entities[linkEntityLocation].position += vec2(2 * deltaTime, 0.0f);
+	}
+
+	camera.position = entities[linkEntityLocation].position;
+
 
 	// NOTE: Setting the viewport each frame shouldnt happen
-	glViewport(0, 0, 600, 500);
+	glViewport(0, 0, 600, 540);
 
 	// NOTE: Clear the buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -334,12 +545,12 @@ void GameUpdate(F32 deltaTime)
 	// NOTE: Draw this bitch.
 	//glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 
-	for (U32 i = 0; i < 10 * 9; ++i)
+	for (U32 i = 0; i < numEntities; ++i)
 	{
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, entities[i].texture);
 		
-		mat3 Bmodel = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, entities[i].position.x, entities[i].position.y, 1.0f);
+		mat3 Bmodel = mat3(1.0f*entities[i].scale.x, 0.0f, 0.0f, 0.0f, 1.0f*entities[i].scale.y, 0.0f, entities[i].position.x, entities[i].position.y, 1.0f);
 		mat3 Ccamera = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, camera.position.x, camera.position.y, 1.0f);
 		mat3 Oprojection = mat3((2.0f / camera.viewArea.x), 0.0f, 0.0f, 0.0f, (2.0f / camera.viewArea.y), 0.0f, 0.0f, 0.0f, 1.0f);
 		mat3 PCM = Oprojection * inverse(Ccamera) * Bmodel;

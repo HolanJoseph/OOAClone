@@ -271,7 +271,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	char* windowClassName = "OracleOfAgesCloneMainWindow";
 	char* windowTitle = "Oracle of Ages Clone";
 	U32 windowWidth = 600;
-	U32 windowHeight = 500;
+	U32 windowHeight = 540;
 	DWORD windowStyle = WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_OVERLAPPED | WS_SIZEBOX | WS_VISIBLE;
 
 	WNDCLASSEX windowClass;
@@ -425,7 +425,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	I64 performanceFrequency = (I64)qpf.QuadPart; // This is number of counts per second
 
 	LARGE_INTEGER frameStartLI;
-	F32 frameElapsedTime = 1000.0f/60.0f;
+	F32 frameElapsedTime = 1.0f/60.0f;
 	QueryPerformanceCounter(&frameStartLI);
 
 	bool running = true;
@@ -519,7 +519,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 		LARGE_INTEGER frameEndLI;
 		QueryPerformanceCounter(&frameEndLI);
-		frameElapsedTime = (F32)((frameEndLI.QuadPart - frameStartLI.QuadPart) * 1000) / performanceFrequency;
+		frameElapsedTime = (F32)((frameEndLI.QuadPart - frameStartLI.QuadPart)) / performanceFrequency;
 		frameStartLI = frameEndLI;
 	}
 
