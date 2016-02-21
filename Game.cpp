@@ -22,10 +22,10 @@ struct Square
 
 enum SimplexType
 {
-	Simplex_Point = 1,
-	Simplex_Line = 2,
-	Simplex_Triangle = 3,
-	Simplex_Tetrahedron = 4
+	Simplex_Point = 0,
+	Simplex_Line = 1,
+	Simplex_Triangle = 2,
+	Simplex_Tetrahedron = 3
 };
 
 
@@ -68,10 +68,10 @@ vec2 Support(Square* A, Square* B, vec2* direction)
 	F32 maxDotBj = -1000000.0f;
 	for (U32 i = 0; i < 4; ++i)
 	{
-		if (AiDots[i] > maxDotBj)
+		if (BjDots[i] > maxDotBj)
 		{
 			maxPositionBj = i;
-			maxDotBj = AiDots[i];
+			maxDotBj = BjDots[i];
 		}
 	}
 	vec2 maxB = BjPoints[maxPositionBj];
@@ -80,21 +80,113 @@ vec2 Support(Square* A, Square* B, vec2* direction)
 	return result;
 }
 
-bool DoSimplexLine(vec2* simplex, vec2* D)
+bool DoSimplexLine(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
+
+	vec3 ab = vec3(simplex[0].x - simplex[1].x, simplex[0].y - simplex[1].y, 0);
+	vec3 ag = vec3(0-simplex[1].x, 0-simplex[1].y, 0);
+	if (dot(ab, ag) > 0)
+	{
+		vec3 DinR3 = cross(cross(ab, ag), ab);
+		*D = vec2(DinR3.x, DinR3.y);
+	}
+	else
+	{
+		simplex[0] = simplex[1];
+		simplex[1] = vec2();
+		*simplexType = Simplex_Point;
+	}
 
 	return result;
 }
 
-bool DoSimplexTriangle(vec2* simplex, vec2* D)
+bool DoSimplexTriangle(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
+
+	vec3 ab = vec3((simplex[1] - simplex[2]), 0);
+	vec3 ac = vec3((simplex[0] - simplex[2]), 0);
+	vec3 ag = vec3((vec2(0,0) - simplex[2]), 0);
+	vec3 abc = cross(ab, ac);
+
+	if (dot(cross(abc, ac), ag) > 0)
+	{
+		if (dot(ac, ag) > 0)
+		{
+			simplex[1] = simplex[2];
+			simplex[2] = vec2();
+			*simplexType = Simplex_Line;
+			vec3 dInR3 = cross(cross(ac, ag), ac);
+			*D = vec2(dInR3.x, dInR3.y);
+		}
+		else
+		{
+			// Magical special fun times case
+			if (dot(ab, ag) > 0)
+			{
+				*simplexType = Simplex_Line;
+				simplex[1] = simplex[2];
+				simplex[2] = vec2();
+				vec3 dInR3 = cross(cross(ab, ag), ab);
+				*D = vec2(dInR3.x, dInR3.y);
+			}
+			else
+			{
+				*simplexType = Simplex_Point;
+				simplex[0] = simplex[2];
+				simplex[1] = vec2();
+				simplex[2] = vec2();
+				*D = vec2(ag.x, ag.y);
+			}
+		}
+	}
+	else
+	{
+		if (dot(cross(ab, abc), ag) > 0)
+		{
+			// Magical special fun times case
+			if (dot(ab, ag) > 0)
+			{
+				*simplexType = Simplex_Line;
+				simplex[1] = simplex[2];
+				simplex[2] = vec2();
+				vec3 dInR3 = cross(cross(ab, ag), ab);
+				*D = vec2(dInR3.x, dInR3.y);
+			}
+			else
+			{
+				*simplexType = Simplex_Point;
+				simplex[0] = simplex[2];
+				simplex[1] = vec2();
+				simplex[2] = vec2();
+				*D = vec2(ag.x, ag.y);
+			}
+		}
+		else
+		{
+			// NOTE: In the 2D case this means the origin is within the triangle.
+			result = true;
+			// NOTE: This is for the 3D case.
+			/*if (dot(abc, ag) > 0)
+			{
+				*D = abc;
+			}
+			else
+			{
+				// NOTE: Swap points so plane normal will be in the direction of the new point.
+				vec3 t = simplex[1];
+				simplex[1] = simplex[0];
+				simplex[0] = t;
+				*D = -abc;
+			}*/
+		}
+	}
 
 	return result;
 }
 
-bool DoSimplexTetrahedron(vec2* simplex, vec2* D)
+bool DoSimplexTetrahedron(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
 
@@ -109,19 +201,19 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 	{
 	case Simplex_Line:
 	{
-						 result = DoSimplexLine(simplex, D);
+						 result = DoSimplexLine(simplex, simplexType, D);
 						 break;
 	}
 
 	case Simplex_Triangle:
 	{
-							 result = DoSimplexTriangle(simplex, D);
+							 result = DoSimplexTriangle(simplex, simplexType, D);
 							 break;
 	}
 
 	case Simplex_Tetrahedron:
 	{
-								result = DoSimplexTetrahedron(simplex, D);
+								result = DoSimplexTetrahedron(simplex, simplexType, D);
 								break;
 	}
 
@@ -136,6 +228,23 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 
 void CollisionDetection()
 {
+// 	vec2 d = vec2(1, -2);
+// 	vec2 p1 = vec2(-3, 6);
+// 	vec2 p2 = vec2(-6, 1 );
+// 	vec2 p3 = vec2(-6, -5);
+// 	vec2 p4 = vec2(0, -5);
+// 	vec2 p5 = vec2(6, -5);
+// 	vec2 p6 = vec2(6, 1);
+// 	vec2 p7 = vec2(3, 6);
+// 
+// 	F32 d1 = dot(d, p1);
+// 	F32 d2 = dot(d, p2);
+// 	F32 d3 = dot(d, p3);
+// 	F32 d4 = dot(d, p4);
+// 	F32 d5 = dot(d, p5);
+// 	F32 d6 = dot(d, p6);
+// 	F32 d7 = dot(d, p7);
+
 	bool collisionDetected = false;
 
 	Square shapeA;
@@ -146,7 +255,7 @@ void CollisionDetection()
 	shapeB.origin = vec2(3.0f, 3.0f);
 	shapeB.radius = vec2(1.0f, 1.0f);
 
-	vec2 S = Support(&shapeA, &shapeB, &vec2(1.0f, 1.0f));
+	vec2 S = Support(&shapeA, &shapeB, &vec2(1.0f, -1.0f));
 	vec2 simplex[4];
 	SimplexType simplexType = Simplex_Point;
 	simplex[0] = S;
@@ -160,8 +269,8 @@ void CollisionDetection()
 			collisionDetected = false;
 			break;
 		}
-		simplexType = Simplex_Line;
-		simplex[1] = A;
+		simplexType = (SimplexType)(simplexType + 1);
+		simplex[simplexType] = A;
 		if (DoSimplex(simplex, &simplexType, &D))
 		{
 			collisionDetected = true;
