@@ -20,6 +20,32 @@ struct Square
 	vec2 radius;
 };
 
+struct Circle
+{
+	vec2 origin;
+	F32  radius;
+};
+
+struct OrientedBoundingBox
+{
+
+};
+
+struct RoundedOrientedBoundingBox
+{
+
+};
+
+struct Sphere
+{
+
+};
+
+struct Capsule
+{
+
+};
+
 enum SimplexType
 {
 	Simplex_Point = 0,
@@ -29,18 +55,21 @@ enum SimplexType
 };
 
 
-vec2 Support(Square* A, Square* B, vec2* direction)
+vec2 Support(Square* A, vec2 direction)
 {
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 AiPoints[4] = { vec2(A->origin.x - A->radius.x, A->origin.y - A->radius.y),
+	vec2 AiPoints[4] = {
+		vec2(A->origin.x - A->radius.x, A->origin.y - A->radius.y),
 		vec2(A->origin.x - A->radius.x, A->origin.y + A->radius.y),
 		vec2(A->origin.x + A->radius.x, A->origin.y - A->radius.y),
-		vec2(A->origin.x + A->radius.x, A->origin.y + A->radius.y) };
-	F32 AiDots[4] = { dot(*direction, AiPoints[0]),
-		dot(*direction, AiPoints[1]),
-		dot(*direction, AiPoints[2]),
-		dot(*direction, AiPoints[3])
+		vec2(A->origin.x + A->radius.x, A->origin.y + A->radius.y)
 	};
+	F32 AiDots[4] = { 
+		dot(direction, AiPoints[0]),
+		dot(direction, AiPoints[1]),
+		dot(direction, AiPoints[2]),
+		dot(direction, AiPoints[3])
+	};
+
 	U32 maxPositionAi = 0;
 	F32 maxDotAi = -1000000.0f;
 	for (U32 i = 0; i < 4; ++i)
@@ -52,35 +81,46 @@ vec2 Support(Square* A, Square* B, vec2* direction)
 		}
 	}
 	vec2 maxA = AiPoints[maxPositionAi];
+	return maxA;
+}
 
+vec2 Support(Circle* A, vec2 direction)
+{
+	return vec2();
+}
+
+vec2 Support(OrientedBoundingBox* A, vec3 direction)
+{
+	return vec2();
+}
+
+vec2 Support(Sphere* A, vec3 direction)
+{
+	return vec2();
+}
+
+vec2 Support(Capsule* A, vec3 direction)
+{
+	return vec2();
+}
+
+vec2 Support(RoundedOrientedBoundingBox* A, vec3 direction)
+{
+	return vec2();
+}
+
+vec2 Support(Square* A, Square* B, vec2* direction)
+{
+	// find the point in A that has the largest value with dot(Ai, Direction)
+	vec2 maxA = Support(A, *direction);
 
 	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 BjPoints[4] = { vec2(B->origin.x - B->radius.x, B->origin.y - B->radius.y),
-		vec2(B->origin.x - B->radius.x, B->origin.y + B->radius.y),
-		vec2(B->origin.x + B->radius.x, B->origin.y - B->radius.y),
-		vec2(B->origin.x + B->radius.x, B->origin.y + B->radius.y) };
-	F32 BjDots[4] = { dot(-*direction, BjPoints[0]),
-		dot(-*direction, BjPoints[1]),
-		dot(-*direction, BjPoints[2]),
-		dot(-*direction, BjPoints[3])
-	};
-	U32 maxPositionBj = 0;
-	F32 maxDotBj = -1000000.0f;
-	for (U32 i = 0; i < 4; ++i)
-	{
-		if (BjDots[i] > maxDotBj)
-		{
-			maxPositionBj = i;
-			maxDotBj = BjDots[i];
-		}
-	}
-	vec2 maxB = BjPoints[maxPositionBj];
-
+	vec2 maxB = Support(B, -*direction);
 	vec2 result = maxA - maxB;
 	return result;
 }
 
-bool DoSimplexLine(vec2* simplex, SimplexType* simplexType, vec2* D)
+bool DoSimplexLineCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
 
@@ -101,7 +141,7 @@ bool DoSimplexLine(vec2* simplex, SimplexType* simplexType, vec2* D)
 	return result;
 }
 
-bool DoSimplexTriangle(vec2* simplex, SimplexType* simplexType, vec2* D)
+bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
 
@@ -201,13 +241,13 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 	{
 	case Simplex_Line:
 	{
-						 result = DoSimplexLine(simplex, simplexType, D);
+						 result = DoSimplexLineCasey(simplex, simplexType, D);
 						 break;
 	}
 
 	case Simplex_Triangle:
 	{
-							 result = DoSimplexTriangle(simplex, simplexType, D);
+							 result = DoSimplexTriangleCasey(simplex, simplexType, D);
 							 break;
 	}
 
@@ -615,19 +655,19 @@ bool GameInit()
 
 void GameUpdate(F32 deltaTime)
 {
-	if (getKey(KeyCode_W))
+	if (GetKey(KeyCode_W))
 	{
 		entities[linkEntityLocation].position += vec2(0.0f, 2*deltaTime);
 	}
-	if (getKey(KeyCode_S))
+	if (GetKey(KeyCode_S))
 	{
 		entities[linkEntityLocation].position += vec2(0.0f, 2 * -deltaTime);
 	}
-	if (getKey(KeyCode_A))
+	if (GetKey(KeyCode_A))
 	{
 		entities[linkEntityLocation].position += vec2(2 * -deltaTime, 0.0f);
 	}
-	if (getKey(KeyCode_D))
+	if (GetKey(KeyCode_D))
 	{
 		entities[linkEntityLocation].position += vec2(2 * deltaTime, 0.0f);
 	}

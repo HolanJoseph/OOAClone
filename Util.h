@@ -1,6 +1,6 @@
 #include "Types.h"
 
-inline F32 clampRange(F32 val, F32 low, F32 high)
+inline F32 ClampRange(F32 val, F32 low, F32 high)
 {
 	F32 result = val;
 

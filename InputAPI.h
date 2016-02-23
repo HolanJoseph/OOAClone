@@ -42,35 +42,35 @@ enum GamepadCode
 
 
 // Keyboard
-bool getKeyDown(KeyCode code);
-bool getKey(KeyCode code);
-bool getKeyUp(KeyCode code);
+bool GetKeyDown(KeyCode code);
+bool GetKey(KeyCode code);
+bool GetKeyUp(KeyCode code);
 
 
 
 // Mouse
-vec2 getMousePosition();
-vec2 getMouseMovement();
+vec2 GetMousePosition();
+vec2 GetMouseMovement();
 
-bool getMouseButtonDown(MouseCode code);
-bool getMouseButton(MouseCode code);
-bool getMouseButtonUp(MouseCode code);
+bool GetMouseButtonDown(MouseCode code);
+bool GetMouseButton(MouseCode code);
+bool GetMouseButtonUp(MouseCode code);
 
-void setMousePosition(vec2 newPos);
+void SetMousePosition(vec2 newPos);
 
-void setCursorVisibility(bool newVis);
+void SetCursorVisibility(bool newVis);
 
 
 
 // Controller
-bool isGamepadConnected();
+bool IsGamepadConnected();
 
-bool getGamepadButtonDown(GamepadCode code);
-bool getGamepadButton(GamepadCode code);
-bool getGamepadButtonUp(GamepadCode code);
+bool GetGamepadButtonDown(GamepadCode code);
+bool GetGamepadButton(GamepadCode code);
+bool GetGamepadButtonUp(GamepadCode code);
 
-F32  getGamepadLeftTrigger();
-F32  getGamepadRightTrigger();
+F32  GetGamepadLeftTrigger();
+F32  GetGamepadRightTrigger();
 
-vec2 getGamepadLeftStick();
-vec2 getGamepadRightStick();
+vec2 GetGamepadLeftStick();
+vec2 GetGamepadRightStick();

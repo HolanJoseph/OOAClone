@@ -55,8 +55,8 @@ struct Gamepad
 Gamepad gamepad;
 Gamepad backGamepad;
 
-KeyCode translateVKCodeToKeyCode(UINT_PTR vkCode);
-void queryController();
+KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode);
+void QueryController();
 
 
 LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam )    
@@ -186,7 +186,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
 	{
-						  setBit(&inputBuffer, translateVKCodeToKeyCode(wParam), 1);
+						  SetBit(&inputBuffer, TranslateVKCodeToKeyCode(wParam), 1);
 						  return 0;
 						  break;
 	}
@@ -194,7 +194,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
 	{
-						setBit(&inputBuffer, translateVKCodeToKeyCode(wParam), 0);
+						SetBit(&inputBuffer, TranslateVKCodeToKeyCode(wParam), 0);
 						return 0;
 						break;
 	}
@@ -218,39 +218,39 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 
 	case WM_LBUTTONDOWN:
 	{
-						   setBit(&inputBuffer, MouseCode_Left, 1);
+						   SetBit(&inputBuffer, MouseCode_Left, 1);
 						   return 0;
 						   break;
 	}
 	case WM_LBUTTONUP:
 	{
-						 setBit(&inputBuffer, MouseCode_Left, 0);
+						 SetBit(&inputBuffer, MouseCode_Left, 0);
 						 return 0;
 						 break;
 	}
 
 	case WM_MBUTTONDOWN:
 	{
-						   setBit(&inputBuffer, MouseCode_Middle, 1);
+						   SetBit(&inputBuffer, MouseCode_Middle, 1);
 						   return 0;
 						   break;
 	}
 	case WM_MBUTTONUP:
 	{
-						 setBit(&inputBuffer, MouseCode_Middle, 0);
+						 SetBit(&inputBuffer, MouseCode_Middle, 0);
 						 return 0;
 						 break;
 	}
 
 	case WM_RBUTTONDOWN:
 	{
-						   setBit(&inputBuffer, MouseCode_Right, 1);
+						   SetBit(&inputBuffer, MouseCode_Right, 1);
 						   return 0;
 						   break;
 	}
 	case WM_RBUTTONUP:
 	{
-						 setBit(&inputBuffer, MouseCode_Right, 0);
+						 SetBit(&inputBuffer, MouseCode_Right, 0);
 						 return 0;
 						 break;
 	}
@@ -465,42 +465,42 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 			gamepad.connected = true;
 			
 			// Buttons
-			setBit(&gamepad.buttons, GamepadCode_Up,    (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_Down,  (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_Left,  (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_Right, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_Start, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_START), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_Back,  (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_X, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_X), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_Y, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_Y), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_A, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_A), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_B, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_B), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_RightBumper, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_R3, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_LeftBumper, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER), 0, 1));
-			setBit(&gamepad.buttons, GamepadCode_L3, (U8)clampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Up,    (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Down,  (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Left,  (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Right, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Start, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_START), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Back,  (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_X, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_X), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Y, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_Y), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_A, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_A), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_B, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_B), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_RightBumper, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_R3, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_LeftBumper, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_L3, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB), 0, 1));
 
 			// Thumb sticks
 			gamepad.leftThumbstick = vec2(controllerState.Gamepad.sThumbLX, controllerState.Gamepad.sThumbLY);
 			F32 leftStickMagnitude = length(gamepad.leftThumbstick);
-			leftStickMagnitude = clampRange(leftStickMagnitude, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, I16_MAX);
+			leftStickMagnitude = ClampRange(leftStickMagnitude, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, I16_MAX);
 			leftStickMagnitude -= XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;
 			leftStickMagnitude /= (I16_MAX - XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 			gamepad.leftThumbstick = normalize(gamepad.leftThumbstick) * leftStickMagnitude;
 
 			gamepad.rightThumbstick = vec2(controllerState.Gamepad.sThumbRX, controllerState.Gamepad.sThumbRY);
 			F32 rightStickMagnitude = length(gamepad.rightThumbstick);
-			rightStickMagnitude = clampRange(rightStickMagnitude, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, I16_MAX);
+			rightStickMagnitude = ClampRange(rightStickMagnitude, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, I16_MAX);
 			rightStickMagnitude -= XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE;
 			rightStickMagnitude /= (I16_MAX - XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 			gamepad.rightThumbstick = normalize(gamepad.rightThumbstick) * rightStickMagnitude;
 
 			// Triggers
-			gamepad.leftTrigger = clampRange(controllerState.Gamepad.bLeftTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
+			gamepad.leftTrigger = ClampRange(controllerState.Gamepad.bLeftTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
 			gamepad.leftTrigger -= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 			gamepad.leftTrigger /= (U8_MAX - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
 
-			gamepad.rightTrigger = clampRange(controllerState.Gamepad.bRightTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
+			gamepad.rightTrigger = ClampRange(controllerState.Gamepad.bRightTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
 			gamepad.rightTrigger -= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 			gamepad.rightTrigger /= (U8_MAX - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
 
@@ -545,28 +545,28 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
  */
 
 // Keyboard
-bool getKeyDown(KeyCode code)
+bool GetKeyDown(KeyCode code)
 {
-	bool result = isBitSet(&inputBuffer, code) && !isBitSet(&inputBackBuffer, code);
+	bool result = IsBitSet(&inputBuffer, code) && !IsBitSet(&inputBackBuffer, code);
 	return result;
 }
 
-bool getKey(KeyCode code)
+bool GetKey(KeyCode code)
 {
-	bool result = isBitSet(&inputBuffer, code);
+	bool result = IsBitSet(&inputBuffer, code);
 	return result;
 }
 
-bool getKeyUp(KeyCode code)
+bool GetKeyUp(KeyCode code)
 {
-	bool result = !isBitSet(&inputBuffer, code) && isBitSet(&inputBackBuffer, code);
+	bool result = !IsBitSet(&inputBuffer, code) && IsBitSet(&inputBackBuffer, code);
 	return result;
 }
 
 
 
 // Mouse
-vec2 getMousePosition()
+vec2 GetMousePosition()
 {
 	POINT cursorPosScreenSpace;
 	RECT windowPos;
@@ -583,35 +583,35 @@ vec2 getMousePosition()
 	return result;
 }
 
-vec2 getMouseMovement()
+vec2 GetMouseMovement()
 {
 	return hdMouseMovement;
 }
 
-bool getMouseButtonDown(MouseCode code)
+bool GetMouseButtonDown(MouseCode code)
 {
-	bool result = isBitSet(&inputBuffer, code) && !isBitSet(&inputBackBuffer, code);
+	bool result = IsBitSet(&inputBuffer, code) && !IsBitSet(&inputBackBuffer, code);
 	return result;
 }
 
-bool getMouseButton(MouseCode code)
+bool GetMouseButton(MouseCode code)
 {
-	bool result = isBitSet(&inputBuffer, code);
+	bool result = IsBitSet(&inputBuffer, code);
 	return result;
 }
 
-bool getMouseButtonUp(MouseCode code)
+bool GetMouseButtonUp(MouseCode code)
 {
-	bool result = !isBitSet(&inputBuffer, code) && isBitSet(&inputBackBuffer, code);
+	bool result = !IsBitSet(&inputBuffer, code) && IsBitSet(&inputBackBuffer, code);
 	return result;
 }
 
-void setMousePosition(vec2 newPos)
+void SetMousePosition(vec2 newPos)
 {
 	SetCursorPos((I32)newPos.x, (I32)newPos.y);
 }
 
-void setCursorVisibility(bool newVis)
+void SetCursorVisibility(bool newVis)
 {
 	if (newVis != cursorVisibility)
 	{
@@ -623,45 +623,45 @@ void setCursorVisibility(bool newVis)
 
 
 // Controller
-bool isGamepadConnected()
+bool IsGamepadConnected()
 {
 	return gamepad.connected;
 }
 
-bool getGamepadButtonDown(GamepadCode code)
+bool GetGamepadButtonDown(GamepadCode code)
 {
-	bool result = isBitSet(&gamepad.buttons, code) && !isBitSet(&backGamepad.buttons, code);
+	bool result = IsBitSet(&gamepad.buttons, code) && !IsBitSet(&backGamepad.buttons, code);
 	return result;
 }
 
-bool getGamepadButton(GamepadCode code)
+bool GetGamepadButton(GamepadCode code)
 {
-	bool result = isBitSet(&gamepad.buttons, code);
+	bool result = IsBitSet(&gamepad.buttons, code);
 	return result;
 }
 
-bool getGamepadButtonUp(GamepadCode code)
+bool GetGamepadButtonUp(GamepadCode code)
 {
-	bool result = !isBitSet(&gamepad.buttons, code) && isBitSet(&backGamepad.buttons, code);
+	bool result = !IsBitSet(&gamepad.buttons, code) && IsBitSet(&backGamepad.buttons, code);
 	return result;
 }
 
-F32  getGamepadLeftTrigger()
+F32  GetGamepadLeftTrigger()
 {
 	return gamepad.leftTrigger;
 }
 
-F32  getGamepadRightTrigger()
+F32  GetGamepadRightTrigger()
 {
 	return gamepad.rightTrigger;
 }
 
-vec2 getGamepadLeftStick()
+vec2 GetGamepadLeftStick()
 {
 	return gamepad.leftThumbstick;
 }
 
-vec2 getGamepadRightStick()
+vec2 GetGamepadRightStick()
 {
 	return gamepad.rightThumbstick;
 }
@@ -669,7 +669,7 @@ vec2 getGamepadRightStick()
 
 
 // Input API utility functions
-KeyCode translateVKCodeToKeyCode(UINT_PTR vkCode)
+KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 {
 	KeyCode code;
 	switch (vkCode)
@@ -709,120 +709,120 @@ KeyCode translateVKCodeToKeyCode(UINT_PTR vkCode)
 	return code;
 }
 
-void queryController()
+void QueryController()
 {
-	if (getGamepadButtonDown(GamepadCode_A))
+	if (GetGamepadButtonDown(GamepadCode_A))
 	{
 		DebugPrint("Gamepad A Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_A))
+	if (GetGamepadButtonUp(GamepadCode_A))
 	{
 		DebugPrint("Gamepad A Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_B))
+	if (GetGamepadButtonDown(GamepadCode_B))
 	{
 		DebugPrint("Gamepad B Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_B))
+	if (GetGamepadButtonUp(GamepadCode_B))
 	{
 		DebugPrint("Gamepad B Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_X))
+	if (GetGamepadButtonDown(GamepadCode_X))
 	{
 		DebugPrint("Gamepad X Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_X))
+	if (GetGamepadButtonUp(GamepadCode_X))
 	{
 		DebugPrint("Gamepad X Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_Y))
+	if (GetGamepadButtonDown(GamepadCode_Y))
 	{
 		DebugPrint("Gamepad Y Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_Y))
+	if (GetGamepadButtonUp(GamepadCode_Y))
 	{
 		DebugPrint("Gamepad Y Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_Up))
+	if (GetGamepadButtonDown(GamepadCode_Up))
 	{
 		DebugPrint("Gamepad up Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_Up))
+	if (GetGamepadButtonUp(GamepadCode_Up))
 	{
 		DebugPrint("Gamepad up Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_Right))
+	if (GetGamepadButtonDown(GamepadCode_Right))
 	{
 		DebugPrint("Gamepad right Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_Right))
+	if (GetGamepadButtonUp(GamepadCode_Right))
 	{
 		DebugPrint("Gamepad right Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_Down))
+	if (GetGamepadButtonDown(GamepadCode_Down))
 	{
 		DebugPrint("Gamepad down Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_Down))
+	if (GetGamepadButtonUp(GamepadCode_Down))
 	{
 		DebugPrint("Gamepad down Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_Left))
+	if (GetGamepadButtonDown(GamepadCode_Left))
 	{
 		DebugPrint("Gamepad left Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_Left))
+	if (GetGamepadButtonUp(GamepadCode_Left))
 	{
 		DebugPrint("Gamepad left Up\n");
 	}
 
-	if (getGamepadButtonDown(GamepadCode_Start))
+	if (GetGamepadButtonDown(GamepadCode_Start))
 	{
 		DebugPrint("Gamepad start Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_Start))
+	if (GetGamepadButtonUp(GamepadCode_Start))
 	{
 		DebugPrint("Gamepad start Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_Back))
+	if (GetGamepadButtonDown(GamepadCode_Back))
 	{
 		DebugPrint("Gamepad Back Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_Back))
+	if (GetGamepadButtonUp(GamepadCode_Back))
 	{
 		DebugPrint("Gamepad Back Up\n");
 	}
 
-	if (getGamepadButtonDown(GamepadCode_L3))
+	if (GetGamepadButtonDown(GamepadCode_L3))
 	{
 		DebugPrint("Gamepad L3 Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_L3))
+	if (GetGamepadButtonUp(GamepadCode_L3))
 	{
 		DebugPrint("Gamepad L3 Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_R3))
+	if (GetGamepadButtonDown(GamepadCode_R3))
 	{
 		DebugPrint("Gamepad R3 Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_R3))
+	if (GetGamepadButtonUp(GamepadCode_R3))
 	{
 		DebugPrint("Gamepad R3 Up\n");
 	}
 
-	if (getGamepadButtonDown(GamepadCode_RightBumper))
+	if (GetGamepadButtonDown(GamepadCode_RightBumper))
 	{
 		DebugPrint("Gamepad rb Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_RightBumper))
+	if (GetGamepadButtonUp(GamepadCode_RightBumper))
 	{
 		DebugPrint("Gamepad rb Up\n");
 	}
-	if (getGamepadButtonDown(GamepadCode_LeftBumper))
+	if (GetGamepadButtonDown(GamepadCode_LeftBumper))
 	{
 		DebugPrint("Gamepad lb Down\n");
 	}
-	if (getGamepadButtonUp(GamepadCode_LeftBumper))
+	if (GetGamepadButtonUp(GamepadCode_LeftBumper))
 	{
 		DebugPrint("Gamepad lb Up\n");
 	}
@@ -985,6 +985,11 @@ WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfByte
 /*
 	Debug API
 */
+void Assert(int expression)
+{
+	assert(expression);
+}
+
 void DebugPrint(char* outputString)
 {
 	OutputDebugString(outputString);
