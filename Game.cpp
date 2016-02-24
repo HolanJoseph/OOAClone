@@ -16,58 +16,25 @@
 
 struct Square
 {
-	vec2 origin;
-	vec2 radius;
+	mat3 transform;
+
+	vec2 origin; // NOTE: this is in "model" space
+	vec2 halfDim;
 };
-
-struct Circle
-{
-	vec2 origin;
-	F32  radius;
-};
-
-struct OrientedBoundingBox
-{
-
-};
-
-struct RoundedOrientedBoundingBox
-{
-
-};
-
-struct Sphere
-{
-
-};
-
-struct Capsule
-{
-
-};
-
-enum SimplexType
-{
-	Simplex_Point = 0,
-	Simplex_Line = 1,
-	Simplex_Triangle = 2,
-	Simplex_Tetrahedron = 3
-};
-
 
 vec2 Support(Square* A, vec2 direction)
 {
-	vec2 AiPoints[4] = {
-		vec2(A->origin.x - A->radius.x, A->origin.y - A->radius.y),
-		vec2(A->origin.x - A->radius.x, A->origin.y + A->radius.y),
-		vec2(A->origin.x + A->radius.x, A->origin.y - A->radius.y),
-		vec2(A->origin.x + A->radius.x, A->origin.y + A->radius.y)
+	vec3 AiPoints[4] = {
+		A->transform * vec3(A->origin.x - A->halfDim.x, A->origin.y - A->halfDim.y, 1.0f),
+		A->transform * vec3(A->origin.x - A->halfDim.x, A->origin.y + A->halfDim.y, 1.0f),
+		A->transform * vec3(A->origin.x + A->halfDim.x, A->origin.y - A->halfDim.y, 1.0f),
+		A->transform * vec3(A->origin.x + A->halfDim.x, A->origin.y + A->halfDim.y, 1.0f)
 	};
-	F32 AiDots[4] = { 
-		dot(direction, AiPoints[0]),
-		dot(direction, AiPoints[1]),
-		dot(direction, AiPoints[2]),
-		dot(direction, AiPoints[3])
+	F32 AiDots[4] = {
+		dot(direction, vec2(AiPoints[0].x, AiPoints[0].y)),
+		dot(direction, vec2(AiPoints[1].x, AiPoints[1].y)),
+		dot(direction, vec2(AiPoints[2].x, AiPoints[2].y)),
+		dot(direction, vec2(AiPoints[3].x, AiPoints[3].y))
 	};
 
 	U32 maxPositionAi = 0;
@@ -80,35 +47,174 @@ vec2 Support(Square* A, vec2 direction)
 			maxDotAi = AiDots[i];
 		}
 	}
-	vec2 maxA = AiPoints[maxPositionAi];
+
+	vec2 maxA = vec2(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y);
+	
 	return maxA;
 }
 
+
+
+struct Circle
+{
+	vec2 origin;
+	F32  radius;
+};
+
 vec2 Support(Circle* A, vec2 direction)
 {
-	return vec2();
+	direction = normalize(direction);
+	vec2 maxA = A->origin + (A->radius * direction);
+
+	return maxA;
 }
 
-vec2 Support(OrientedBoundingBox* A, vec3 direction)
+
+
+struct Triangle
 {
-	return vec2();
-}
+	mat3 transform;
+	
+	vec2 origin; // NOTE: this is in "model" space
+	vec2 points[3];
+};
 
-vec2 Support(Sphere* A, vec3 direction)
+vec2 Support(Triangle* A, vec2 direction)
 {
-	return vec2();
+	vec3 AiPoints[3] = {
+		A->transform * vec3(A->origin.x - A->points[0].x, A->origin.y - A->points[0].y, 1.0f),
+		A->transform * vec3(A->origin.x - A->points[1].x, A->origin.y + A->points[1].y, 1.0f),
+		A->transform * vec3(A->origin.x + A->points[2].x, A->origin.y - A->points[2].y, 1.0f)
+	};
+	F32 AiDots[3] = {
+		dot(direction, vec2(AiPoints[0].x, AiPoints[0].y)),
+		dot(direction, vec2(AiPoints[1].x, AiPoints[1].y)),
+		dot(direction, vec2(AiPoints[2].x, AiPoints[2].y))
+	};
+
+	U32 maxPositionAi = 0;
+	F32 maxDotAi = -1000000.0f;
+	for (U32 i = 0; i < 3; ++i)
+	{
+		if (AiDots[i] > maxDotAi)
+		{
+			maxPositionAi = i;
+			maxDotAi = AiDots[i];
+		}
+	}
+
+	vec2 maxA = vec2(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y);
+
+	return maxA;
 }
 
-vec2 Support(Capsule* A, vec3 direction)
+
+
+struct OrientedBoundingBox
 {
-	return vec2();
-}
+	mat4 transform;
+	
+	vec3 origin; // NOTE: this is in "model" space
+	vec3 halfDim;
+};
 
-vec2 Support(RoundedOrientedBoundingBox* A, vec3 direction)
+vec3 Support(OrientedBoundingBox* A, vec3 direction)
 {
-	return vec2();
+	vec4 AiPoints[8] = {
+		A->transform * vec4(A->origin - A->halfDim.x, A->origin - A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin - A->halfDim.x, A->origin + A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin + A->halfDim.x, A->origin - A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin + A->halfDim.x, A->origin + A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin - A->halfDim.x, A->origin - A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin - A->halfDim.x, A->origin + A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin + A->halfDim.x, A->origin - A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin + A->halfDim.x, A->origin + A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
+	};
+	F32 AiDots[8] = {
+		dot(direction, vec3(AiPoints[0].x, AiPoints[0].y, AiPoints[0].z)),
+		dot(direction, vec3(AiPoints[1].x, AiPoints[1].y, AiPoints[1].z)),
+		dot(direction, vec3(AiPoints[2].x, AiPoints[2].y, AiPoints[2].z)),
+		dot(direction, vec3(AiPoints[3].x, AiPoints[3].y, AiPoints[3].z)),
+		dot(direction, vec3(AiPoints[4].x, AiPoints[4].y, AiPoints[4].z)),
+		dot(direction, vec3(AiPoints[5].x, AiPoints[5].y, AiPoints[5].z)),
+		dot(direction, vec3(AiPoints[6].x, AiPoints[6].y, AiPoints[6].z)),
+		dot(direction, vec3(AiPoints[7].x, AiPoints[7].y, AiPoints[7].z))
+	};
+
+	U32 maxPositionAi = 0;
+	F32 maxDotAi = -1000000.0f;
+	for (U32 i = 0; i < 8; ++i)
+	{
+		if (AiDots[i] > maxDotAi)
+		{
+			maxPositionAi = i;
+			maxDotAi = AiDots[i];
+		}
+	}
+
+	vec3 maxA = vec3(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y, AiPoints[maxPositionAi].z);
+
+	return maxA;
 }
 
+
+
+struct Sphere
+{
+	vec3 origin;
+	F32 radius;
+};
+
+vec3 Support(Sphere* A, vec3 direction)
+{
+	direction = normalize(direction);
+	vec3 maxA = A->origin + (A->radius * direction);
+
+	return maxA;
+}
+
+
+
+struct Capsule
+{
+	mat4 transform;
+
+	vec3 points[2]; // NOTE: these are in "model" space
+	F32 radius;
+};
+
+vec3 Support(Capsule* A, vec3 direction)
+{
+	vec4 AiPoints[2] = {
+		A->transform * vec4(A->points[0].x, A->points[0].y, A->points[0].z, 1.0f),
+		A->transform * vec4(A->points[1].x, A->points[1].y, A->points[1].z, 1.0f)
+	};
+	F32 AiDots[2] = {
+		dot(direction, vec3(AiPoints[0])),
+		dot(direction, vec3(AiPoints[1]))
+	};
+
+	U32 maxPositionAi = 0;
+	F32 maxDotAi = -1000000.0f;
+	for (U32 i = 0; i < 3; ++i)
+	{
+		if (AiDots[i] > maxDotAi)
+		{
+			maxPositionAi = i;
+			maxDotAi = AiDots[i];
+		}
+	}
+
+	vec3 maxLinePointA = vec3(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y, AiPoints[maxPositionAi].z);
+	vec3 maxA = maxLinePointA + (normalize(direction) * A->radius);
+
+	return maxA;
+}
+
+
+/*
+	COMBO SUPPORTS
+*/
 vec2 Support(Square* A, Square* B, vec2* direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
@@ -119,6 +225,16 @@ vec2 Support(Square* A, Square* B, vec2* direction)
 	vec2 result = maxA - maxB;
 	return result;
 }
+
+
+
+enum SimplexType
+{
+	Simplex_Point = 0,
+	Simplex_Line = 1,
+	Simplex_Triangle = 2,
+	Simplex_Tetrahedron = 3
+};
 
 bool DoSimplexLineCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
@@ -133,6 +249,7 @@ bool DoSimplexLineCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 	}
 	else
 	{
+		Assert(false);
 		simplex[0] = simplex[1];
 		simplex[1] = vec2();
 		*simplexType = Simplex_Point;
@@ -173,6 +290,7 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			}
 			else
 			{
+				Assert(false);
 				*simplexType = Simplex_Point;
 				simplex[0] = simplex[2];
 				simplex[1] = vec2();
@@ -196,6 +314,7 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			}
 			else
 			{
+				Assert(false);
 				*simplexType = Simplex_Point;
 				simplex[0] = simplex[2];
 				simplex[1] = vec2();
@@ -270,7 +389,7 @@ void CollisionDetection()
 {
 // 	vec2 d = vec2(1, -2);
 // 	vec2 p1 = vec2(-3, 6);
-// 	vec2 p2 = vec2(-6, 1 );
+// 	vec2 p2 = vec2(-6, 1 ); 
 // 	vec2 p3 = vec2(-6, -5);
 // 	vec2 p4 = vec2(0, -5);
 // 	vec2 p5 = vec2(6, -5);
@@ -289,11 +408,11 @@ void CollisionDetection()
 
 	Square shapeA;
 	shapeA.origin = vec2(2.0f, 2.0f);
-	shapeA.radius = vec2(1.0f, 1.0f);
+	shapeA.halfDim = vec2(1.0f, 1.0f);
 
 	Square shapeB;
 	shapeB.origin = vec2(3.0f, 3.0f);
-	shapeB.radius = vec2(1.0f, 1.0f);
+	shapeB.halfDim = vec2(1.0f, 1.0f);
 
 	vec2 S = Support(&shapeA, &shapeB, &vec2(1.0f, -1.0f));
 	vec2 simplex[4];
