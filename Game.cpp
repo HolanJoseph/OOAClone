@@ -641,7 +641,7 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 	{
 	case Simplex_Line:
 	{
-						 result1 = DoSimplex(simplex, simplexType, D);
+						 result1 = DoSimplexLine(simplex, simplexType, D);
 						 vec2 r1Simplex[4];
 						 r1Simplex[0] = simplex[0];
 						 r1Simplex[1] = simplex[1];
@@ -737,10 +737,12 @@ void CollisionDetection()
 	bool collisionDetected = false;
 
 	Square shapeA;
+	shapeA.transform = mat3(1.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 1.0f);
 	shapeA.origin = vec2(2.0f, 2.0f);
 	shapeA.halfDim = vec2(1.0f, 1.0f);
 
 	Square shapeB;
+	shapeB.transform = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 	shapeB.origin = vec2(3.0f, 3.0f);
 	shapeB.halfDim = vec2(1.0f, 1.0f);
 
