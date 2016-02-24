@@ -121,14 +121,14 @@ struct OrientedBoundingBox
 vec3 Support(OrientedBoundingBox* A, vec3 direction)
 {
 	vec4 AiPoints[8] = {
-		A->transform * vec4(A->origin - A->halfDim.x, A->origin - A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin - A->halfDim.x, A->origin + A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin + A->halfDim.x, A->origin - A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin + A->halfDim.x, A->origin + A->halfDim.y, A->origin + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin - A->halfDim.x, A->origin - A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin - A->halfDim.x, A->origin + A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin + A->halfDim.x, A->origin - A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin + A->halfDim.x, A->origin + A->halfDim.y, A->origin - A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
+		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
 	};
 	F32 AiDots[8] = {
 		dot(direction, vec3(AiPoints[0].x, AiPoints[0].y, AiPoints[0].z)),
