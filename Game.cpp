@@ -432,6 +432,19 @@ enum SimplexType
 	Simplex_Tetrahedron = 3
 };
 
+bool DoSimplexLine(vec2* simplex, SimplexType* simplexType, vec2* D)
+{
+	bool result = false;
+
+	vec3 ab = vec3(simplex[0].x - simplex[1].x, simplex[0].y - simplex[1].y, 0);
+	vec3 ag = vec3(0 - simplex[1].x, 0 - simplex[1].y, 0);
+	
+	vec3 DinR3 = cross(cross(ab, ag), ab);
+	*D = vec2(DinR3.x, DinR3.y);
+
+	return result;
+}
+
 bool DoSimplexLineCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
@@ -454,6 +467,48 @@ bool DoSimplexLineCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 	return result;
 }
 
+bool DoSimplexTriangle(vec2* simplex, SimplexType* simplexType, vec2* D)
+{
+	bool result = false;
+
+	vec3 ab = vec3((simplex[1] - simplex[2]), 0);
+	vec3 ac = vec3((simplex[0] - simplex[2]), 0);
+	vec3 ag = vec3((vec2(0, 0) - simplex[2]), 0);
+	vec3 abc = cross(ab, ac);
+
+	if (dot(cross(abc, ac), ag) > 0)
+	{
+		// NOTE:	  1  0
+		// simplex = [A, C]
+		simplex[1] = simplex[2]; 
+		simplex[2] = vec2();
+		*simplexType = Simplex_Line;
+		vec3 dInR3 = cross(cross(ac, ag), ac);
+		*D = vec2(dInR3.x, dInR3.y);
+	}
+	else
+	{
+		if (dot(cross(ab, abc), ag) > 0)
+		{
+			// NOTE:	  1  0
+			// simplex = [A, B]
+			simplex[0] = simplex[1];
+			simplex[1] = simplex[2];
+			simplex[2] = vec2();
+			*simplexType = Simplex_Line;
+			vec3 dInR3 = cross(cross(ab, ag), ab);
+			*D = vec2(dInR3.x, dInR3.y);
+		}
+		else
+		{
+			// NOTE: In the 2D case this means the origin is within the triangle.
+			result = true;
+		}
+	}
+
+	return result;
+}
+
 bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
@@ -467,9 +522,14 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 	{
 		if (dot(ac, ag) > 0)
 		{
+			// CASE 1
+
+			// NOTE		  1  0
+			// simplex = [A, C]
 			simplex[1] = simplex[2];
 			simplex[2] = vec2();
 			*simplexType = Simplex_Line;
+
 			vec3 dInR3 = cross(cross(ac, ag), ac);
 			*D = vec2(dInR3.x, dInR3.y);
 		}
@@ -478,19 +538,30 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			// Magical special fun times case
 			if (dot(ab, ag) > 0)
 			{
-				*simplexType = Simplex_Line;
+				// CASE 4
+
+				// NOTE		  1  0
+				// simplex = [A, B]
+				simplex[0] = simplex[1];
 				simplex[1] = simplex[2];
 				simplex[2] = vec2();
+				*simplexType = Simplex_Line;
+
 				vec3 dInR3 = cross(cross(ab, ag), ab);
 				*D = vec2(dInR3.x, dInR3.y);
 			}
 			else
 			{
+				// CASE 5
 				Assert(false);
-				*simplexType = Simplex_Point;
+
+				// NOTE		  0
+				// simplex = [A]
 				simplex[0] = simplex[2];
 				simplex[1] = vec2();
 				simplex[2] = vec2();
+				*simplexType = Simplex_Point;
+
 				*D = vec2(ag.x, ag.y);
 			}
 		}
@@ -502,24 +573,37 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			// Magical special fun times case
 			if (dot(ab, ag) > 0)
 			{
-				*simplexType = Simplex_Line;
+				// CASE 4
+
+				// NOTE		  1  0
+				// simplex = [A, B]
+				simplex[0] = simplex[1];
 				simplex[1] = simplex[2];
 				simplex[2] = vec2();
+				*simplexType = Simplex_Line;
+
 				vec3 dInR3 = cross(cross(ab, ag), ab);
 				*D = vec2(dInR3.x, dInR3.y);
 			}
 			else
 			{
+				// CASE 5
 				Assert(false);
-				*simplexType = Simplex_Point;
+
+				// NOTE		  0
+				// simplex = [A]
 				simplex[0] = simplex[2];
 				simplex[1] = vec2();
 				simplex[2] = vec2();
+				*simplexType = Simplex_Point;
+
 				*D = vec2(ag.x, ag.y);
 			}
 		}
 		else
 		{
+			// CASE 2 AND CASE 3
+
 			// NOTE: In the 2D case this means the origin is within the triangle.
 			result = true;
 			// NOTE: This is for the 3D case.
@@ -550,25 +634,75 @@ bool DoSimplexTetrahedron(vec2* simplex, SimplexType* simplexType, vec2* D)
 
 bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
-	bool result = false;
+	bool result1 = false;
+	bool result2 = false;
 
 	switch (*simplexType)
 	{
 	case Simplex_Line:
 	{
-						 result = DoSimplexLineCasey(simplex, simplexType, D);
+						 result1 = DoSimplex(simplex, simplexType, D);
+						 vec2 r1Simplex[4];
+						 r1Simplex[0] = simplex[0];
+						 r1Simplex[1] = simplex[1];
+						 r1Simplex[2] = simplex[2];
+						 r1Simplex[3] = simplex[3];
+						 SimplexType r1simplexType = *simplexType;
+						 vec2 r1D = *D;
+
+						 result2 = DoSimplexLineCasey(simplex, simplexType, D);
+						 vec2 r2Simplex[4];
+						 r2Simplex[0] = simplex[0];
+						 r2Simplex[1] = simplex[1];
+						 r2Simplex[2] = simplex[2];
+						 r2Simplex[3] = simplex[3];
+						 SimplexType r2simplexType = *simplexType;
+						 vec2 r2D = *D;
+
+						 Assert(r1Simplex[0] == r2Simplex[0]);
+						 Assert(r1Simplex[1] == r2Simplex[1]);
+						 Assert(r1Simplex[2] == r2Simplex[2]);
+						 Assert(r1Simplex[3] == r2Simplex[3]);
+						 Assert(r1simplexType == r2simplexType);
+						 Assert(r1D == r2D);
+						 Assert(result1 == result2);
+						 
 						 break;
 	}
 
 	case Simplex_Triangle:
 	{
-							 result = DoSimplexTriangleCasey(simplex, simplexType, D);
+							 result1 = DoSimplexTriangle(simplex, simplexType, D);
+							 vec2 r1Simplex[4];
+							 r1Simplex[0] = simplex[0];
+							 r1Simplex[1] = simplex[1];
+							 r1Simplex[2] = simplex[2];
+							 r1Simplex[3] = simplex[3];
+							 SimplexType r1simplexType = *simplexType;
+							 vec2 r1D = *D;
+
+							 result2 = DoSimplexTriangleCasey(simplex, simplexType, D);
+							 vec2 r2Simplex[4];
+							 r2Simplex[0] = simplex[0];
+							 r2Simplex[1] = simplex[1];
+							 r2Simplex[2] = simplex[2];
+							 r2Simplex[3] = simplex[3];
+							 SimplexType r2simplexType = *simplexType;
+							 vec2 r2D = *D;
+
+							 Assert(r1Simplex[0] == r2Simplex[0]);
+							 Assert(r1Simplex[1] == r2Simplex[1]);
+							 Assert(r1Simplex[2] == r2Simplex[2]);
+							 Assert(r1Simplex[3] == r2Simplex[3]);
+							 Assert(r1simplexType == r2simplexType);
+							 Assert(r1D == r2D);
+							 Assert(result1 == result2);
 							 break;
 	}
 
 	case Simplex_Tetrahedron:
 	{
-								result = DoSimplexTetrahedron(simplex, simplexType, D);
+								result2 = DoSimplexTetrahedron(simplex, simplexType, D);
 								break;
 	}
 
@@ -578,7 +712,7 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 	}
 	}
 
-	return result;
+	return result2;
 }
 
 void CollisionDetection()
