@@ -18,9 +18,9 @@
 struct Rectangle
 {
 	mat3 transform;
-
-	vec2 origin; // NOTE: this is in "model" space
-	vec2 halfDim;
+ 
+ 	vec2 origin; // NOTE: this is in "model" space
+ 	vec2 halfDim;
 };
 
 vec2 Support(Rectangle* A, vec2 direction)
@@ -459,7 +459,8 @@ bool DoSimplexLineCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 	}
 	else
 	{
-		Assert(false);
+		//Assert(false);
+		
 		simplex[0] = simplex[1];
 		simplex[1] = vec2();
 		*simplexType = Simplex_Point;
@@ -554,7 +555,7 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			else
 			{
 				// CASE 5
-				Assert(false);
+				//Assert(false);
 
 				// NOTE		  0
 				// simplex = [A]
@@ -589,7 +590,7 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			else
 			{
 				// CASE 5
-				Assert(false);
+				//Assert(false);
 
 				// NOTE		  0
 				// simplex = [A]
@@ -635,75 +636,74 @@ bool DoSimplexTetrahedron(vec2* simplex, SimplexType* simplexType, vec2* D)
 
 bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
-	bool result1 = false;
-	bool result2 = false;
+	bool result = false;
 
 	switch (*simplexType)
 	{
 	case Simplex_Line:
 	{
-						 result1 = DoSimplexLine(simplex, simplexType, D);
-						 vec2 r1Simplex[4];
-						 r1Simplex[0] = simplex[0];
-						 r1Simplex[1] = simplex[1];
-						 r1Simplex[2] = simplex[2];
-						 r1Simplex[3] = simplex[3];
-						 SimplexType r1simplexType = *simplexType;
-						 vec2 r1D = *D;
+						 vec2 tsimplex[4];
+						 tsimplex[0] = simplex[0];
+						 tsimplex[1] = simplex[1];
+						 tsimplex[2] = simplex[2];
+						 tsimplex[3] = simplex[3];
+						 SimplexType tsimplexType = *simplexType;
+						 vec2 tD = *D;
+						 bool resultCasey = DoSimplexLineCasey(tsimplex, &tsimplexType, &tD);
 
-						 result2 = DoSimplexLineCasey(simplex, simplexType, D);
-						 vec2 r2Simplex[4];
-						 r2Simplex[0] = simplex[0];
-						 r2Simplex[1] = simplex[1];
-						 r2Simplex[2] = simplex[2];
-						 r2Simplex[3] = simplex[3];
-						 SimplexType r2simplexType = *simplexType;
-						 vec2 r2D = *D;
 
-						 Assert(r1Simplex[0] == r2Simplex[0]);
-						 Assert(r1Simplex[1] == r2Simplex[1]);
-						 Assert(r1Simplex[2] == r2Simplex[2]);
-						 Assert(r1Simplex[3] == r2Simplex[3]);
-						 Assert(r1simplexType == r2simplexType);
-						 Assert(r1D == r2D);
-						 Assert(result1 == result2);
-						 
+						 tsimplex[0] = simplex[0];
+						 tsimplex[1] = simplex[1];
+						 tsimplex[2] = simplex[2];
+						 tsimplex[3] = simplex[3];
+						 tsimplexType = *simplexType;
+						 tD = *D;
+						 result = DoSimplexLine(tsimplex, &tsimplexType, &tD);
+
+						 Assert(resultCasey == result);
+
+						 simplex[0] = tsimplex[0];
+						 simplex[1] = tsimplex[1];
+						 simplex[2] = tsimplex[2];
+						 simplex[3] = tsimplex[3];
+						 *simplexType = tsimplexType;
+						 *D = tD;
 						 break;
 	}
 
 	case Simplex_Triangle:
 	{
-							 result1 = DoSimplexTriangle(simplex, simplexType, D);
-							 vec2 r1Simplex[4];
-							 r1Simplex[0] = simplex[0];
-							 r1Simplex[1] = simplex[1];
-							 r1Simplex[2] = simplex[2];
-							 r1Simplex[3] = simplex[3];
-							 SimplexType r1simplexType = *simplexType;
-							 vec2 r1D = *D;
+							 vec2 tsimplex[4];
+							 tsimplex[0] = simplex[0];
+							 tsimplex[1] = simplex[1];
+							 tsimplex[2] = simplex[2];
+							 tsimplex[3] = simplex[3];
+							 SimplexType tsimplexType = *simplexType;
+							 vec2 tD = *D;
+							 bool resultCasey = DoSimplexTriangleCasey(tsimplex, &tsimplexType, &tD);
 
-							 result2 = DoSimplexTriangleCasey(simplex, simplexType, D);
-							 vec2 r2Simplex[4];
-							 r2Simplex[0] = simplex[0];
-							 r2Simplex[1] = simplex[1];
-							 r2Simplex[2] = simplex[2];
-							 r2Simplex[3] = simplex[3];
-							 SimplexType r2simplexType = *simplexType;
-							 vec2 r2D = *D;
+							 tsimplex[0] = simplex[0];
+							 tsimplex[1] = simplex[1];
+							 tsimplex[2] = simplex[2];
+							 tsimplex[3] = simplex[3];
+							 tsimplexType = *simplexType;
+							 tD = *D;
+							 result = DoSimplexTriangle(tsimplex, &tsimplexType, &tD);
 
-							 Assert(r1Simplex[0] == r2Simplex[0]);
-							 Assert(r1Simplex[1] == r2Simplex[1]);
-							 Assert(r1Simplex[2] == r2Simplex[2]);
-							 Assert(r1Simplex[3] == r2Simplex[3]);
-							 Assert(r1simplexType == r2simplexType);
-							 Assert(r1D == r2D);
-							 Assert(result1 == result2);
+							 Assert(resultCasey == result);
+
+							 simplex[0] = tsimplex[0];
+							 simplex[1] = tsimplex[1];
+							 simplex[2] = tsimplex[2];
+							 simplex[3] = tsimplex[3];
+							 *simplexType = tsimplexType;
+							 *D = tD;
 							 break;
 	}
 
 	case Simplex_Tetrahedron:
 	{
-								result2 = DoSimplexTetrahedron(simplex, simplexType, D);
+								result = DoSimplexTetrahedron(simplex, simplexType, D);
 								break;
 	}
 
@@ -713,7 +713,128 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 	}
 	}
 
-	return result2;
+	return result;
+}
+
+
+
+
+
+
+bool GJK(Rectangle shapeA, Rectangle shapeB)
+{
+	bool collisionDetected = false;
+
+	vec2 S = Support(&shapeA, &shapeB, &vec2(1.0f, -1.0f));
+	vec2 simplex[4];
+	SimplexType simplexType = Simplex_Point;
+	simplex[0] = S;
+	vec2 D = -S;
+
+	for (;;)
+	{
+		vec2 A = Support(&shapeA, &shapeB, &D);
+		if (A == vec2(0.0f, 0.0f))
+		{
+			collisionDetected = true;
+			break;
+		}
+		if (dot(A, D) < 0)
+		{
+			collisionDetected = false;
+			break;
+		}
+		simplexType = (SimplexType)(simplexType + 1);
+		simplex[simplexType] = A;
+		if (DoSimplex(simplex, &simplexType, &D))
+		{
+			collisionDetected = true;
+			break;
+		}
+	}
+
+	return collisionDetected;
+}
+
+
+void CollisionTestsRectRect1()
+{
+	Rectangle g;
+	g.origin = vec2(0, 0);
+	g.halfDim = vec2(.5, .5);
+	g.transform = mat3(1,0,0,   0,1,0,   .5,.5,1);
+
+
+	F32 xs[7] = {-1, -.5, 0, .5, 1, 1.5, 2};
+	F32 ys[7] = { 2, 1.5, 1, .5, 0, -.5, -1 };
+	U32 hits[7][7];
+
+	for (U32 y = 0; y < 7; ++y)
+	{
+		for (U32 x = 0; x < 7; ++x)
+		{
+			Rectangle r;
+			r.origin = vec2(0,0);
+			r.halfDim = vec2(.5, .5);
+			r.transform = mat3(1,0,0,   0,1,0,   xs[x],ys[y],1);
+
+			bool collision = GJK(g, r);
+			if (collision)
+			{
+				hits[y][x] = 1;
+			}
+			else
+			{
+				hits[y][x] = 0;
+			}
+		}
+	}
+
+	for (U32 i = 0; i < 7; ++i)
+	{
+		DebugPrintf(1024, "hits %u %u %u %u %u %u %u\n", hits[i][0], hits[i][1], hits[i][2], hits[i][3], hits[i][4], hits[i][5], hits[i][6]);
+	}
+}
+
+// r rotated 45 degrees 
+void CollisionTestsRectRect2()
+{
+	Rectangle g;
+	g.origin = vec2(0, 0);
+	g.halfDim = vec2(.5, .5);
+	g.transform = mat3(1, 0, 0, 0, 1, 0, .5, .5, 1);
+
+	F32 angle = DegreesToRadians(45.0f);
+
+	F32 xs[7] = { -1, -.5, 0, .5, 1, 1.5, 2 };
+	F32 ys[7] = { 2, 1.5, 1, .5, 0, -.5, -1 };
+	U32 hits[7][7];
+
+	for (U32 y = 0; y < 7; ++y)
+	{
+		for (U32 x = 0; x < 7; ++x)
+		{
+			Rectangle r;
+			r.origin = vec2(0, 0);
+			r.halfDim = vec2(.5, .5);
+			r.transform = mat3(1, 0, 0, 0, 1, 0, xs[x], ys[y], 1) * mat3(cos(angle),sin(angle),0,   -sin(angle),cos(angle),0,   0,0,1);
+
+			bool collision = GJK(g, r);
+			if (collision)
+			{
+				hits[y][x] = 1;
+			}
+			else
+			{
+				hits[y][x] = 0;
+			}
+		}
+	}
+
+	for (U32 i = 0; i < 7; ++i)
+	{
+		DebugPrintf(1024, "hits %u %u %u %u %u %u %u\n", hits[i][0], hits[i][1], hits[i][2], hits[i][3], hits[i][4], hits[i][5], hits[i][6]);
+	}
 }
 
 
@@ -721,7 +842,7 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 void CollisionSupportsTests()
 {
 	RandomNumberGenerator shapeRandomGenerator;
-	SeedRandomNumberGenerator(shapeRandomGenerator, 1);
+	SeedRandomNumberGenerator(&shapeRandomGenerator, 1);
 	const U32 numShapes = 100;
 	Rectangle rectangles[numShapes];
 	Circle    circles[numShapes];
@@ -730,43 +851,47 @@ void CollisionSupportsTests()
 	// Init randomly sized and positioned rectangles
 	for (U32 i = 0; i < numShapes; ++i)
 	{
-		Rectangle r = rectangles[i];
+		Rectangle r;
 
-		F32 angle = RandomF32Between(shapeRandomGenerator, 0.0f, 360.0f);
-		F32 scaleXY = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
-		F32 positionX = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
-		F32 positionY = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		F32 angle = RandomF32Between(&shapeRandomGenerator, 0.0f, 360.0f);
+		F32 scaleXY = RandomF32Between(&shapeRandomGenerator, 0.1f, 100.0f);
+		F32 positionX = RandomF32Between(&shapeRandomGenerator, -100.0f, 100.0f);
+		F32 positionY = RandomF32Between(&shapeRandomGenerator, -100.0f, 100.0f);
 		mat3 scale = mat3(scaleXY, 0.0f, 0.0f, 0.0f, scaleXY, 0.0f, 0.0f, 0.0f, 1.0f);
-		mat3 rotation = mat3(cos(angle), sin(angle), 0.0f,   -sin(angle), cos(angle), 0.0f,   0.0f, 0.0f, 1.0f);
-		mat3 translation = mat3(1.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f,   positionX, positionY, 1.0f);
+		mat3 rotation = mat3(cos(angle), sin(angle), 0.0f, -sin(angle), cos(angle), 0.0f, 0.0f, 0.0f, 1.0f);
+		mat3 translation = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, positionX, positionY, 1.0f);
 		r.transform = translation * rotation * scale;
 
+		r.halfDim.x = RandomF32Between(&shapeRandomGenerator, 0.1f, 100.0f);
+		r.halfDim.y = RandomF32Between(&shapeRandomGenerator, 0.1f, 100.0f);
+		
 		r.origin = vec2(0.0f, 0.0f);
 
-		r.halfDim.x = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
-		r.halfDim.y = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
+		rectangles[i] = r;
 	}
 
 	// Init randomly sized and positioned circles
 	for (U32 i = 0; i < numShapes; ++i)
 	{
-		Circle c = circles[i];
+		Circle c;
 
-		c.origin.x = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
-		c.origin.y = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		c.origin.x = RandomF32Between(&shapeRandomGenerator, -100.0f, 100.0f);
+		c.origin.y = RandomF32Between(&shapeRandomGenerator, -100.0f, 100.0f);
 
-		c.radius = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
+		c.radius = RandomF32Between(&shapeRandomGenerator, 0.1f, 100.0f);
+
+		circles[i] = c;
 	}
 
 	// Init randomly sized and positioned triangles
 	for (U32 i = 0; i < numShapes; ++i)
 	{
-		Triangle t = triangles[i];
+		Triangle t;
 
-		F32 angle = RandomF32Between(shapeRandomGenerator, 0.0f, 360.0f);
-		F32 scaleXY = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
-		F32 positionX = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
-		F32 positionY = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		F32 angle = RandomF32Between(&shapeRandomGenerator, 0.0f, 360.0f);
+		F32 scaleXY = RandomF32Between(&shapeRandomGenerator, 0.1f, 100.0f);
+		F32 positionX = RandomF32Between(&shapeRandomGenerator, -100.0f, 100.0f);
+		F32 positionY = RandomF32Between(&shapeRandomGenerator, -100.0f, 100.0f);
 		mat3 scale = mat3(scaleXY, 0.0f, 0.0f, 0.0f, scaleXY, 0.0f, 0.0f, 0.0f, 1.0f);
 		mat3 rotation = mat3(cos(angle), sin(angle), 0.0f, -sin(angle), cos(angle), 0.0f, 0.0f, 0.0f, 1.0f);
 		mat3 translation = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, positionX, positionY, 1.0f);
@@ -779,46 +904,144 @@ void CollisionSupportsTests()
 		// NOTE:
 		// NOTE:  0      1
 		t.points[0] = vec2(0.0f, 0.0f);
-		t.points[1] = t.points[0] + vec2(RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f), RandomF32Between(shapeRandomGenerator, -50.0f, 0.0f));
-		t.points[2] = vec2(RandomF32Between(shapeRandomGenerator, 0.0f, 100.0f), RandomF32Between(shapeRandomGenerator, 0.0f, 50.0f));
+		t.points[1] = t.points[0] + vec2(RandomF32Between(&shapeRandomGenerator, 0.1f, 100.0f), RandomF32Between(&shapeRandomGenerator, -50.0f, 0.0f));
+		t.points[2] = vec2(RandomF32Between(&shapeRandomGenerator, 0.0f, 100.0f), RandomF32Between(&shapeRandomGenerator, 0.0f, 50.0f));
+	
+		triangles[i] = t;
 	}
+
+	U32 numberOfCollisions = 0;
+	U32 numberOfNoncollisions = 0;
+
+	U32 numberOfRectRectCollisions = 0;
+	U32 numberOfRectCircleCollisions = 0;
+	U32 numberOfRectTriangleCollisions = 0;
+	U32 numberOfRectRectNonCollisions = 0;
+	U32 numberOfRectCircleNonCollisions = 0;
+	U32 numberOfRectTriangleNonCollisions = 0;
+
+	U32 numberOfCircleCircleCollisions = 0;
+	U32 numberOfCircleTriangleCollisions = 0;
+	U32 numberOfCircleCircleNonCollisions = 0;
+	U32 numberOfCircleTriangleNonCollisions = 0;
+
+	U32 numberOfTriangleTriangleCollisions = 0;
+	U32 numberOfTriangleTriangleNonCollisions = 0;
 
 	// Check collision against all shapes
 	for (U32 i = 0; i < numShapes; ++i)
 	{
 		for (U32 j = 0; j < numShapes; ++j)
 		{
-			GJK(rectangles[i], rectangles[j]);
+			bool collision = GJK(rectangles[i], rectangles[j]);
+			if (collision)
+			{
+				++numberOfCollisions;
+				++numberOfRectRectCollisions;
+			}
+			else
+			{
+				++numberOfNoncollisions;
+				++numberOfRectRectNonCollisions;
+			}
 		}
 
-		for (U32 j = 0; j < numShapes; ++j)
-		{
-			GJK(rectangles[i], circles[j]);
-		}
-
-		for (U32 j = 0; j < numShapes; ++j)
-		{
-			GJK(rectangles[i], triangles[j]);
-		}
+// 		for (U32 j = 0; j < numShapes; ++j)
+// 		{
+// 			bool collision = GJK(rectangles[i], circles[j]);
+// 			if (collision)
+// 			{
+// 				++numberOfCollisions;
+// 				++numberOfRectCircleCollisions;
+// 			}
+// 			else
+// 			{
+// 				++numberOfNoncollisions;
+// 				++numberOfRectCircleNonCollisions;
+// 			}
+// 		}
+// 
+// 		for (U32 j = 0; j < numShapes; ++j)
+// 		{
+// 			bool collision = GJK(rectangles[i], triangles[j]);
+// 			if (collision)
+// 			{
+// 				++numberOfCollisions;
+// 				++numberOfRectTriangleCollisions;
+// 			}
+// 			else
+// 			{
+// 				++numberOfNoncollisions;
+// 				++numberOfRectTriangleNonCollisions;
+// 			}
+// 		}
 	}
 
-	for (U32 i = 0; i < numShapes; ++i)
-	{
-		for (U32 j = 0; j < numShapes; ++j)
-		{
-			GJK(circles[i], circles[j]);
-		}
+// 	for (U32 i = 0; i < numShapes; ++i)
+// 	{
+// 		for (U32 j = 0; j < numShapes; ++j)
+// 		{
+// 			bool collision = GJK(circles[i], circles[j]);
+// 			if (collision)
+// 			{
+// 				++numberOfCollisions;
+// 				++numberOfCircleCircleCollisions;
+// 			}
+// 			else
+// 			{
+// 				++numberOfNoncollisions;
+// 				++numberOfCircleCircleNonCollisions;
+// 			}
+// 		}
+// 
+// 		for (U32 j = 0; j < numShapes; ++j)
+// 		{
+// 			bool collision = GJK(circles[i], triangles[j]);
+// 			if (collision)
+// 			{
+// 				++numberOfCollisions;
+// 				++numberOfCircleTriangleCollisions;
+// 			}
+// 			else
+// 			{
+// 				++numberOfNoncollisions;
+// 				++numberOfCircleTriangleNonCollisions;
+// 			}
+// 		}
+// 	}
+// 
+// 	for (U32 i = 0; i < numShapes; ++i)
+// 	{
+// 		bool collision = GJK(triangles[i], triangles[i]);
+// 		if (collision)
+// 		{
+// 			++numberOfCollisions;
+// 			++numberOfTriangleTriangleCollisions;
+// 		}
+// 		else
+// 		{
+// 			++numberOfNoncollisions;
+// 			++numberOfTriangleTriangleNonCollisions;
+// 		}
+// 	}
 
-		for (U32 j = 0; j < numShapes; ++j)
-		{
-			GJK(circles[i], triangles[j]);
-		}
-	}
+	DebugPrintf(512, "There were %u collisions in the set.\n", numberOfCollisions);
+	DebugPrintf(512, "There were %u non-collisions in the set.\n\n", numberOfNoncollisions);
 
-	for (U32 i = 0; i < numShapes; ++i)
-	{
-		GJK(triangles[i], triangles[i]);
-	}
+	DebugPrintf(512, "There were %u rect rect collisions in the set.\n", numberOfRectRectCollisions);
+	DebugPrintf(512, "There were %u rect rect non-collisions in the set.\n", numberOfRectRectNonCollisions);
+	DebugPrintf(512, "There were %u rect circle collisions in the set.\n", numberOfRectCircleCollisions);
+	DebugPrintf(512, "There were %u rect circle non-collisions in the set.\n", numberOfRectCircleNonCollisions);
+	DebugPrintf(512, "There were %u rect triangle collisions in the set.\n", numberOfRectTriangleCollisions);
+	DebugPrintf(512, "There were %u rect triangle non-collisions in the set.\n\n", numberOfRectTriangleNonCollisions);
+
+	DebugPrintf(512, "There were %u circle circle collisions in the set.\n", numberOfCircleCircleCollisions);
+	DebugPrintf(512, "There were %u circle circle non-collisions in the set.\n", numberOfCircleCircleNonCollisions);
+	DebugPrintf(512, "There were %u circle triangle collisions in the set.\n", numberOfCircleTriangleCollisions);
+	DebugPrintf(512, "There were %u circle triangle non-collisions in the set.\n\n", numberOfCircleTriangleNonCollisions);
+
+	DebugPrintf(512, "There were %u triangle triangle collisions in the set.\n", numberOfTriangleTriangleCollisions);
+	DebugPrintf(512, "There were %u triangle triangle non-collisions in the set.\n", numberOfTriangleTriangleNonCollisions);
 }
 
 void CollisionDetection()
@@ -886,19 +1109,28 @@ const GLuint textureSpaceDimensionality = 2;
 GLuint texturedQuadVAO;
 
 
-GLuint shaderProgram;
+// Textured Quad Shader Things
+GLuint texturedQuadShaderProgram;
 
 GLuint spriteSamplerLocation;
 GLuint PCMLocation;
 
 GLuint texture;
-
 GLuint textureSampler;
+
+// Solid Color Quad Shader Things
+GLuint solidColorQuadShaderProgram;
+GLuint solidColorQuadPCMLocation;
+GLuint solidColorQuadQuadColorLocation;
+
+
+
 
 struct Entity
 {
 	vec2 position;
 	vec2 scale;
+	F32 rotationAngle;
 	GLuint texture;
 };
 
@@ -907,6 +1139,25 @@ struct Camera
 	vec2 position;
 	vec2 viewArea;
 };
+
+U32 numCollisionEntities = 2;
+Rectangle crG;
+Rectangle crR;
+Camera collisionCamera;
+
+void InitCollisionTestScene()
+{
+	collisionCamera.position = vec2(0,0);
+	collisionCamera.viewArea = vec2(4,4);
+
+	crG.origin = vec2(0,0);
+	crG.halfDim = vec2(.5f, .5f);
+	crG.transform = mat3(1,0,0,   0,1,0,   .5f,.5f,1);
+
+	crR.origin = vec2(0, 0);
+	crR.halfDim = vec2(.5f, .5f);
+	crR.transform = mat3(1,0,0,   0,1,0,   -1,2,1);
+}
 
 U32 numEntities = (10 * 9) + 1;
 Entity* entities;
@@ -919,7 +1170,7 @@ void InitScene()
 	camera.viewArea.x = 10;
 	camera.viewArea.y = 9;
 
-	entities = (Entity*)malloc(sizeof(Entity) * ((10*9)+1));
+	entities = (Entity*)malloc(sizeof(Entity) * numEntities);
 
 	char* tileFilenames[] = {
 		// System Bar
@@ -1075,9 +1326,53 @@ void InitScene()
 
 }
 
+GLuint LoadShaderProgram(char* vertexShaderFilename, char* fragmentShaderFilename)
+{
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	U64 vertexShaderFileSize = GetFileSize(vertexShaderFilename).fileSize;
+	char* vertexShaderSource = (char *)malloc(sizeof(char)* vertexShaderFileSize);
+	const GLint glSizeRead = ReadFile(vertexShaderFilename, vertexShaderSource, vertexShaderFileSize, 0).numberOfBytesRead;
+	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
+	glCompileShader(vertexShader);
+	verifyShaderReturnResult vertexVerification = verifyShader(vertexShader);
+	if (!vertexVerification.compiled)
+	{
+		DebugPrint(vertexVerification.infoLog);
+		return false;
+	}
+
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFilename).fileSize;
+	char* fragmentShaderSource = (char *)malloc(sizeof(char)* fragmentShaderFileSize);
+	const GLint glFragmentShaderSize = ReadFile(fragmentShaderFilename, fragmentShaderSource, fragmentShaderFileSize, 0).numberOfBytesRead;
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
+	glCompileShader(fragmentShader);
+	verifyShaderReturnResult fragmentVerification = verifyShader(fragmentShader);
+	if (!fragmentVerification.compiled)
+	{
+		DebugPrint(fragmentVerification.infoLog);
+		return false;
+	}
+
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+	verifyProgramReturnResult programVerification = verifyProgram(shaderProgram);
+	if (!programVerification.compiled)
+	{
+		DebugPrint(programVerification.infoLog);
+		return false;
+	}
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	return shaderProgram;
+}
+
 bool GameInit()
 {
-	CollisionSupportsTests();
+	CollisionTestsRectRect2();
 	CollisionDetection();
 
 	glClearColor(0.32f, 0.18f, 0.66f, 0.0f);
@@ -1107,49 +1402,9 @@ bool GameInit()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 	glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(textureCoordinates), textureCoordinates);
 
-
-
-	char* vertexShaderFile = "triangles.vert";
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	U64 vertexShaderFileSize = GetFileSize(vertexShaderFile).fileSize;
-	char* vertexShaderSource = (char *)malloc(sizeof(char)* vertexShaderFileSize);
-	const GLint glSizeRead = ReadFile(vertexShaderFile, vertexShaderSource, vertexShaderFileSize, 0).numberOfBytesRead;
-	glShaderSource(vertexShader, 1, &vertexShaderSource, &glSizeRead);
-	glCompileShader(vertexShader);
-	verifyShaderReturnResult vertexVerification = verifyShader(vertexShader);
-	if (!vertexVerification.compiled)
-	{
-		DebugPrint(vertexVerification.infoLog);
-		return false;
-	}
-
-	char* fragmentShaderFile = "triangles.frag";
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	U64 fragmentShaderFileSize = GetFileSize(fragmentShaderFile).fileSize;
-	char* fragmentShaderSource = (char *)malloc(sizeof(char)* fragmentShaderFileSize);
-	const GLint glFragmentShaderSize = ReadFile(fragmentShaderFile, fragmentShaderSource, fragmentShaderFileSize, 0).numberOfBytesRead;
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, &glFragmentShaderSize);
-	glCompileShader(fragmentShader);
-	verifyShaderReturnResult fragmentVerification = verifyShader(fragmentShader);
-	if (!fragmentVerification.compiled)
-	{
-		DebugPrint(fragmentVerification.infoLog);
-		return false;
-	}
-
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	verifyProgramReturnResult programVerification = verifyProgram(shaderProgram);
-	if (!programVerification.compiled)
-	{
-		DebugPrint(programVerification.infoLog);
-		return false;
-	}
-	glUseProgram(shaderProgram);
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader); 
+	texturedQuadShaderProgram = LoadShaderProgram("texturedQuad.vert", "texturedQuad.frag");
+	solidColorQuadShaderProgram = LoadShaderProgram("solidColorQuad.vert", "solidColorQuad.frag");
+	glUseProgram(texturedQuadShaderProgram);
 
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
@@ -1182,52 +1437,58 @@ bool GameInit()
 	glSamplerParameteri(textureSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	// Set the spriteSampler sampler variable in the shader to fetch data from the 0th texture location
-	spriteSamplerLocation = glGetUniformLocation(shaderProgram, "spriteSampler");
+	spriteSamplerLocation = glGetUniformLocation(texturedQuadShaderProgram, "spriteSampler");
 	glUniform1i(spriteSamplerLocation, 0);
+	PCMLocation = glGetUniformLocation(texturedQuadShaderProgram, "PCM");
 
+	solidColorQuadPCMLocation = glGetUniformLocation(solidColorQuadShaderProgram, "PCM");
+	solidColorQuadQuadColorLocation = glGetUniformLocation(solidColorQuadShaderProgram, "quadColor");
 
-	PCMLocation = glGetUniformLocation(shaderProgram, "PCM");
-
-	InitScene();
+	//InitScene();
+	InitCollisionTestScene();
 
 	return true;
 }
 
 
+vec2 crRPos = vec2(-1,2);
+F32 crRRotationAngle = 0;
 
 void GameUpdate(F32 deltaTime)
 {
-	if (GetKey(KeyCode_W))
-	{
-		entities[linkEntityLocation].position += vec2(0.0f, 2*deltaTime);
-	}
-	if (GetKey(KeyCode_S))
-	{
-		entities[linkEntityLocation].position += vec2(0.0f, 2 * -deltaTime);
-	}
-	if (GetKey(KeyCode_A))
-	{
-		entities[linkEntityLocation].position += vec2(2 * -deltaTime, 0.0f);
-	}
-	if (GetKey(KeyCode_D))
-	{
-		entities[linkEntityLocation].position += vec2(2 * deltaTime, 0.0f);
-	}
-
-	camera.position = entities[linkEntityLocation].position;
+// 	if (GetKey(KeyCode_W))
+// 	{
+// 		entities[linkEntityLocation].position += vec2(0.0f, 2*deltaTime);
+// 	}
+// 	if (GetKey(KeyCode_S))
+// 	{
+// 		entities[linkEntityLocation].position += vec2(0.0f, 2 * -deltaTime);
+// 	}
+// 	if (GetKey(KeyCode_A))
+// 	{
+// 		entities[linkEntityLocation].position += vec2(2 * -deltaTime, 0.0f);
+// 	}
+// 	if (GetKey(KeyCode_D))
+// 	{
+// 		entities[linkEntityLocation].position += vec2(2 * deltaTime, 0.0f);
+// 	}
+// 
+// 	camera.position = entities[linkEntityLocation].position;
 
 
 	// NOTE: Setting the viewport each frame shouldnt happen
-	glViewport(0, 0, 600, 540);
+	//glViewport(0, 0, 600, 540);
+	glViewport(0, 0, 800, 800);
 
 	// NOTE: Clear the buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	// NOTE: Bind the VAO that holds the vertex information for the current object.
-	glBindVertexArray(texturedQuadVAO);
+	//glBindVertexArray(texturedQuadVAO);
 
 	// NOTE: Bind the shader that will be used to draw it.
-	glUseProgram(shaderProgram);
+	//glUseProgram(texturedQuadShaderProgram);
+	glUseProgram(solidColorQuadShaderProgram);
 
 	// NOTE: Bind the texture that represents the gameobject, also make sure the texture is active.
 	//glActiveTexture(GL_TEXTURE0);
@@ -1236,24 +1497,93 @@ void GameUpdate(F32 deltaTime)
 	// NOTE: Draw this bitch.
 	//glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 
-	for (U32 i = 0; i < numEntities; ++i)
-	{
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, entities[i].texture);
-		
-		mat3 Bmodel = mat3(1.0f*entities[i].scale.x, 0.0f, 0.0f, 0.0f, 1.0f*entities[i].scale.y, 0.0f, entities[i].position.x, entities[i].position.y, 1.0f);
-		mat3 Ccamera = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, camera.position.x, camera.position.y, 1.0f);
-		mat3 Oprojection = mat3((2.0f / camera.viewArea.x), 0.0f, 0.0f, 0.0f, (2.0f / camera.viewArea.y), 0.0f, 0.0f, 0.0f, 1.0f);
-		mat3 PCM = Oprojection * inverse(Ccamera) * Bmodel;
-		glUniformMatrix3fv(PCMLocation, 1, GL_FALSE, &PCM[0][0]);
+// 	for (U32 i = 0; i < numEntities; ++i)
+// 	{
+// 		glActiveTexture(GL_TEXTURE0);
+// 		glBindTexture(GL_TEXTURE_2D, entities[i].texture);
+// 		
+// 		mat3 Bmodel = mat3(1.0f*entities[i].scale.x, 0.0f, 0.0f, 0.0f, 1.0f*entities[i].scale.y, 0.0f, entities[i].position.x, entities[i].position.y, 1.0f);
+// 		mat3 Ccamera = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, camera.position.x, camera.position.y, 1.0f);
+// 		mat3 Oprojection = mat3((2.0f / camera.viewArea.x), 0.0f, 0.0f, 0.0f, (2.0f / camera.viewArea.y), 0.0f, 0.0f, 0.0f, 1.0f);
+// 		mat3 PCM = Oprojection * inverse(Ccamera) * Bmodel;
+// 		glUniformMatrix3fv(PCMLocation, 1, GL_FALSE, &PCM[0][0]);
+// 
+// 		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+// 	}
 
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	F32 angle = DegreesToRadians(45.0f);
+ 	if (GetKeyDown(KeyCode_W))
+ 	{
+		crRPos.y += 0.5f;
+ 	}
+	if (GetKeyDown(KeyCode_S))
+ 	{
+		crRPos.y -= 0.5f;
+ 	}
+	if (GetKeyDown(KeyCode_A))
+ 	{
+		crRPos.x -= 0.5f;
+ 	}
+	if (GetKeyDown(KeyCode_D))
+ 	{
+		crRPos.x += 0.5f;
+ 	}
+	if (GetKeyDown(KeyCode_K))
+	{
+		crRRotationAngle += angle;
 	}
+	if (GetKeyDown(KeyCode_L))
+	{
+		crRRotationAngle -= angle;
+	}
+
+	vec4 darkRed = vec4(0.898f, 0.224f, 0.208f, 1.0f);
+	vec4 lightRed = vec4(0.957f, 0.263f, 0.212f, 1.0f);
+
+	vec4 darkGreen = vec4(0.263f, 0.627f, 0.278f, 1.0f);
+	vec4 lightGreen = vec4(0.298f, 0.686f, 0.314f, 1.0f);
+
+	mat3 Ccamera = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, collisionCamera.position.x, collisionCamera.position.y, 1.0f);
+ 	mat3 Oprojection = mat3((2.0f / collisionCamera.viewArea.x), 0.0f, 0.0f, 0.0f, (2.0f / collisionCamera.viewArea.y), 0.0f, 0.0f, 0.0f, 1.0f);
+	
+	
+	vec4 crGColor;
+	vec4 crRColor;
+	mat3 BmodelG = crG.transform;
+	mat3 BmodelR = mat3(1, 0, 0, 0, 1, 0, crRPos.x, crRPos.y, 1) * mat3(cos(crRRotationAngle), sin(crRRotationAngle), 0, -sin(crRRotationAngle), cos(crRRotationAngle), 0, 0, 0, 1);
+	crR.transform = BmodelR;
+	bool collision = GJK(crR, crG);
+	if (collision)
+	{
+		crGColor = lightGreen;
+		crRColor = darkGreen;
+	}
+	else
+	{
+		crGColor = lightRed;
+		crRColor = darkRed;
+	}
+	
+	
+	// NOTE: COLLISION RECTANGLE G
+ 	mat3 PCM = Oprojection * inverse(Ccamera) * BmodelG;
+	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadQuadColorLocation, 1, &crGColor[0]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+
+
+
+	// NOTE: COLLISION RECTANGLE R
+	PCM = Oprojection * inverse(Ccamera) * BmodelR;
+	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadQuadColorLocation, 1, &crRColor[0]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+
 }
 
 bool GameShutdown()
 {
-	glDeleteProgram(shaderProgram);
+	glDeleteProgram(texturedQuadShaderProgram);
 	return true;
 }
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "Types.h"
 
 inline void SetBit(U8* buffer, U8 code, U8 val)

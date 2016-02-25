@@ -1,3 +1,4 @@
+#pragma once
 #include "Types.h"
 
 bool CreateFile(char* filename, bool overwriteIfExists);
