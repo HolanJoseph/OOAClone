@@ -11,6 +11,7 @@
 //#define NDEBUG
 #include <cassert>
 #include <stdarg.h>
+#include <random>
 
 #include "Types.h"
 #include "Math.h"

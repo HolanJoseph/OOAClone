@@ -7,6 +7,7 @@
 #include "Math.h"
 #include "BitManip.h"
 #include "Util.h"
+#include "RandomNumberGenerator.h"
 
 #include "GameAPI.h"
 #include "DebugAPI.h"
@@ -14,7 +15,7 @@
 #include "FileAPI.h"
 
 
-struct Square
+struct Rectangle
 {
 	mat3 transform;
 
@@ -22,7 +23,7 @@ struct Square
 	vec2 halfDim;
 };
 
-vec2 Support(Square* A, vec2 direction)
+vec2 Support(Rectangle* A, vec2 direction)
 {
 	vec3 AiPoints[4] = {
 		A->transform * vec3(A->origin.x - A->halfDim.x, A->origin.y - A->halfDim.y, 1.0f),
@@ -216,7 +217,7 @@ vec3 Support(Capsule* A, vec3 direction)
 /*
 	2D COMBO SUPPORTS
 */
-vec2 Support(Square* A, Square* B, vec2* direction)
+vec2 Support(Rectangle* A, Rectangle* B, vec2* direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec2 maxA = Support(A, *direction);
@@ -227,7 +228,7 @@ vec2 Support(Square* A, Square* B, vec2* direction)
 	return result;
 }
 
-vec2 Support(Square* A, Circle* B, vec2* direction)
+vec2 Support(Rectangle* A, Circle* B, vec2* direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec2 maxA = Support(A, *direction);
@@ -238,7 +239,7 @@ vec2 Support(Square* A, Circle* B, vec2* direction)
 	return result;
 }
 
-vec2 Support(Square* A, Triangle* B, vec2* direction)
+vec2 Support(Rectangle* A, Triangle* B, vec2* direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec2 maxA = Support(A, *direction);
@@ -260,7 +261,7 @@ vec2 Support(Circle* A, Circle* B, vec2* direction)
 	return result;
 }
 
-vec2 Support(Circle* A, Square* B, vec2* direction)
+vec2 Support(Circle* A, Rectangle* B, vec2* direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec2 maxA = Support(A, *direction);
@@ -293,7 +294,7 @@ vec2 Support(Triangle* A, Triangle* B, vec2* direction)
 	return result;
 }
 
-vec2 Support(Triangle* A, Square* B, vec2* direction)
+vec2 Support(Triangle* A, Rectangle* B, vec2* direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec2 maxA = Support(A, *direction);
@@ -715,33 +716,122 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 	return result2;
 }
 
+
+// NOTE: These tests are to test whether simplified GJK provides the same results as Casey's implementation.
+void CollisionSupportsTests()
+{
+	RandomNumberGenerator shapeRandomGenerator;
+	SeedRandomNumberGenerator(shapeRandomGenerator, 1);
+	const U32 numShapes = 100;
+	Rectangle rectangles[numShapes];
+	Circle    circles[numShapes];
+	Triangle  triangles[numShapes];
+
+	// Init randomly sized and positioned rectangles
+	for (U32 i = 0; i < numShapes; ++i)
+	{
+		Rectangle r = rectangles[i];
+
+		F32 angle = RandomF32Between(shapeRandomGenerator, 0.0f, 360.0f);
+		F32 scaleXY = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
+		F32 positionX = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		F32 positionY = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		mat3 scale = mat3(scaleXY, 0.0f, 0.0f, 0.0f, scaleXY, 0.0f, 0.0f, 0.0f, 1.0f);
+		mat3 rotation = mat3(cos(angle), sin(angle), 0.0f,   -sin(angle), cos(angle), 0.0f,   0.0f, 0.0f, 1.0f);
+		mat3 translation = mat3(1.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f,   positionX, positionY, 1.0f);
+		r.transform = translation * rotation * scale;
+
+		r.origin = vec2(0.0f, 0.0f);
+
+		r.halfDim.x = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
+		r.halfDim.y = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
+	}
+
+	// Init randomly sized and positioned circles
+	for (U32 i = 0; i < numShapes; ++i)
+	{
+		Circle c = circles[i];
+
+		c.origin.x = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		c.origin.y = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+
+		c.radius = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
+	}
+
+	// Init randomly sized and positioned triangles
+	for (U32 i = 0; i < numShapes; ++i)
+	{
+		Triangle t = triangles[i];
+
+		F32 angle = RandomF32Between(shapeRandomGenerator, 0.0f, 360.0f);
+		F32 scaleXY = RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f);
+		F32 positionX = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		F32 positionY = RandomF32Between(shapeRandomGenerator, -100.0f, 100.0f);
+		mat3 scale = mat3(scaleXY, 0.0f, 0.0f, 0.0f, scaleXY, 0.0f, 0.0f, 0.0f, 1.0f);
+		mat3 rotation = mat3(cos(angle), sin(angle), 0.0f, -sin(angle), cos(angle), 0.0f, 0.0f, 0.0f, 1.0f);
+		mat3 translation = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, positionX, positionY, 1.0f);
+		t.transform = translation * rotation * scale;
+
+		t.origin = vec2(0.0f, 0.0f);
+
+		// NOTE: Counter clockwise winding 
+		// NOTE:     2
+		// NOTE:
+		// NOTE:  0      1
+		t.points[0] = vec2(0.0f, 0.0f);
+		t.points[1] = t.points[0] + vec2(RandomF32Between(shapeRandomGenerator, 0.1f, 100.0f), RandomF32Between(shapeRandomGenerator, -50.0f, 0.0f));
+		t.points[2] = vec2(RandomF32Between(shapeRandomGenerator, 0.0f, 100.0f), RandomF32Between(shapeRandomGenerator, 0.0f, 50.0f));
+	}
+
+	// Check collision against all shapes
+	for (U32 i = 0; i < numShapes; ++i)
+	{
+		for (U32 j = 0; j < numShapes; ++j)
+		{
+			GJK(rectangles[i], rectangles[j]);
+		}
+
+		for (U32 j = 0; j < numShapes; ++j)
+		{
+			GJK(rectangles[i], circles[j]);
+		}
+
+		for (U32 j = 0; j < numShapes; ++j)
+		{
+			GJK(rectangles[i], triangles[j]);
+		}
+	}
+
+	for (U32 i = 0; i < numShapes; ++i)
+	{
+		for (U32 j = 0; j < numShapes; ++j)
+		{
+			GJK(circles[i], circles[j]);
+		}
+
+		for (U32 j = 0; j < numShapes; ++j)
+		{
+			GJK(circles[i], triangles[j]);
+		}
+	}
+
+	for (U32 i = 0; i < numShapes; ++i)
+	{
+		GJK(triangles[i], triangles[i]);
+	}
+}
+
 void CollisionDetection()
 {
-// 	vec2 d = vec2(1, -2);
-// 	vec2 p1 = vec2(-3, 6);
-// 	vec2 p2 = vec2(-6, 1 ); 
-// 	vec2 p3 = vec2(-6, -5);
-// 	vec2 p4 = vec2(0, -5);
-// 	vec2 p5 = vec2(6, -5);
-// 	vec2 p6 = vec2(6, 1);
-// 	vec2 p7 = vec2(3, 6);
-// 
-// 	F32 d1 = dot(d, p1);
-// 	F32 d2 = dot(d, p2);
-// 	F32 d3 = dot(d, p3);
-// 	F32 d4 = dot(d, p4);
-// 	F32 d5 = dot(d, p5);
-// 	F32 d6 = dot(d, p6);
-// 	F32 d7 = dot(d, p7);
 
 	bool collisionDetected = false;
 
-	Square shapeA;
+	Rectangle shapeA;
 	shapeA.transform = mat3(1.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 1.0f);
 	shapeA.origin = vec2(2.0f, 2.0f);
 	shapeA.halfDim = vec2(1.0f, 1.0f);
 
-	Square shapeB;
+	Rectangle shapeB;
 	shapeB.transform = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 	shapeB.origin = vec2(3.0f, 3.0f);
 	shapeB.halfDim = vec2(1.0f, 1.0f);
@@ -987,6 +1077,7 @@ void InitScene()
 
 bool GameInit()
 {
+	CollisionSupportsTests();
 	CollisionDetection();
 
 	glClearColor(0.32f, 0.18f, 0.66f, 0.0f);
