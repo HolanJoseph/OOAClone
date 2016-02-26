@@ -1134,6 +1134,9 @@ GLuint solidColorQuadShaderProgram;
 GLuint solidColorQuadPCMLocation;
 GLuint solidColorQuadQuadColorLocation;
 
+GLuint solidColorCircleInPointShaderProgram;
+GLuint solidColorCircleInPointPCMLocation;
+GLuint solidColorCircleInPointCircleColorLocation;
 
 
 
@@ -1155,16 +1158,21 @@ U32 numCollisionEntities = 2;
 Rectangle cs2Rectangle;
 Rectangle cs1Rectangle;
 Triangle  cs1Triangle;
+Circle    cs1Circle;
 Camera collisionCamera;
 
 GLuint gridVAO;
 #define numGridLines 10
-#define gridLineVectorElements 2
+#define gridLinePointDimensionality 2
 #define pointsPerLine 2
 
 GLuint equalateralTriangleVAO;
 #define numPointsInTriangle 3
 #define equalateralTrianglePointDimensionality 2
+
+GLuint circleVAO;
+#define numPointsInCircle 1
+#define circlePointDimensionality 2
 
 void InitCollisionTestScene()
 {
@@ -1181,7 +1189,7 @@ void InitCollisionTestScene()
 	// Grid
 	glGenVertexArrays(1, &gridVAO);
 	glBindVertexArray(gridVAO);
-	GLfloat gridPositions[(numGridLines + numGridLines + 2) * pointsPerLine * gridLineVectorElements] = {
+	GLfloat gridPositions[(numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality] = {
 		// varying y values
 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f,
 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f,
@@ -1238,6 +1246,22 @@ void InitCollisionTestScene()
 	cs1Triangle.points[0] = vec2(equalateralTrianglePoints[0], equalateralTrianglePoints[1]);
 	cs1Triangle.points[1] = vec2(equalateralTrianglePoints[2], equalateralTrianglePoints[3]);
 	cs1Triangle.points[2] = vec2(equalateralTrianglePoints[4], equalateralTrianglePoints[5]);
+
+	// Circle
+	glGenVertexArrays(1, &circleVAO);
+	glBindVertexArray(circleVAO);
+
+	GLfloat circleOrigin[2] = {0.0f, 0.0f};
+	GLuint circleVertexBuffer;
+	glGenBuffers(1, &circleVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, circleVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(circleOrigin), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(circleOrigin), circleOrigin);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+
+	cs1Circle.origin = vec2(0, 0);
+	cs1Circle.radius = 0.5f;
 }
 
 U32 numEntities = (10 * 9) + 1;
@@ -1485,6 +1509,7 @@ bool GameInit()
 
 	texturedQuadShaderProgram = LoadShaderProgram("texturedQuad.vert", "texturedQuad.frag");
 	solidColorQuadShaderProgram = LoadShaderProgram("solidColorQuad.vert", "solidColorQuad.frag");
+	solidColorCircleInPointShaderProgram = LoadShaderProgram("solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
 	glUseProgram(texturedQuadShaderProgram);
 
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
@@ -1525,6 +1550,9 @@ bool GameInit()
 	solidColorQuadPCMLocation = glGetUniformLocation(solidColorQuadShaderProgram, "PCM");
 	solidColorQuadQuadColorLocation = glGetUniformLocation(solidColorQuadShaderProgram, "quadColor");
 
+	solidColorCircleInPointPCMLocation = glGetUniformLocation(solidColorCircleInPointShaderProgram, "PCM");
+	solidColorCircleInPointCircleColorLocation = glGetUniformLocation(solidColorCircleInPointShaderProgram, "circleColor");
+
 	//InitScene();
 	InitCollisionTestScene();
 
@@ -1554,8 +1582,8 @@ vec4 cs1Color;
 vec4 cs2Color;
 
 U32 sampleNumber = 0;
-bool detailsMode = false;
-bool showcs2 = true;
+bool detailsMode = true;
+bool showcs2 = false;
 
 void GameUpdate(F32 deltaTime)
 {
@@ -1590,13 +1618,14 @@ void GameUpdate(F32 deltaTime)
 
 
 	// NOTE: Draw grid
+	glUseProgram(solidColorQuadShaderProgram);
 	glBindVertexArray(gridVAO);
 	mat3 Ccamera = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, collisionCamera.position.x, collisionCamera.position.y, 1.0f);
 	mat3 Oprojection = mat3((2.0f / collisionCamera.viewArea.x), 0.0f, 0.0f, 0.0f, (2.0f / collisionCamera.viewArea.y), 0.0f, 0.0f, 0.0f, 1.0f);
 	mat3 PCM = Oprojection * inverse(Ccamera) * mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
 	glUniform4fv(solidColorQuadQuadColorLocation, 1, &vec4(.933, .933, .933, 1)[0]);
-	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLineVectorElements);
+	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality);
 
 
 
@@ -1605,7 +1634,7 @@ void GameUpdate(F32 deltaTime)
 
 	// NOTE: Bind the shader that will be used to draw it.
 	//glUseProgram(texturedQuadShaderProgram);
-	glUseProgram(solidColorQuadShaderProgram);
+	//glUseProgram(solidColorQuadShaderProgram);
 
 	// NOTE: Bind the texture that represents the gameobject, also make sure the texture is active.
 	//glActiveTexture(GL_TEXTURE0);
@@ -1678,6 +1707,7 @@ void GameUpdate(F32 deltaTime)
 	mat3 Bmodelcs1 = mat3(1, 0, 0, 0, 1, 0, cs1Pos.x, cs1Pos.y, 1) * mat3(cos(cs1RotationAngle), sin(cs1RotationAngle), 0, -sin(cs1RotationAngle), cos(cs1RotationAngle), 0, 0, 0, 1);
 	cs1Rectangle.transform = Bmodelcs1;
 	cs1Triangle.transform = Bmodelcs1;
+	cs1Circle.origin = cs1Pos;
 	bool collision = false;
 	if (cs1Type == cs_Rectangle)
 	{
@@ -1686,6 +1716,10 @@ void GameUpdate(F32 deltaTime)
 	if (cs1Type == cs_Triangle)
 	{
 		collision = GJK(cs1Triangle, cs2Rectangle);
+	}
+	if (cs1Type == cs_Circle)
+	{
+		collision = GJK(cs1Circle, cs2Rectangle);
 	}
 
 	if (collision)
@@ -1698,9 +1732,10 @@ void GameUpdate(F32 deltaTime)
 		cs2Color = lightRed;
 		cs1Color = darkRed;
 	}
-	
+
 
 	// cs2
+	glUseProgram(solidColorQuadShaderProgram);
 	glBindVertexArray(texturedQuadVAO);
 	PCM = Oprojection * inverse(Ccamera) * Bmodelcs2;
 	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
@@ -1708,6 +1743,7 @@ void GameUpdate(F32 deltaTime)
 	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 	
 	// cs1
+	glUseProgram(solidColorQuadShaderProgram);
 	PCM = Oprojection * inverse(Ccamera) * Bmodelcs1;
 	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
 	glUniform4fv(solidColorQuadQuadColorLocation, 1, &cs1Color[0]);
@@ -1722,6 +1758,16 @@ void GameUpdate(F32 deltaTime)
 		// When cs1 is a triangle
 		glBindVertexArray(equalateralTriangleVAO);
 		glDrawArrays(GL_TRIANGLES, 0, numPointsInTriangle*equalateralTrianglePointDimensionality);
+	}
+	if (cs1Type == cs_Circle)
+	{
+		glUseProgram(solidColorCircleInPointShaderProgram);
+		glBindVertexArray(circleVAO);
+		glUniformMatrix3fv(solidColorCircleInPointPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glUniform4fv(solidColorCircleInPointCircleColorLocation, 1, &cs1Color[0]);
+		F32 unitCircleSize = 800.0f / ((F32)numGridLines/2.0f);
+		glPointSize(cs1Circle.radius * unitCircleSize);
+		glDrawArrays(GL_POINTS, 0, 1);
 	}
 
 	// Print out collision information
@@ -1767,6 +1813,12 @@ void GameUpdate(F32 deltaTime)
 			vec3 cs1p1 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[1].x, cs1Triangle.origin.y + cs1Triangle.points[1].y, 1.0f);
 			vec3 cs1p2 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[2].x, cs1Triangle.origin.y + cs1Triangle.points[2].y, 1.0f);
 			DebugPrintf(1024, "Transformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\n\n", cs1p0.x, cs1p0.y, cs1p1.x, cs1p1.y, cs1p2.x, cs1p2.y);
+		}
+		else if (cs1Type == cs_Circle)
+		{
+			DebugPrint("COLLISION SHAPE 1(CIRCLE)\n");
+			DebugPrintf(1024, "origin = (%f, %f)\n", cs1Circle.origin.x, cs1Circle.origin.y);
+			DebugPrintf(512, "radius = %f\n\n", cs1Circle.radius);
 		}
 		
 		if (showcs2)
