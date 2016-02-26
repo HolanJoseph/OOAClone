@@ -709,6 +709,14 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 	code = KeyCode_SPACEBAR;
 	break;
 
+	case 0x4D:
+	code = KeyCode_M;
+	break;
+
+	case 0x4E:
+	code = KeyCode_N;
+	break;
+
 	default:
 	code = KeyCode_NULL;
 	break;

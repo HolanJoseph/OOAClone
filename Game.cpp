@@ -83,9 +83,9 @@ struct Triangle
 vec2 Support(Triangle* A, vec2 direction)
 {
 	vec3 AiPoints[3] = {
-		A->transform * vec3(A->origin.x - A->points[0].x, A->origin.y - A->points[0].y, 1.0f),
-		A->transform * vec3(A->origin.x - A->points[1].x, A->origin.y + A->points[1].y, 1.0f),
-		A->transform * vec3(A->origin.x + A->points[2].x, A->origin.y - A->points[2].y, 1.0f)
+		A->transform * vec3(A->origin.x + A->points[0].x, A->origin.y + A->points[0].y, 1.0f),
+		A->transform * vec3(A->origin.x + A->points[1].x, A->origin.y + A->points[1].y, 1.0f),
+		A->transform * vec3(A->origin.x + A->points[2].x, A->origin.y + A->points[2].y, 1.0f)
 	};
 	F32 AiDots[3] = {
 		dot(direction, vec2(AiPoints[0].x, AiPoints[0].y)),
@@ -1553,6 +1553,9 @@ vec4 cs1Color;
 
 vec4 cs2Color;
 
+U32 sampleNumber = 0;
+bool detailsMode = false;
+bool showcs2 = true;
 
 void GameUpdate(F32 deltaTime)
 {
@@ -1659,9 +1662,13 @@ void GameUpdate(F32 deltaTime)
 		}
 		DebugPrintf(512, "crRType = %i\n", cs1Type);
 	}
-	if (GetKeyDown(KeyCode_SPACEBAR))
+	if (GetKeyDown(KeyCode_M))
 	{
-		DebugPrint("space down\n");
+		detailsMode = !detailsMode;
+	}
+	if (GetKeyDown(KeyCode_N))
+	{
+		showcs2 = !showcs2;
 	}
 
 	
@@ -1715,6 +1722,61 @@ void GameUpdate(F32 deltaTime)
 		// When cs1 is a triangle
 		glBindVertexArray(equalateralTriangleVAO);
 		glDrawArrays(GL_TRIANGLES, 0, numPointsInTriangle*equalateralTrianglePointDimensionality);
+	}
+
+	// Print out collision information
+	if (GetKeyDown(KeyCode_SPACEBAR))
+	{
+		DebugPrintf(512, "\n\n\nCOLLISION SAMPLE %u\n\n", sampleNumber++);
+		(collision) ? DebugPrint("collision = TRUE\n\n") : DebugPrint("collision = FALSE\n\n");
+
+		if (cs1Type == cs_Rectangle)
+		{
+			DebugPrint("COLLISION SHAPE 1(RECTANGLE)\n");
+
+			if (detailsMode)
+			{
+				DebugPrintf(1024, "origin = (%f, %f)\n", cs1Rectangle.origin.x, cs1Rectangle.origin.y);
+				DebugPrintf(1024, "halfDim = (%f, %f)\n\n", cs1Rectangle.halfDim.x, cs1Rectangle.halfDim.y);
+				mat3 t = cs1Rectangle.transform;
+				DebugPrintf(2048, "transform = %f %f %f\n            %f %f %f\n            %f %f %f\n\n", t[0][0], t[1][0], t[2][0], t[0][1], t[1][1], t[2][1], t[0][2], t[1][2], t[2][2]);
+			}
+
+			vec3 cs1p0 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x - cs1Rectangle.halfDim.x, cs1Rectangle.origin.y - cs1Rectangle.halfDim.y, 1.0f);
+			vec3 cs1p1 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x - cs1Rectangle.halfDim.x, cs1Rectangle.origin.y + cs1Rectangle.halfDim.y, 1.0f);
+			vec3 cs1p2 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x + cs1Rectangle.halfDim.x, cs1Rectangle.origin.y - cs1Rectangle.halfDim.y, 1.0f);
+			vec3 cs1p3 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x + cs1Rectangle.halfDim.x, cs1Rectangle.origin.y + cs1Rectangle.halfDim.y, 1.0f);
+			DebugPrintf(1024, "Transformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\np[3] = (%f,%f)\n\n", cs1p0.x, cs1p0.y, cs1p2.x, cs1p2.y, cs1p3.x, cs1p3.y, cs1p1.x, cs1p1.y);
+		}
+		else if (cs1Type == cs_Triangle)
+		{
+			DebugPrint("COLLISION SHAPE 1(TRIANGLE)\n");
+
+			if (detailsMode)
+			{
+				DebugPrintf(1024, "origin = (%f, %f)\n\n", cs1Triangle.origin.x, cs1Triangle.origin.y);
+				mat3 t = cs1Triangle.transform;
+				DebugPrintf(2048, "transform = %f %f %f\n            %f %f %f\n            %f %f %f\n", t[0][0], t[1][0], t[2][0], t[0][1], t[1][1], t[2][1], t[0][2], t[1][2], t[2][2]);
+				vec2 p0 = cs1Triangle.points[0];
+				vec2 p1 = cs1Triangle.points[1];
+				vec2 p2 = cs1Triangle.points[2];
+				DebugPrintf(2048, "Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\n\n", p0.x, p0.y, p1.x, p1.y, p2.x, p2.y);
+			}
+
+			vec3 cs1p0 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[0].x, cs1Triangle.origin.y + cs1Triangle.points[0].y, 1.0f);
+			vec3 cs1p1 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[1].x, cs1Triangle.origin.y + cs1Triangle.points[1].y, 1.0f);
+			vec3 cs1p2 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[2].x, cs1Triangle.origin.y + cs1Triangle.points[2].y, 1.0f);
+			DebugPrintf(1024, "Transformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\n\n", cs1p0.x, cs1p0.y, cs1p1.x, cs1p1.y, cs1p2.x, cs1p2.y);
+		}
+		
+		if (showcs2)
+		{
+			vec3 cs2p0 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x - cs2Rectangle.halfDim.x, cs2Rectangle.origin.y - cs2Rectangle.halfDim.y, 1.0f);
+			vec3 cs2p1 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x - cs2Rectangle.halfDim.x, cs2Rectangle.origin.y + cs2Rectangle.halfDim.y, 1.0f);
+			vec3 cs2p2 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x + cs2Rectangle.halfDim.x, cs2Rectangle.origin.y - cs2Rectangle.halfDim.y, 1.0f);
+			vec3 cs2p3 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x + cs2Rectangle.halfDim.x, cs2Rectangle.origin.y + cs2Rectangle.halfDim.y, 1.0f);
+			DebugPrintf(1024, "COLLISION SHAPE 2(RECTANGLE)\nTransformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\np[3] = (%f,%f)\n", cs2p0.x, cs2p0.y, cs2p2.x, cs2p2.y, cs2p3.x, cs2p3.y, cs2p1.x, cs2p1.y);
+		}
 	}
 }
 
