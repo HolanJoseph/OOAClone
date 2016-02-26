@@ -1141,32 +1141,35 @@ struct Camera
 };
 
 U32 numCollisionEntities = 2;
-Rectangle crG;
-Rectangle crR;
+Rectangle cs2Rectangle;
+Rectangle cs1Rectangle;
+Triangle  cs1Triangle;
 Camera collisionCamera;
 
 GLuint gridVAO;
-
-
 #define numGridLines 10
 #define gridLineVectorElements 2
 #define pointsPerLine 2
+
+GLuint equalateralTriangleVAO;
+#define numPointsInTriangle 3
+#define equalateralTrianglePointDimensionality 2
+
 void InitCollisionTestScene()
 {
 	collisionCamera.position = vec2(0,0);
 	collisionCamera.viewArea = vec2(10,10);
 
-	crG.origin = vec2(0,0);
-	crG.halfDim = vec2(.5f, .5f);
-	crG.transform = mat3(1,0,0,   0,1,0,   .5f,.5f,1);
+	cs2Rectangle.origin = vec2(0,0);
+	cs2Rectangle.halfDim = vec2(.5f, .5f);
+	cs2Rectangle.transform = mat3(1,0,0,   0,1,0,   .5f,.5f,1);
 
-	crR.origin = vec2(0, 0);
-	crR.halfDim = vec2(.5f, .5f);
-	crR.transform = mat3(1,0,0,   0,1,0,   -1,2,1);
+	cs1Rectangle.origin = vec2(0, 0);
+	cs1Rectangle.halfDim = vec2(.5f, .5f);
 
+	// Grid
 	glGenVertexArrays(1, &gridVAO);
 	glBindVertexArray(gridVAO);
-
 	GLfloat gridPositions[(numGridLines + numGridLines + 2) * pointsPerLine * gridLineVectorElements] = {
 		// varying y values
 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f,
@@ -1201,6 +1204,29 @@ void InitCollisionTestScene()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(gridPositions), gridPositions);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
+
+
+	// Equilateral triangle
+	glGenVertexArrays(1, &equalateralTriangleVAO);
+	glBindVertexArray(equalateralTriangleVAO);
+
+	GLfloat equalateralTrianglePoints[numPointsInTriangle * equalateralTrianglePointDimensionality] = {
+		-0.6f, -0.3f,
+		 0.6f, -0.3f,
+		 0.0f,  0.6f
+	};
+	GLuint equalateralTriangleVertexBuffer;
+	glGenBuffers(1, &equalateralTriangleVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, equalateralTriangleVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(equalateralTrianglePoints), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(equalateralTrianglePoints), equalateralTrianglePoints);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+
+	cs1Triangle.origin = vec2(0, 0);
+	cs1Triangle.points[0] = vec2(equalateralTrianglePoints[0], equalateralTrianglePoints[1]);
+	cs1Triangle.points[1] = vec2(equalateralTrianglePoints[2], equalateralTrianglePoints[3]);
+	cs1Triangle.points[2] = vec2(equalateralTrianglePoints[4], equalateralTrianglePoints[5]);
 }
 
 U32 numEntities = (10 * 9) + 1;
@@ -1495,8 +1521,27 @@ bool GameInit()
 }
 
 
-vec2 crRPos = vec2(-1,2);
-F32 crRRotationAngle = 0;
+vec4 darkRed = vec4(0.898f, 0.224f, 0.208f, 1.0f);
+vec4 lightRed = vec4(0.957f, 0.263f, 0.212f, 1.0f);
+
+vec4 darkGreen = vec4(0.263f, 0.627f, 0.278f, 1.0f);
+vec4 lightGreen = vec4(0.298f, 0.686f, 0.314f, 1.0f);
+
+enum csType
+{
+	cs_Rectangle,
+	cs_Triangle,
+	cs_Circle,
+
+	cs_COUNT
+};
+csType cs1Type = cs_Rectangle;
+vec2 cs1Pos = vec2(-1,2);
+F32 cs1RotationAngle = 0;
+vec4 cs1Color;
+
+vec4 cs2Color;
+
 
 void GameUpdate(F32 deltaTime)
 {
@@ -1526,6 +1571,20 @@ void GameUpdate(F32 deltaTime)
 
 	// NOTE: Clear the buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+
+
+
+	// NOTE: Draw grid
+	glBindVertexArray(gridVAO);
+	mat3 Ccamera = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, collisionCamera.position.x, collisionCamera.position.y, 1.0f);
+	mat3 Oprojection = mat3((2.0f / collisionCamera.viewArea.x), 0.0f, 0.0f, 0.0f, (2.0f / collisionCamera.viewArea.y), 0.0f, 0.0f, 0.0f, 1.0f);
+	mat3 PCM = Oprojection * inverse(Ccamera) * mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadQuadColorLocation, 1, &vec4(.933, .933, .933, 1)[0]);
+	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLineVectorElements);
+
+
 
 	// NOTE: Bind the VAO that holds the vertex information for the current object.
 	glBindVertexArray(texturedQuadVAO);
@@ -1558,77 +1617,90 @@ void GameUpdate(F32 deltaTime)
 	F32 angle = DegreesToRadians(45.0f);
  	if (GetKeyDown(KeyCode_W))
  	{
-		crRPos.y += 0.5f;
+		cs1Pos.y += 0.5f;
  	}
 	if (GetKeyDown(KeyCode_S))
  	{
-		crRPos.y -= 0.5f;
+		cs1Pos.y -= 0.5f;
  	}
 	if (GetKeyDown(KeyCode_A))
  	{
-		crRPos.x -= 0.5f;
+		cs1Pos.x -= 0.5f;
  	}
 	if (GetKeyDown(KeyCode_D))
  	{
-		crRPos.x += 0.5f;
+		cs1Pos.x += 0.5f;
  	}
 	if (GetKeyDown(KeyCode_K))
 	{
-		crRRotationAngle += angle;
+		cs1RotationAngle += angle;
 	}
 	if (GetKeyDown(KeyCode_L))
 	{
-		crRRotationAngle -= angle;
+		cs1RotationAngle -= angle;
+	}
+	if (GetMouseButtonDown(MouseCode_Left))
+	{
+		cs1Type = (csType)(cs1Type + 1);
+		if (cs1Type == cs_COUNT)
+		{
+			cs1Type = cs_Rectangle;
+		}
+		DebugPrintf(512, "crRType = %i\n", cs1Type);
 	}
 
-	vec4 darkRed = vec4(0.898f, 0.224f, 0.208f, 1.0f);
-	vec4 lightRed = vec4(0.957f, 0.263f, 0.212f, 1.0f);
-
-	vec4 darkGreen = vec4(0.263f, 0.627f, 0.278f, 1.0f);
-	vec4 lightGreen = vec4(0.298f, 0.686f, 0.314f, 1.0f);
-
-	mat3 Ccamera = mat3(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, collisionCamera.position.x, collisionCamera.position.y, 1.0f);
- 	mat3 Oprojection = mat3((2.0f / collisionCamera.viewArea.x), 0.0f, 0.0f, 0.0f, (2.0f / collisionCamera.viewArea.y), 0.0f, 0.0f, 0.0f, 1.0f);
 	
 	
-	vec4 crGColor;
-	vec4 crRColor;
-	mat3 BmodelG = crG.transform;
-	mat3 BmodelR = mat3(1, 0, 0, 0, 1, 0, crRPos.x, crRPos.y, 1) * mat3(cos(crRRotationAngle), sin(crRRotationAngle), 0, -sin(crRRotationAngle), cos(crRRotationAngle), 0, 0, 0, 1);
-	crR.transform = BmodelR;
-	bool collision = GJK(crR, crG);
+	
+	mat3 Bmodelcs2 = cs2Rectangle.transform;
+	mat3 Bmodelcs1 = mat3(1, 0, 0, 0, 1, 0, cs1Pos.x, cs1Pos.y, 1) * mat3(cos(cs1RotationAngle), sin(cs1RotationAngle), 0, -sin(cs1RotationAngle), cos(cs1RotationAngle), 0, 0, 0, 1);
+	cs1Rectangle.transform = Bmodelcs1;
+	cs1Triangle.transform = Bmodelcs1;
+	bool collision = false;
+	if (cs1Type == cs_Rectangle)
+	{
+		collision = GJK(cs1Rectangle, cs2Rectangle);
+	}
+	if (cs1Type == cs_Triangle)
+	{
+		collision = GJK(cs1Triangle, cs2Rectangle);
+	}
+
 	if (collision)
 	{
-		crGColor = lightGreen;
-		crRColor = darkGreen;
+		cs2Color = lightGreen;
+		cs1Color = darkGreen;
 	}
 	else
 	{
-		crGColor = lightRed;
-		crRColor = darkRed;
+		cs2Color = lightRed;
+		cs1Color = darkRed;
 	}
 	
+
+	// cs2
+	glBindVertexArray(texturedQuadVAO);
+	PCM = Oprojection * inverse(Ccamera) * Bmodelcs2;
+	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadQuadColorLocation, 1, &cs2Color[0]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 	
-	// NOTE: COLLISION RECTANGLE G
- 	mat3 PCM = Oprojection * inverse(Ccamera) * BmodelG;
+	// cs1
+	PCM = Oprojection * inverse(Ccamera) * Bmodelcs1;
 	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &crGColor[0]);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
-
-
-
-	// NOTE: COLLISION RECTANGLE R
-	PCM = Oprojection * inverse(Ccamera) * BmodelR;
-	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &crRColor[0]);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
-
-
-	glBindVertexArray(gridVAO);
-	PCM = Oprojection * inverse(Ccamera) * mat3(1,0,0,   0,1,0,   0,0,1);
-	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &vec4(.933,.933,.933,1)[0]);
-	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLineVectorElements);
+	glUniform4fv(solidColorQuadQuadColorLocation, 1, &cs1Color[0]);
+	if (cs1Type == cs_Rectangle)
+	{
+		// When cs1 is a rectangle
+		glBindVertexArray(texturedQuadVAO);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	}
+	if (cs1Type == cs_Triangle)
+	{
+		// When cs1 is a triangle
+		glBindVertexArray(equalateralTriangleVAO);
+		glDrawArrays(GL_TRIANGLES, 0, numPointsInTriangle*equalateralTrianglePointDimensionality);
+	}
 }
 
 bool GameShutdown()
