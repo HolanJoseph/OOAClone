@@ -643,14 +643,8 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 	case Simplex_Line:
 	{
 						 vec2 tsimplex[4];
-						 tsimplex[0] = simplex[0];
-						 tsimplex[1] = simplex[1];
-						 tsimplex[2] = simplex[2];
-						 tsimplex[3] = simplex[3];
-						 SimplexType tsimplexType = *simplexType;
-						 vec2 tD = *D;
-						 bool resultCasey = DoSimplexLineCasey(tsimplex, &tsimplexType, &tD);
-
+						 SimplexType tsimplexType;
+						 vec2 tD;
 
 						 tsimplex[0] = simplex[0];
 						 tsimplex[1] = simplex[1];
@@ -659,6 +653,14 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 						 tsimplexType = *simplexType;
 						 tD = *D;
 						 result = DoSimplexLine(tsimplex, &tsimplexType, &tD);
+						 
+						 tsimplex[0] = simplex[0];
+						 tsimplex[1] = simplex[1];
+						 tsimplex[2] = simplex[2];
+						 tsimplex[3] = simplex[3];
+						 tsimplexType = *simplexType;
+						 tD = *D;
+						 bool resultCasey = DoSimplexLineCasey(tsimplex, &tsimplexType, &tD);
 
 						 Assert(resultCasey == result);
 
@@ -668,19 +670,16 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 						 simplex[3] = tsimplex[3];
 						 *simplexType = tsimplexType;
 						 *D = tD;
+
+						 result = resultCasey;
 						 break;
 	}
 
 	case Simplex_Triangle:
 	{
 							 vec2 tsimplex[4];
-							 tsimplex[0] = simplex[0];
-							 tsimplex[1] = simplex[1];
-							 tsimplex[2] = simplex[2];
-							 tsimplex[3] = simplex[3];
-							 SimplexType tsimplexType = *simplexType;
-							 vec2 tD = *D;
-							 bool resultCasey = DoSimplexTriangleCasey(tsimplex, &tsimplexType, &tD);
+							 SimplexType tsimplexType;
+							 vec2 tD;
 
 							 tsimplex[0] = simplex[0];
 							 tsimplex[1] = simplex[1];
@@ -689,6 +688,16 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 							 tsimplexType = *simplexType;
 							 tD = *D;
 							 result = DoSimplexTriangle(tsimplex, &tsimplexType, &tD);
+							 
+							 
+							 tsimplex[0] = simplex[0];
+							 tsimplex[1] = simplex[1];
+							 tsimplex[2] = simplex[2];
+							 tsimplex[3] = simplex[3];
+							 tsimplexType = *simplexType;
+							 tD = *D;
+							 bool resultCasey = DoSimplexTriangleCasey(tsimplex, &tsimplexType, &tD);
+
 
 							 Assert(resultCasey == result);
 
@@ -698,6 +707,8 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 							 simplex[3] = tsimplex[3];
 							 *simplexType = tsimplexType;
 							 *D = tD;
+
+							 result = resultCasey;
 							 break;
 	}
 
@@ -720,8 +731,8 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 
 
 
-
-bool GJK(Rectangle shapeA, Rectangle shapeB)
+template<typename S1, typename S2>
+bool GJK(S1 shapeA, S2 shapeB)
 {
 	bool collisionDetected = false;
 
@@ -1647,6 +1658,10 @@ void GameUpdate(F32 deltaTime)
 			cs1Type = cs_Rectangle;
 		}
 		DebugPrintf(512, "crRType = %i\n", cs1Type);
+	}
+	if (GetKeyDown(KeyCode_SPACEBAR))
+	{
+		DebugPrint("space down\n");
 	}
 
 	

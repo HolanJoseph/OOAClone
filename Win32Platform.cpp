@@ -705,6 +705,10 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 	code = KeyCode_L;
 	break;
 
+	case VK_SPACE:
+	code = KeyCode_SPACEBAR;
+	break;
+
 	default:
 	code = KeyCode_NULL;
 	break;

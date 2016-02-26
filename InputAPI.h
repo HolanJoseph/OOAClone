@@ -11,7 +11,8 @@ enum KeyCode
 	KeyCode_D = 7,
 	KeyCode_J = 8,
 	KeyCode_K = 9,
-	KeyCode_L = 10
+	KeyCode_L = 10,
+	KeyCode_SPACEBAR = 11
 };
 
 enum MouseCode
