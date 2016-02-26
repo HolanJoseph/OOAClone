@@ -459,7 +459,7 @@ bool DoSimplexLineCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 	}
 	else
 	{
-		//Assert(false);
+		Assert(false);
 		
 		simplex[0] = simplex[1];
 		simplex[1] = vec2();
@@ -555,7 +555,7 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			else
 			{
 				// CASE 5
-				//Assert(false);
+				Assert(false);
 
 				// NOTE		  0
 				// simplex = [A]
@@ -590,7 +590,7 @@ bool DoSimplexTriangleCasey(vec2* simplex, SimplexType* simplexType, vec2* D)
 			else
 			{
 				// CASE 5
-				//Assert(false);
+				Assert(false);
 
 				// NOTE		  0
 				// simplex = [A]
@@ -1584,6 +1584,7 @@ vec4 cs2Color;
 U32 sampleNumber = 0;
 bool detailsMode = true;
 bool showcs2 = false;
+bool smoothMode = true;
 
 void GameUpdate(F32 deltaTime)
 {
@@ -1657,30 +1658,77 @@ void GameUpdate(F32 deltaTime)
 // 		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 // 	}
 
-	F32 angle = DegreesToRadians(45.0f);
- 	if (GetKeyDown(KeyCode_W))
- 	{
-		cs1Pos.y += 0.5f;
- 	}
-	if (GetKeyDown(KeyCode_S))
- 	{
-		cs1Pos.y -= 0.5f;
- 	}
-	if (GetKeyDown(KeyCode_A))
- 	{
-		cs1Pos.x -= 0.5f;
- 	}
-	if (GetKeyDown(KeyCode_D))
- 	{
-		cs1Pos.x += 0.5f;
- 	}
-	if (GetKeyDown(KeyCode_K))
+	if (GetMouseButtonDown(MouseCode_Right))
 	{
-		cs1RotationAngle += angle;
+		smoothMode = !smoothMode;
 	}
-	if (GetKeyDown(KeyCode_L))
+
+	F32 angle = DegreesToRadians(45.0f);
+ 	if (GetKey(KeyCode_W))
+ 	{
+		if (smoothMode)
+		{
+			cs1Pos.y += deltaTime * .5f;
+		}
+		else if (GetKeyDown(KeyCode_W))
+		{
+			cs1Pos.y += 0.5f;
+		}
+ 	}
+	if (GetKey(KeyCode_S))
+ 	{
+		if (smoothMode)
+		{
+			cs1Pos.y -= deltaTime * .5f;
+		}
+		else if (GetKeyDown(KeyCode_S))
+		{
+			cs1Pos.y -= 0.5f;
+		}
+ 	}
+	if (GetKey(KeyCode_A))
+ 	{
+		if (smoothMode)
+		{
+			cs1Pos.x -= deltaTime * .5f;
+		}
+		else if(GetKeyDown(KeyCode_A))
+		{
+			cs1Pos.x -= 0.5f;
+		}
+ 	}
+	if (GetKey(KeyCode_D))
+ 	{
+		if (smoothMode)
+		{
+			cs1Pos.x += deltaTime * .5f;
+		}
+		else if (GetKeyDown(KeyCode_D))
+		{
+			cs1Pos.x += 0.5f;
+		}
+ 	}
+	if (GetKey(KeyCode_K))
 	{
-		cs1RotationAngle -= angle;
+		if (smoothMode)
+		{
+			cs1RotationAngle += deltaTime * angle;
+		}
+		else if (GetKeyDown(KeyCode_K))
+		{
+			cs1RotationAngle += angle;
+		}
+	}
+	if (GetKey(KeyCode_L))
+	{
+		if (smoothMode)
+		{
+			cs1RotationAngle -= deltaTime * angle;
+		}
+		else if (GetKeyDown(KeyCode_L))
+		{
+			cs1RotationAngle -= angle;
+		}
 	}
 	if (GetMouseButtonDown(MouseCode_Left))
 	{

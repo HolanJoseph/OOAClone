@@ -717,6 +717,10 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 	code = KeyCode_N;
 	break;
 
+	case 0x42:
+	code = KeyCode_B;
+	break;
+
 	default:
 	code = KeyCode_NULL;
 	break;
