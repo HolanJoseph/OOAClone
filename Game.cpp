@@ -1145,10 +1145,16 @@ Rectangle crG;
 Rectangle crR;
 Camera collisionCamera;
 
+GLuint gridVAO;
+
+
+#define numGridLines 10
+#define gridLineVectorElements 2
+#define pointsPerLine 2
 void InitCollisionTestScene()
 {
 	collisionCamera.position = vec2(0,0);
-	collisionCamera.viewArea = vec2(4,4);
+	collisionCamera.viewArea = vec2(10,10);
 
 	crG.origin = vec2(0,0);
 	crG.halfDim = vec2(.5f, .5f);
@@ -1157,6 +1163,44 @@ void InitCollisionTestScene()
 	crR.origin = vec2(0, 0);
 	crR.halfDim = vec2(.5f, .5f);
 	crR.transform = mat3(1,0,0,   0,1,0,   -1,2,1);
+
+	glGenVertexArrays(1, &gridVAO);
+	glBindVertexArray(gridVAO);
+
+	GLfloat gridPositions[(numGridLines + numGridLines + 2) * pointsPerLine * gridLineVectorElements] = {
+		// varying y values
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f,
+		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f,
+
+		// varying x values
+		(-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f,
+		(-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f,
+	};
+	GLuint gridVertexBuffer;
+	glGenBuffers(1, &gridVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, gridVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(gridPositions), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(gridPositions), gridPositions);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
 }
 
 U32 numEntities = (10 * 9) + 1;
@@ -1484,7 +1528,7 @@ void GameUpdate(F32 deltaTime)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	// NOTE: Bind the VAO that holds the vertex information for the current object.
-	//glBindVertexArray(texturedQuadVAO);
+	glBindVertexArray(texturedQuadVAO);
 
 	// NOTE: Bind the shader that will be used to draw it.
 	//glUseProgram(texturedQuadShaderProgram);
@@ -1579,6 +1623,12 @@ void GameUpdate(F32 deltaTime)
 	glUniform4fv(solidColorQuadQuadColorLocation, 1, &crRColor[0]);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 
+
+	glBindVertexArray(gridVAO);
+	PCM = Oprojection * inverse(Ccamera) * mat3(1,0,0,   0,1,0,   0,0,1);
+	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadQuadColorLocation, 1, &vec4(.933,.933,.933,1)[0]);
+	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLineVectorElements);
 }
 
 bool GameShutdown()
