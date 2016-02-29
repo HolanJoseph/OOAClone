@@ -829,15 +829,37 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 						 tsimplexType = *simplexType;
 						 tD = *D;
 
-// 						 Simplex s;
-// 						 s.type = tsimplexType;
-// 						 s.A = vec3(tsimplex[1].x, tsimplex[1].y, 0);
-// 						 s.B = vec3(tsimplex[0].x, tsimplex[0].y, 0);
-// 
-// 						 DoSimplexResult resultAllVoronoi = DoSimplexLineAllVoronoi( s, vec3(tD.x, tD.y, 0));
-// 						 Assert(resultCasey == result);
-// 						 Assert(resultCasey == resultAllVoronoi.containsGoal);
-// 						 Assert(result == resultAllVoronoi.containsGoal);
+						 Simplex s;
+						 s.type = tsimplexType;
+						 s.A = vec3(tsimplex[1].x, tsimplex[1].y, 0);
+						 s.B = vec3(tsimplex[0].x, tsimplex[0].y, 0);
+
+						 DoSimplexResult resultAllVoronoi = DoSimplexLineAllVoronoi( s, vec3(tD.x, tD.y, 0));
+
+						 tsimplexType = resultAllVoronoi.simplex.type;
+						 if (tsimplexType == Simplex_Point)
+						 {
+							 tsimplex[0] = vec2(resultAllVoronoi.simplex.A.x, resultAllVoronoi.simplex.A.y);
+							 tsimplex[1] = vec2(0, 0);
+							 tsimplex[2] = vec2(0, 0);
+							 tsimplex[3] = vec2(0, 0);
+						 }
+						 else if (tsimplexType == Simplex_Line)
+						 {
+							 tsimplex[0] = vec2(resultAllVoronoi.simplex.B.x, resultAllVoronoi.simplex.B.y);
+							 tsimplex[1] = vec2(resultAllVoronoi.simplex.A.x, resultAllVoronoi.simplex.A.y);
+							 tsimplex[2] = vec2(0, 0);
+							 tsimplex[3] = vec2(0, 0);
+						 }
+						 tD = vec2(resultAllVoronoi.d.x, resultAllVoronoi.d.y);
+
+
+
+						 Assert(resultCasey == result);
+						 Assert(resultCasey == resultAllVoronoi.containsGoal);
+						 Assert(result == resultAllVoronoi.containsGoal);
+
+
 
 						 simplex[0] = tsimplex[0];
 						 simplex[1] = tsimplex[1];
