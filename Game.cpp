@@ -521,6 +521,42 @@ DoSimplexResult DoSimplexLineAllVoronoi(Simplex simplex, vec3 D)
 	return result;
 }
 
+DoSimplexResult DoSimplexLineAllVoronoiDouble(Simplex simplex, vec3 D)
+{
+	DoSimplexResult result;
+	result.containsGoal = false;
+
+	dvec3 ab = dvec3(simplex.B) - dvec3(simplex.A);
+	dvec3 ag = dvec3(0, 0, 0) - dvec3(simplex.A);
+	dvec3 ba = dvec3(simplex.A) - dvec3(simplex.B);
+	dvec3 bg = dvec3(0, 0, 0) - dvec3(simplex.B);
+
+	if (dot(ab, ag) < 0)
+	{
+		// Voronoi Region A
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.A;
+		result.d = ag;
+	}
+	else if (dot(ba, bg) < 0)
+	{
+		// Voronoi Region B
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.B;
+		result.d = bg;
+	}
+	else
+	{
+		// Voronoi Region AB
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
+		result.d = cross(cross(ab, ag), ab);
+	}
+
+	return result;
+}
+
 bool DoSimplexTriangle(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
@@ -684,9 +720,10 @@ DoSimplexResult DoSimplexTriangleAllVoronoi(Simplex simplex, vec3 D)
 	DoSimplexResult result;
 	result.containsGoal = false;
 
+	// Vectors
 	vec3 ab = simplex.B - simplex.A;
 	vec3 ac = simplex.C - simplex.A;
-	vec3 ag = vec3(0, 0, 0) - simplex.A;
+ 	vec3 ag = vec3(0, 0, 0) - simplex.A;
 
 	vec3 bc = simplex.C - simplex.B;
 	vec3 ba = simplex.A - simplex.B;
@@ -698,33 +735,50 @@ DoSimplexResult DoSimplexTriangleAllVoronoi(Simplex simplex, vec3 D)
 
 	vec3 sn = cross(ab, ac);
 
-	if ( dot(ab, ag) < 0 &&
-		dot(ac, ag) < 0)
+	
+	// Tests
+	F32 ab_DOT_ag = dot(ab, ag);
+	F32 ac_DOT_ag = dot(ac, ag);
+
+	F32 ba_DOT_bg = dot(ba, bg);
+	F32 bc_DOT_bg = dot(bc, bg);
+
+	F32 ca_DOT_cg = dot(ca, cg);
+	F32 cb_DOT_cg = dot(cb, cg);
+
+	F32 perpAB_DOT_ag = dot(cross(ab, sn), ag);
+	F32 perpAC_DOT_ag = dot(cross(sn, ac), ag);
+	F32 perpBC_DOT_bg = dot(cross(bc, sn), bg);
+	F32 perpCB_DOT_cg = dot(cross(sn, cb), cg);
+	F32 sn_DOT_ag = dot(sn, ag);
+
+	if (ab_DOT_ag < 0 &&
+		ac_DOT_ag < 0)
 	{
 		// Voronoi Region A
 		result.simplex.type = Simplex_Point;
 		result.simplex.A = simplex.A;
 		result.d = ag;
 	}
-	else if ( dot(ba, bg) < 0 &&
-		dot(bc, bg) < 0)
+	else if (ba_DOT_bg < 0 &&
+			 bc_DOT_bg < 0)
 	{
 		// Voronoi Region B
 		result.simplex.type = Simplex_Point;
 		result.simplex.A = simplex.B;
 		result.d = bg;
 	}
-	else if ( dot(ca, cg) < 0 &&
-		dot(cb, cg) < 0)
+	else if (ca_DOT_cg < 0 &&
+			 cb_DOT_cg < 0)
 	{
 		// Voronoi Region C
 		result.simplex.type = Simplex_Point;
 		result.simplex.A = simplex.C;
 		result.d = cg;
 	}
-	else if ( dot(ab, ag) > 0 &&
-		dot(ba, bg) > 0 &&
-		dot(cross(ab, sn), ag) > 0)
+	else if (ab_DOT_ag >= 0 &&
+			 ba_DOT_bg >= 0 &&
+			 perpAB_DOT_ag > 0)
 	{
 		// Voronoi Region AB
 		result.simplex.type = Simplex_Line;
@@ -732,9 +786,9 @@ DoSimplexResult DoSimplexTriangleAllVoronoi(Simplex simplex, vec3 D)
 		result.simplex.B = simplex.B;
 		result.d = cross(cross(ab, ag), ab);
 	}
-	else if (dot(ac, ag) > 0 &&
-		dot(ca, cg) > 0 && 
-		dot(cross(sn, ac), ag) > 0)
+	else if (ac_DOT_ag >= 0 &&
+			 ca_DOT_cg >= 0 &&
+			 perpAC_DOT_ag > 0)
 	{
 		// Voronoi Region AC
 		result.simplex.type = Simplex_Line;
@@ -742,9 +796,9 @@ DoSimplexResult DoSimplexTriangleAllVoronoi(Simplex simplex, vec3 D)
 		result.simplex.B = simplex.C;
 		result.d = cross(cross(ac, ag), ac);
 	}
-	else if (dot(bc, bg) > 0 &&
-		dot(cb, cg) > 0 &&
-		dot(cross(bc, sn), bg) > 0)
+	else if (bc_DOT_bg >= 0 &&
+			 cb_DOT_cg >= 0 &&
+			 perpBC_DOT_bg > 0)
 	{
 		// Voronoi Region BC
 		result.simplex.type = Simplex_Line;
@@ -752,10 +806,10 @@ DoSimplexResult DoSimplexTriangleAllVoronoi(Simplex simplex, vec3 D)
 		result.simplex.B = simplex.C;
 		result.d = cross(cross(bc, bg), bc);
 	}
-	else if (dot(cross(ab, sn), ag) < 0 &&
-		dot(cross(sn, ac), ag) < 0 &&
-		dot(cross(sn, cb), cg) < 0 &&
-		dot(sn, ag) > 0)
+	else if (perpAB_DOT_ag <= 0 &&
+			 perpAC_DOT_ag <= 0 &&
+			 perpBC_DOT_bg <= 0 &&
+			 sn_DOT_ag > 0)
 	{
 		// Voronoi Region ABC Above
 		result.simplex.type = Simplex_Triangle;
@@ -764,10 +818,10 @@ DoSimplexResult DoSimplexTriangleAllVoronoi(Simplex simplex, vec3 D)
 		result.simplex.C = simplex.B;
 		result.d = sn;
 	}
-	else if (dot(cross(ab, sn), ag) < 0 &&
-		dot(cross(sn, ac), ag) < 0 &&
-		dot(cross(sn, cb), cg) < 0 &&
-		dot(sn, ag) <= 0)
+	else if (perpAB_DOT_ag <= 0 &&
+			 perpAC_DOT_ag <= 0 &&
+			 perpBC_DOT_bg <= 0 &&
+			 sn_DOT_ag <= 0)
 	{
 		// Voronoi Region ABC Below
 		result.simplex.type = Simplex_Triangle;
@@ -777,6 +831,127 @@ DoSimplexResult DoSimplexTriangleAllVoronoi(Simplex simplex, vec3 D)
 		result.d = -sn;
 	}
 
+	//result.d = normalize(result.d);
+	return result;
+}
+
+DoSimplexResult DoSimplexTriangleAllVoronoiDouble(Simplex simplex, vec3 D)
+{
+	DoSimplexResult result;
+	result.containsGoal = false;
+
+	// Vectors
+	dvec3 ab = dvec3(simplex.B) - dvec3(simplex.A);
+	dvec3 ac = dvec3(simplex.C) - dvec3(simplex.A);
+	dvec3 ag = dvec3(0, 0, 0) - dvec3(simplex.A);
+
+	dvec3 bc = dvec3(simplex.C) - dvec3(simplex.B);
+	dvec3 ba = dvec3(simplex.A) - dvec3(simplex.B);
+	dvec3 bg = dvec3(0, 0, 0) - dvec3(simplex.B);
+
+	dvec3 ca = dvec3(simplex.A) - dvec3(simplex.C);
+	dvec3 cb = dvec3(simplex.B) - dvec3(simplex.C);
+	dvec3 cg = dvec3(0, 0, 0) - dvec3(simplex.C);
+
+	dvec3 sn = cross(ab, ac);
+
+
+	// Tests
+	F64 ab_DOT_ag = dot(ab, ag);
+	F64 ac_DOT_ag = dot(ac, ag);
+
+	F64 ba_DOT_bg = dot(ba, bg);
+	F64 bc_DOT_bg = dot(bc, bg);
+
+	F64 ca_DOT_cg = dot(ca, cg);
+	F64 cb_DOT_cg = dot(cb, cg);
+
+	F64 perpAB_DOT_ag = dot(cross(ab, sn), ag);
+	F64 perpAC_DOT_ag = dot(cross(sn, ac), ag);
+	F64 perpBC_DOT_bg = dot(cross(bc, sn), bg);
+	F64 perpCB_DOT_cg = dot(cross(sn, cb), cg);
+	F64 sn_DOT_ag = dot(sn, ag);
+
+	if (ab_DOT_ag < 0 &&
+		ac_DOT_ag < 0)
+	{
+		// Voronoi Region A
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.A;
+		result.d = ag;
+	}
+	else if (ba_DOT_bg < 0 &&
+		bc_DOT_bg < 0)
+	{
+		// Voronoi Region B
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.B;
+		result.d = bg;
+	}
+	else if (ca_DOT_cg < 0 &&
+		cb_DOT_cg < 0)
+	{
+		// Voronoi Region C
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.C;
+		result.d = cg;
+	}
+	else if (ab_DOT_ag >= 0 &&
+		ba_DOT_bg >= 0 &&
+		perpAB_DOT_ag > 0)
+	{
+		// Voronoi Region AB
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
+		result.d = cross(cross(ab, ag), ab);
+	}
+	else if (ac_DOT_ag >= 0 &&
+		ca_DOT_cg >= 0 &&
+		perpAC_DOT_ag > 0)
+	{
+		// Voronoi Region AC
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.C;
+		result.d = normalize(cross(cross(ac, ag), ac));
+	}
+	else if (bc_DOT_bg >= 0 &&
+		cb_DOT_cg >= 0 &&
+		perpBC_DOT_bg > 0)
+	{
+		// Voronoi Region BC
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.B;
+		result.simplex.B = simplex.C;
+		result.d = cross(cross(bc, bg), bc);
+	}
+	else if (perpAB_DOT_ag <= 0 &&
+		perpAC_DOT_ag <= 0 &&
+		perpBC_DOT_bg <= 0 &&
+		sn_DOT_ag > 0)
+	{
+		// Voronoi Region ABC Above
+		result.simplex.type = Simplex_Triangle;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.C;
+		result.simplex.C = simplex.B;
+		result.d = sn;
+	}
+	else if (perpAB_DOT_ag <= 0 &&
+		perpAC_DOT_ag <= 0 &&
+		perpBC_DOT_bg <= 0 &&
+		sn_DOT_ag <= 0)
+	{
+		// Voronoi Region ABC Below
+		result.simplex.type = Simplex_Triangle;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
+		result.simplex.C = simplex.C;
+		result.d = -sn;
+	}
+
+	//result.d = normalize(result.d);
 	return result;
 }
 
@@ -794,7 +969,7 @@ DoSimplexResult DoSimplexTetrahedronAllVoronoi()
 	return result;
 }
 
-bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
+bool DoSimplex__(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
 
@@ -896,7 +1071,58 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 							 bool resultCasey = DoSimplexTriangleCasey(tsimplex, &tsimplexType, &tD);
 
 
+							 //
+							 tsimplex[0] = simplex[0];
+							 tsimplex[1] = simplex[1];
+							 tsimplex[2] = simplex[2];
+							 tsimplex[3] = simplex[3];
+							 tsimplexType = *simplexType;
+							 tD = *D;
+
+							 Simplex s;
+							 s.type = tsimplexType;
+							 s.A = vec3(tsimplex[2].x, tsimplex[2].y, 0);
+							 s.B = vec3(tsimplex[1].x, tsimplex[1].y, 0);
+							 s.C = vec3(tsimplex[0].x, tsimplex[0].y, 0);
+
+							 DoSimplexResult resultAllVoronoi = DoSimplexTriangleAllVoronoi(s, vec3(tD.x, tD.y, 0));
+
+							 tsimplexType = resultAllVoronoi.simplex.type;
+							 if (tsimplexType == Simplex_Point)
+							 {
+								 tsimplex[0] = vec2(resultAllVoronoi.simplex.A.x, resultAllVoronoi.simplex.A.y);
+								 tsimplex[1] = vec2(0, 0);
+								 tsimplex[2] = vec2(0, 0);
+								 tsimplex[3] = vec2(0, 0);
+							 }
+							 else if (tsimplexType == Simplex_Line)
+							 {
+								 tsimplex[0] = vec2(resultAllVoronoi.simplex.B.x, resultAllVoronoi.simplex.B.y);
+								 tsimplex[1] = vec2(resultAllVoronoi.simplex.A.x, resultAllVoronoi.simplex.A.y);
+								 tsimplex[2] = vec2(0, 0);
+								 tsimplex[3] = vec2(0, 0);
+							 }
+							 else if (tsimplexType == Simplex_Triangle)
+							 {
+								 tsimplex[0] = vec2(resultAllVoronoi.simplex.C.x, resultAllVoronoi.simplex.C.y);
+								 tsimplex[1] = vec2(resultAllVoronoi.simplex.B.x, resultAllVoronoi.simplex.B.y);
+								 tsimplex[2] = vec2(resultAllVoronoi.simplex.A.x, resultAllVoronoi.simplex.A.y);
+								 tsimplex[3] = vec2(0, 0);
+								 resultAllVoronoi.containsGoal = true;
+							 }
+							 tD = vec2(resultAllVoronoi.d.x, resultAllVoronoi.d.y);
+
+
+
 							 Assert(resultCasey == result);
+							 Assert(resultCasey == resultAllVoronoi.containsGoal);
+							 Assert(result == resultAllVoronoi.containsGoal);
+							 //
+
+
+
+
+							 //Assert(resultCasey == result);
 
 							 simplex[0] = tsimplex[0];
 							 simplex[1] = tsimplex[1];
@@ -906,6 +1132,176 @@ bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 							 *D = tD;
 
 							 result = resultCasey;
+							 break;
+	}
+
+	case Simplex_Tetrahedron:
+	{
+								result = DoSimplexTetrahedron(simplex, simplexType, D);
+								break;
+	}
+
+	default:
+	{
+			   break;
+	}
+	}
+
+	return result;
+}
+
+
+bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
+{
+	bool result = false;
+
+	switch (*simplexType)
+	{
+	case Simplex_Line:
+	{
+
+						 result = DoSimplexLine(simplex, simplexType, D);
+						 break;
+	}
+
+	case Simplex_Triangle:
+	{
+
+							 result = DoSimplexTriangle(simplex, simplexType, D);
+							 break;
+	}
+
+	case Simplex_Tetrahedron:
+	{
+								result = DoSimplexTetrahedron(simplex, simplexType, D);
+								break;
+	}
+
+	default:
+	{
+			   break;
+	}
+	}
+
+	return result;
+}
+
+bool DoSimplex_Casey(vec2* simplex, SimplexType* simplexType, vec2* D)
+{
+	bool result = false;
+
+	switch (*simplexType)
+	{
+	case Simplex_Line:
+	{
+						 
+						 result = DoSimplexLineCasey(simplex, simplexType, D);
+						 break;
+	}
+
+	case Simplex_Triangle:
+	{
+							 
+							 result = DoSimplexTriangleCasey(simplex, simplexType, D);
+							 break;
+	}
+
+	case Simplex_Tetrahedron:
+	{
+								result = DoSimplexTetrahedron(simplex, simplexType, D);
+								break;
+	}
+
+	default:
+	{
+			   break;
+	}
+	}
+
+	return result;
+}
+
+//#define DOUBLES 1
+bool DoSimplex_AllVoronoi(vec2* simplex, SimplexType* simplexType, vec2* D)
+{
+	bool result = false;
+
+	switch (*simplexType)
+	{
+	case Simplex_Line:
+	{
+						 Simplex s;
+						 s.type = *simplexType;
+						 s.A = vec3(simplex[1].x, simplex[1].y, 0);
+						 s.B = vec3(simplex[0].x, simplex[0].y, 0);
+
+#ifndef DOUBLES
+						 DoSimplexResult rav = DoSimplexLineAllVoronoi(s, vec3(D->x, D->y, 0));
+#else
+						 DoSimplexResult rav = DoSimplexLineAllVoronoiDouble(s, vec3(D->x, D->y, 0));
+#endif
+
+						 if (rav.simplex.type == Simplex_Point)
+						 {
+							 simplex[0] = vec2(rav.simplex.A.x, rav.simplex.A.y);
+							 simplex[1] = vec2(0, 0);
+							 simplex[2] = vec2(0, 0);
+							 simplex[3] = vec2(0, 0);
+						 }
+						 else if (rav.simplex.type == Simplex_Line)
+						 {
+							 simplex[0] = vec2(rav.simplex.B.x, rav.simplex.B.y);
+							 simplex[1] = vec2(rav.simplex.A.x, rav.simplex.A.y);
+							 simplex[2] = vec2(0, 0);
+							 simplex[3] = vec2(0, 0);
+						 }
+
+						 *simplexType = rav.simplex.type;
+						 *D = vec2(rav.d.x, rav.d.y);
+						 result = rav.containsGoal;
+						 break;
+	}
+
+	case Simplex_Triangle:
+	{
+							 Simplex s;
+							 s.type = *simplexType;
+							 s.A = vec3(simplex[2].x, simplex[2].y, 0);
+							 s.B = vec3(simplex[1].x, simplex[1].y, 0);
+							 s.C = vec3(simplex[0].x, simplex[0].y, 0);
+
+#ifndef DOUBLES
+							 DoSimplexResult rav = DoSimplexTriangleAllVoronoi(s, vec3(D->x, D->y, 0));
+#else
+							 DoSimplexResult rav = DoSimplexTriangleAllVoronoiDouble(s, vec3(D->x, D->y, 0));
+#endif
+
+							 if (rav.simplex.type == Simplex_Point)
+							 {
+								 simplex[0] = vec2(rav.simplex.A.x, rav.simplex.A.y);
+								 simplex[1] = vec2(0, 0);
+								 simplex[2] = vec2(0, 0);
+								 simplex[3] = vec2(0, 0);
+							 }
+							 else if (rav.simplex.type == Simplex_Line)
+							 {
+								 simplex[0] = vec2(rav.simplex.B.x, rav.simplex.B.y);
+								 simplex[1] = vec2(rav.simplex.A.x, rav.simplex.A.y);
+								 simplex[2] = vec2(0, 0);
+								 simplex[3] = vec2(0, 0);
+							 }
+							 else if (rav.simplex.type == Simplex_Triangle)
+							 {
+								 simplex[0] = vec2(rav.simplex.C.x, rav.simplex.C.y);
+								 simplex[1] = vec2(rav.simplex.B.x, rav.simplex.B.y);
+								 simplex[2] = vec2(rav.simplex.A.x, rav.simplex.A.y);
+								 simplex[3] = vec2(0, 0);
+								 rav.containsGoal = true;
+							 }
+
+							 *simplexType = rav.simplex.type;
+							 *D = vec2(rav.d.x, rav.d.y);
+							 result = rav.containsGoal;
 							 break;
 	}
 
@@ -955,6 +1351,78 @@ bool GJK(S1 shapeA, S2 shapeB)
 		simplexType = (SimplexType)(simplexType + 1);
 		simplex[simplexType] = A;
 		if (DoSimplex(simplex, &simplexType, &D))
+		{
+			collisionDetected = true;
+			break;
+		}
+	}
+
+	return collisionDetected;
+}
+
+template<typename S1, typename S2>
+bool GJK_Casey(S1 shapeA, S2 shapeB)
+{
+	bool collisionDetected = false;
+
+	vec2 S = Support(&shapeA, &shapeB, &vec2(1.0f, -1.0f));
+	vec2 simplex[4];
+	SimplexType simplexType = Simplex_Point;
+	simplex[0] = S;
+	vec2 D = -S;
+
+	for (;;)
+	{
+		vec2 A = Support(&shapeA, &shapeB, &D);
+		if (A == vec2(0.0f, 0.0f))
+		{
+			collisionDetected = true;
+			break;
+		}
+		if (dot(A, D) < 0)
+		{
+			collisionDetected = false;
+			break;
+		}
+		simplexType = (SimplexType)(simplexType + 1);
+		simplex[simplexType] = A;
+		if (DoSimplex_Casey(simplex, &simplexType, &D))
+		{
+			collisionDetected = true;
+			break;
+		}
+	}
+
+	return collisionDetected;
+}
+
+template<typename S1, typename S2>
+bool GJK_AllVoronoi(S1 shapeA, S2 shapeB)
+{
+	bool collisionDetected = false;
+
+	vec2 S = Support(&shapeA, &shapeB, &vec2(1.0f, -1.0f));
+	vec2 simplex[4];
+	SimplexType simplexType = Simplex_Point;
+	simplex[0] = S;
+	vec2 D = -S;
+
+	for (;;)
+	{
+		vec2 A = Support(&shapeA, &shapeB, &D);
+		if (A == vec2(0.0f, 0.0f))
+		{
+			collisionDetected = true;
+			break;
+		}
+		if (dot(A, D) < 0)
+		{
+			collisionDetected = false;
+			break;
+		}
+		simplexType = (SimplexType)(simplexType + 1);
+		simplex[simplexType] = A;
+		if (DoSimplex_AllVoronoi(simplex, &simplexType, &D))
 		{
 			collisionDetected = true;
 			break;
@@ -1016,7 +1484,9 @@ void CollisionTestsRectRect2()
 
 	F32 xs[7] = { -1, -.5, 0, .5, 1, 1.5, 2 };
 	F32 ys[7] = { 2, 1.5, 1, .5, 0, -.5, -1 };
-	U32 hits[7][7];
+	U32 hits_Simple[7][7];
+	U32 hits_Casey[7][7];
+	U32 hits_AllVoronoi[7][7];
 
 	for (U32 y = 0; y < 7; ++y)
 	{
@@ -1027,21 +1497,51 @@ void CollisionTestsRectRect2()
 			r.halfDim = vec2(.5, .5);
 			r.transform = mat3(1, 0, 0, 0, 1, 0, xs[x], ys[y], 1) * mat3(cos(angle),sin(angle),0,   -sin(angle),cos(angle),0,   0,0,1);
 
-			bool collision = GJK(g, r);
-			if (collision)
+			bool collisionSimple = GJK(g, r);
+			bool collisionCasey = GJK_Casey(g, r);
+			bool collisionAllVoronoi = GJK_AllVoronoi(g, r);
+			if (collisionSimple)
 			{
-				hits[y][x] = 1;
+				hits_Simple[y][x] = 1;
 			}
 			else
 			{
-				hits[y][x] = 0;
+				hits_Simple[y][x] = 0;
+			}
+
+			if (collisionCasey)
+			{
+				hits_Casey[y][x] = 1;
+			}
+			else
+			{
+				hits_Casey[y][x] = 0;
+			}
+
+			if (collisionAllVoronoi)
+			{
+				hits_AllVoronoi[y][x] = 1;
+			}
+			else
+			{
+				hits_AllVoronoi[y][x] = 0;
 			}
 		}
 	}
 
 	for (U32 i = 0; i < 7; ++i)
 	{
-		DebugPrintf(1024, "hits %u %u %u %u %u %u %u\n", hits[i][0], hits[i][1], hits[i][2], hits[i][3], hits[i][4], hits[i][5], hits[i][6]);
+		DebugPrintf(1024, "hits_Simple %u %u %u %u %u %u %u\n", hits_Simple[i][0], hits_Simple[i][1], hits_Simple[i][2], hits_Simple[i][3], hits_Simple[i][4], hits_Simple[i][5], hits_Simple[i][6]);
+	}
+	DebugPrint("\n\n");
+	for (U32 i = 0; i < 7; ++i)
+	{
+		DebugPrintf(1024, "hits_Casey %u %u %u %u %u %u %u\n", hits_Casey[i][0], hits_Casey[i][1], hits_Casey[i][2], hits_Casey[i][3], hits_Casey[i][4], hits_Casey[i][5], hits_Casey[i][6]);
+	}
+	DebugPrint("\n\n");
+	for (U32 i = 0; i < 7; ++i)
+	{
+		DebugPrintf(1024, "hits_AllVoronoi %u %u %u %u %u %u %u\n", hits_AllVoronoi[i][0], hits_AllVoronoi[i][1], hits_AllVoronoi[i][2], hits_AllVoronoi[i][3], hits_AllVoronoi[i][4], hits_AllVoronoi[i][5], hits_AllVoronoi[i][6]);
 	}
 }
 
@@ -1783,6 +2283,16 @@ bool detailsMode = true;
 bool showcs2 = false;
 bool smoothMode = true;
 
+enum GJKMode
+{
+	gjk_Simple,
+	gjk_Casey,
+	gjk_AllVoronoi,
+
+	gjk_COUNT
+};
+GJKMode gjkMode;
+
 void GameUpdate(F32 deltaTime)
 {
 // 	if (GetKey(KeyCode_W))
@@ -1944,6 +2454,15 @@ void GameUpdate(F32 deltaTime)
 	{
 		showcs2 = !showcs2;
 	}
+	if (GetKeyDown(KeyCode_B))
+	{
+		gjkMode = (GJKMode)(gjkMode + 1);
+		if (gjkMode == cs_COUNT)
+		{
+			gjkMode = gjk_Simple;
+		}
+		DebugPrintf(512, "gjkMode = %i\n", gjkMode);
+	}
 
 	
 	
@@ -1956,7 +2475,18 @@ void GameUpdate(F32 deltaTime)
 	bool collision = false;
 	if (cs1Type == cs_Rectangle)
 	{
-		collision = GJK(cs1Rectangle, cs2Rectangle);
+		if (gjkMode == gjk_Simple)
+		{
+			collision = GJK(cs1Rectangle, cs2Rectangle);
+		}
+		else if (gjkMode == gjk_Casey)
+		{
+			collision = GJK_Casey(cs1Rectangle, cs2Rectangle);
+		}
+		else if (gjkMode == gjk_AllVoronoi)
+		{
+			collision = GJK_AllVoronoi(cs1Rectangle, cs2Rectangle);
+		}
 	}
 	if (cs1Type == cs_Triangle)
 	{
