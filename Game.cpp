@@ -962,9 +962,222 @@ bool DoSimplexTetrahedron(vec2* simplex, SimplexType* simplexType, vec2* D)
 	return result;
 }
 
-DoSimplexResult DoSimplexTetrahedronAllVoronoi()
+DoSimplexResult DoSimplexTetrahedronAllVoronoi(Simplex simplex, vec3 D)
 {
 	DoSimplexResult result;
+	result.containsGoal = false;
+
+	vec3 G = vec3(0,0,0);
+	vec3 AG = G - simplex.A;
+	vec3 AB = simplex.B - simplex.A;
+	vec3 AC = simplex.C - simplex.A;
+	vec3 AD = simplex.D - simplex.A;
+
+	vec3 BG = G - simplex.B;
+	vec3 BA = simplex.A - simplex.B;
+	vec3 BC = simplex.C - simplex.B;
+	vec3 BD = simplex.D - simplex.B;
+	
+	vec3 CG = G - simplex.C;
+	vec3 CA = simplex.A - simplex.C;
+	vec3 CB = simplex.B - simplex.C;
+	vec3 CD = simplex.D - simplex.C;
+
+	vec3 DG = G - simplex.D;
+	vec3 DA = simplex.A - simplex.D;
+	vec3 DB = simplex.B - simplex.D;
+	vec3 DC = simplex.C - simplex.D;
+
+	vec3 normalABC = cross(AB,AC);
+	vec3 normalADB = cross(AD,AB);
+	vec3 normalACD = cross(AC,AD);
+
+	vec3 normalBCA = cross(BC,BA);
+	vec3 normalBDC = cross(BD,BC);
+	vec3 normalBAD = cross(BA,BD);
+
+	vec3 normalCDA = cross(CD,CA);
+	vec3 normalCBD = cross(CB,CD);
+
+	if ( dot(AG,AB)<0 &&
+		 dot(AG,AC)<0 &&
+		 dot(AG,AD)<0)
+	{
+		// Voronoi A
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.A;
+		result.d = AG;
+	}
+	else if ( dot(BG,BA)<0 &&
+			  dot(BG,BC)<0 &&
+			  dot(BG,BD)<0)
+	{
+		// Voronoi B
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.B;
+		result.d = BG;
+	}
+	else if ( dot(CG,CA)<0 &&
+			  dot(CG,CB)<0 &&
+			  dot(CG,CD)<0)
+	{
+		// Voronoi C
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.C;
+		result.d = CG;
+	}
+	else if ( dot(DG,DA)<0 &&
+			  dot(DG,DB)<0 &&
+			  dot(DG,DC)<0)
+	{
+		// Voronoi D
+		result.simplex.type = Simplex_Point;
+		result.simplex.A = simplex.D;
+		result.d = DG;
+	}
+	// NOTE: Sign on the plane tests may need to be >= but i dont think so, investigate if errors crop up
+	else if (dot(AG,AB)>=0 &&
+			 dot(BG,BA)>=0 &&
+			 dot(AG,cross(AB,normalABC))>0 &&
+			 dot(AG,cross(normalADB,AB))>0)
+	{
+		// Voronoi AB
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
+		result.d = cross(cross(AB,AG),AB);
+	}
+	else if (dot(AG,AC)>=0 &&
+			 dot(CG,CA)>=0 &&
+			 dot(AG,cross(AC,normalACD))>0 &&
+			 dot(AG,cross(normalABC,AC))>0)
+	{
+		// Voronoi AC
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.C;
+		result.d = cross(cross(AC,AG),AC);
+	}
+	else if (dot(AG,AD)>=0 &&
+			 dot(DG,DA)>=0 &&
+			 dot(AG,cross(AD,normalADB))>0 &&
+			 dot(AG,cross(normalACD,AD))>0)
+	{
+		// Voronoi AD
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.D;
+		result.d = cross(cross(AD,AG),AD);
+	}
+	else if (dot(BG,BC)>=0 &&
+			 dot(CG,CB)>=0 &&
+			 dot(BG,cross(BC,normalBCA))>0 &&
+			 dot(BG,cross(normalBDC,BC))>0)
+	{
+		// Voronoi BC
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.B;
+		result.simplex.B = simplex.C;
+		result.d = cross(cross(BC,BG),BC);
+	}
+	else if (dot(BG,BD)>=0 &&
+			 dot(DG,DB)>=0 &&
+			 dot(BG,cross(BD,normalBDC))>0 &&
+			 dot(BG,cross(normalBAD,BD))>0 )
+	{
+		// Voronoi BD
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.B;
+		result.simplex.B = simplex.D;
+		result.d = cross(cross(BD,BG),BD);
+	}
+	else if (dot(CG,CD)>=0 &&
+			 dot(DG,DC)>=0 &&
+			 dot(BG,cross(BD,normalBDC))>0 &&
+			 dot(BG,cross(normalBAD,BD))>0)
+	{
+		// Voronoi CD
+		result.simplex.type = Simplex_Line;
+		result.simplex.A = simplex.C;
+		result.simplex.B = simplex.D;
+		result.d = cross(cross(CD,CG),CD);
+	}
+	else if ((dot(AG,normalABC))*(dot(AD,normalABC))<0)
+	{
+		// Voronoi ABC
+		result.simplex.type = Simplex_Triangle;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
+		result.simplex.C = simplex.C;
+		if (dot(AG, normalABC)>0)
+		{
+			result.d = normalABC;
+		}
+		else
+		{
+			result.d = -normalABC;
+		}
+	}
+	else if ((dot(AG,normalADB))*(dot(AC,normalADB))<0)
+	{
+		// Voronoi ABD
+		result.simplex.type = Simplex_Triangle;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
+		result.simplex.C = simplex.D;
+		if (dot(AG, normalADB)>0)
+		{
+			result.d = normalADB;
+		}
+		else
+		{
+			result.d = -normalADB;
+		}
+	}
+	else if ((dot(AG,normalACD))*(dot(AB,normalACD))<0)
+	{
+		// Voronoi ACD
+		result.simplex.type = Simplex_Triangle;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.C;
+		result.simplex.C = simplex.D;
+		if (dot(AG, normalACD)>0)
+		{
+			result.d = normalACD;
+		}
+		else
+		{
+			result.d = -normalACD;
+		}
+
+	}
+	else if ((dot(BG,normalBDC))*(dot(BA,normalBDC))<0)
+	{
+		// Voronoi BCD
+		result.simplex.type = Simplex_Triangle;
+		result.simplex.A = simplex.B;
+		result.simplex.B = simplex.C;
+		result.simplex.C = simplex.D;
+		if (dot(BG, normalBDC)>0)
+		{
+			result.d = normalBDC;
+		}
+		else
+		{
+			result.d = -normalBDC;
+		}
+	}
+	else
+	{
+		// Voronoi ABCD
+		result.containsGoal = true;
+		result.simplex.type = Simplex_Tetrahedron;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
+		result.simplex.C = simplex.C;
+		result.simplex.D = simplex.D;
+		// NOTE: If d is needed from here remember it is not set.
+	}
 
 	return result;
 }
@@ -1325,7 +1538,7 @@ bool DoSimplex_AllVoronoi(vec2* simplex, SimplexType* simplexType, vec2* D)
 
 
 template<typename S1, typename S2>
-bool GJK(S1 shapeA, S2 shapeB)
+bool GJK(S1 shapeA, S2 shapeB,  U32* numberOfLoopsCompleted = NULL)
 {
 	bool collisionDetected = false;
 
@@ -1335,8 +1548,10 @@ bool GJK(S1 shapeA, S2 shapeB)
 	simplex[0] = S;
 	vec2 D = -S;
 
-	for (;;)
+	U32 loopCounter = 0;
+	for (;loopCounter < 10;)
 	{
+		++loopCounter;
 		vec2 A = Support(&shapeA, &shapeB, &D);
 		if (A == vec2(0.0f, 0.0f))
 		{
@@ -1357,11 +1572,16 @@ bool GJK(S1 shapeA, S2 shapeB)
 		}
 	}
 
+	if (numberOfLoopsCompleted)
+	{
+		*numberOfLoopsCompleted = loopCounter;
+	}
+
 	return collisionDetected;
 }
 
 template<typename S1, typename S2>
-bool GJK_Casey(S1 shapeA, S2 shapeB)
+bool GJK_Casey(S1 shapeA, S2 shapeB, U32* numberOfLoopsCompleted = NULL)
 {
 	bool collisionDetected = false;
 
@@ -1371,7 +1591,8 @@ bool GJK_Casey(S1 shapeA, S2 shapeB)
 	simplex[0] = S;
 	vec2 D = -S;
 
-	for (;;)
+	U32 loopCounter = 0;
+	for (; loopCounter < 10;)
 	{
 		vec2 A = Support(&shapeA, &shapeB, &D);
 		if (A == vec2(0.0f, 0.0f))
@@ -1393,11 +1614,16 @@ bool GJK_Casey(S1 shapeA, S2 shapeB)
 		}
 	}
 
+	if (numberOfLoopsCompleted)
+	{
+		*numberOfLoopsCompleted = loopCounter;
+	}
+
 	return collisionDetected;
 }
 
 template<typename S1, typename S2>
-bool GJK_AllVoronoi(S1 shapeA, S2 shapeB)
+bool GJK_AllVoronoi(S1 shapeA, S2 shapeB, U32* numberOfLoopsCompleted = NULL)
 {
 	bool collisionDetected = false;
 
@@ -1407,7 +1633,8 @@ bool GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 	simplex[0] = S;
 	vec2 D = -S;
 
-	for (;;)
+	U32 loopCounter = 0;
+	for (; loopCounter < 10;)
 	{
 		vec2 A = Support(&shapeA, &shapeB, &D);
 		if (A == vec2(0.0f, 0.0f))
@@ -1427,6 +1654,11 @@ bool GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 			collisionDetected = true;
 			break;
 		}
+	}
+
+	if (numberOfLoopsCompleted)
+	{
+		*numberOfLoopsCompleted = loopCounter;
 	}
 
 	return collisionDetected;
@@ -1500,6 +1732,11 @@ void CollisionTestsRectRect2()
 			bool collisionSimple = GJK(g, r);
 			bool collisionCasey = GJK_Casey(g, r);
 			bool collisionAllVoronoi = GJK_AllVoronoi(g, r);
+
+			Assert(collisionSimple == collisionCasey);
+			Assert(collisionSimple == collisionAllVoronoi);
+			Assert(collisionCasey == collisionAllVoronoi);
+
 			if (collisionSimple)
 			{
 				hits_Simple[y][x] = 1;
@@ -1511,7 +1748,7 @@ void CollisionTestsRectRect2()
 
 			if (collisionCasey)
 			{
-				hits_Casey[y][x] = 1;
+				hits_Casey[y][x] = 1; 
 			}
 			else
 			{
