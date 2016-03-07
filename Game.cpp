@@ -62,17 +62,17 @@ bool Load3DModel(char* filename, F32** out_vertices, U64* out_numberOfVertices, 
 				U64 faceVertex1NumberOfIndices = 0;
 				U64* faceVertex1IndiceLengths = NULL;
 				char** faceVertex1Indices = SplitStringOnCharacter(lineComponents[1], lineComponentLengths[1], '/', &faceVertex1NumberOfIndices, &faceVertex1IndiceLengths);
-				indices[numberOfIndices++] = StringToU32(faceVertex1Indices[0]);
+				indices[numberOfIndices++] = StringToU32(faceVertex1Indices[0]) - 1;
 
 				U64 faceVertex2NumberOfIndices = 0;
 				U64* faceVertex2IndiceLengths = NULL;
 				char** faceVertex2Indices = SplitStringOnCharacter(lineComponents[2], lineComponentLengths[2], '/', &faceVertex2NumberOfIndices, &faceVertex2IndiceLengths);
-				indices[numberOfIndices++] = StringToU32(faceVertex2Indices[0]);
+				indices[numberOfIndices++] = StringToU32(faceVertex2Indices[0]) - 1;
 
 				U64 faceVertex3NumberOfIndices = 0;
 				U64* faceVertex3IndiceLengths = NULL;
 				char** faceVertex3Indices = SplitStringOnCharacter(lineComponents[3], lineComponentLengths[3], '/', &faceVertex3NumberOfIndices, &faceVertex3IndiceLengths);
-				indices[numberOfIndices++] = StringToU32(faceVertex3Indices[0]);
+				indices[numberOfIndices++] = StringToU32(faceVertex3Indices[0]) - 1;
 
 				free(faceVertex1Indices);
 				free(faceVertex1IndiceLengths);
@@ -2486,8 +2486,8 @@ void Init3DCollisionTestScene()
 	camera3DPosition = vec3(0, 0, -5);
 	camera3DRotations = vec3(0, 0, 0);
 	//camera3DViewFrustum = CreateViewFrustum(55.64f, 33.07f, 1.0f / 3.0f, 100.0f); // NOTE: These FOV values are for fullscreen
-	camera3DViewFrustum = CreateViewFrustum(24.866f, 24.866f, 1.0f / 3.0f, 100.0f);
-	mat4 Pp = GetPerspectiveProjection(camera3DViewFrustum);
+	camera3DViewFrustum = CreateViewFrustum(2*24.866f, 2*24.866f, 1.0f / 3.0f, 100.0f);
+	/*mat4 Pp = GetPerspectiveProjection(camera3DViewFrustum);
 
 	vec4 csNearZero = Pp * vec4(0.0f, 0.0f, -camera3DViewFrustum.near, 1.0f); csNearZero /= csNearZero.w;
 	vec4 csNearMin = Pp * vec4(camera3DViewFrustum.left, camera3DViewFrustum.bottom, -camera3DViewFrustum.near, 1.0f); csNearMin /= csNearMin.w;
@@ -2514,11 +2514,21 @@ void Init3DCollisionTestScene()
 	mat4 Pproj = GetPerspectiveProjection(cvf);
 	OrientedBoundingBoxPoints collisionShape1ClipSpacePoints = Homogenize(Pproj * collisionShape1CameraSpacePoints);
 
-	int x = 5;
+	int x = 5;*/
+
+	vec3 collisionShape1_Rotation = vec3(0, 0, DegreesToRadians(45.0f));
+	mat4 Pprojection = GetPerspectiveProjection(camera3DViewFrustum);
+	mat4 Ccamera = mat4(cos(collisionShape1_Rotation.z), sin(collisionShape1_Rotation.z), 0, 0, -sin(collisionShape1_Rotation.z), cos(collisionShape1_Rotation.z), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, camera3DPosition.x, camera3DPosition.y, camera3DPosition.z, 1);
+	mat4 Bmodel = collisionShape1.transform;
+	mat4 PCM = Pprojection * inverse(Ccamera) * Bmodel;
+
+	OrientedBoundingBoxPoints wsp;
+	for (U32 i = 0; i < 8; ++i)
+	{
+		wsp.points[i] = PCM * vec4(cubeVertices[(i * 3) + 0], cubeVertices[(i * 3) + 1], cubeVertices[(i * 3) + 2], 1.0f);
+	}
+	OrientedBoundingBoxPoints csp = Homogenize(wsp);
 }
-// in the update 
-// set shaders
-// draw the shapes
 
 
 
@@ -3177,27 +3187,61 @@ void collisionScene2DUpdate(F32 deltaTime)
 
 
 vec4 collisionShape1_Color = darkGreen;
+vec3 collisionShape1_Rotation = vec3();
 void collisionScene3DUpdate(F32 deltaTime)
 {
+	
 	// Do any input things
+	if (GetKey(KeyCode_A))
+	{
+		collisionShape1_Rotation.y -= 45.0f * deltaTime;
+	}
+	if (GetKey(KeyCode_D))
+	{
+		collisionShape1_Rotation.y += 45.0f * deltaTime;
+	}
+	if (GetKey(KeyCode_S))
+	{
+		collisionShape1_Rotation.x -= 45.0f * deltaTime;
+	}
+	if (GetKey(KeyCode_W))
+	{
+		collisionShape1_Rotation.x += 45.0f * deltaTime;
+	}
 
 	glViewport(0, 0, 800, 800);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	mat4 Pprojection = GetPerspectiveProjection(camera3DViewFrustum);
-	mat4 Ccamera = mat4(1,0,0,0,   0,1,0,0,   0,0,-1,0,   camera3DPosition.x,camera3DPosition.y,camera3DPosition.z,1);
+	mat4 Ccamera = RotationMatrix_X(collisionShape1_Rotation.x) * RotationMatrix_Y(collisionShape1_Rotation.y) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, camera3DPosition.x, camera3DPosition.y, camera3DPosition.z, 1);
 
-	//glpolygonmode edges
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPointSize(4.0f);
 	glUseProgram(solidColorTriangleShaderProgram);
-	glBindVertexArray(cubeVAO);
-	mat4 Bmodel = collisionShape1.transform;
+	//glBindVertexArray(cubeVAO);
+	//glBindVertexArray(capsuleVAO);
+	glBindVertexArray(sphereVAO);
+	mat4 Bmodel = /*mat4(.75,0,0,0,   0,.75,0,0,   0,0,.75,0,   0,0,0,1) **/ collisionShape1.transform;
 	mat4 PCM = Pprojection * inverse(Ccamera) * Bmodel;
 	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
 	glUniform4fv(solidColorTriangleTriangleColorLocation, 1, &collisionShape1_Color[0]);
-	glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
-	// set PCM matrix
-	// set color
-	// indexed draw
+	//glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
+	//glDrawElements(GL_TRIANGLES, numberOfCapsuleWallIndices, GL_UNSIGNED_INT, NULL);
+	glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+	glBindVertexArray(NULL);
+
+// 	glBindVertexArray(sphereVAO);
+// 	PCM = Pprojection * inverse(Ccamera) * mat4(1, 0, 0, 0,     0, 1, 0, 0,     0, 0, 1, 0,     0, 1, 0, 1);
+// 	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+// 	glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+// 	glBindVertexArray(NULL);
+// 
+// 	glBindVertexArray(sphereVAO);
+// 	PCM = Pprojection * inverse(Ccamera) * mat4(1, 0, 0, 0,     0, 1, 0, 0,     0, 0, 1, 0,     0, -1, 0, 1);
+// 	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+// 	glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+// 	glBindVertexArray(NULL);
+	
 
 }
 

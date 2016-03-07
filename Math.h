@@ -20,3 +20,24 @@ inline F32 DegreesToRadians(F32 angleInDegrees)
 	F32 result = angleInDegrees * (PI/180.0f);
 	return result;
 }
+
+inline mat4 RotationMatrix_X(F32 angleInDegrees)
+{
+	F32 angleInRadians = DegreesToRadians(angleInDegrees);
+	mat4 result = mat4(1,0,0,0,   0,cos(angleInRadians),sin(angleInRadians),0,   0,-sin(angleInRadians),cos(angleInRadians),0,   0,0,0,1);
+	return result;
+}
+
+inline mat4 RotationMatrix_Y(F32 angleInDegrees)
+{
+	F32 angleInRadians = DegreesToRadians(angleInDegrees);
+	mat4 result = mat4(cos(angleInRadians),0,-sin(angleInRadians),0,   0,1,0,0,   sin(angleInRadians),0,cos(angleInRadians),0,   0,0,0,1);
+	return result;
+}
+
+inline mat4 RotationMatrix_Z(F32 angleInDegrees)
+{
+	F32 anglueInRadians = DegreesToRadians(angleInDegrees);
+	mat4 result = mat4(cos(anglueInRadians),sin(anglueInRadians),0,0,   -sin(anglueInRadians),cos(anglueInRadians),0,0,   0,0,1,0,   0,0,0,1);
+	return result;
+}
