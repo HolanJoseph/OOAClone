@@ -90,8 +90,8 @@ bool Load3DModel(char* filename, F32** out_vertices, U64* out_numberOfVertices, 
 		}
 	}
 
-	vertices = (F32*)realloc(vertices, sizeof(F32)* numberOfLines * 3);
-	indices = (U32*)realloc(indices, sizeof(U32)* numberOfLines);
+	vertices = (F32*)realloc(vertices, sizeof(F32)* numberOfVertices);
+	indices = (U32*)realloc(indices, sizeof(U32)* numberOfIndices);
 
 	*out_vertices = vertices;
 	*out_numberOfVertices = numberOfVertices;
@@ -647,6 +647,8 @@ DoSimplexResult DoSimplexLineAllVoronoiDouble(Simplex simplex, vec3 D)
 	return result;
 }
 
+
+
 bool DoSimplexTriangle(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
@@ -1045,6 +1047,8 @@ DoSimplexResult DoSimplexTriangleAllVoronoiDouble(Simplex simplex, vec3 D)
 	return result;
 }
 
+
+
 bool DoSimplexTetrahedron(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
@@ -1272,6 +1276,8 @@ DoSimplexResult DoSimplexTetrahedronAllVoronoi(Simplex simplex, vec3 D)
 	return result;
 }
 
+
+
 bool DoSimplex__(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
@@ -1453,7 +1459,6 @@ bool DoSimplex__(vec2* simplex, SimplexType* simplexType, vec2* D)
 	return result;
 }
 
-
 bool DoSimplex(vec2* simplex, SimplexType* simplexType, vec2* D)
 {
 	bool result = false;
@@ -1627,6 +1632,7 @@ bool DoSimplex_AllVoronoi(vec2* simplex, SimplexType* simplexType, vec2* D)
 
 
 
+
 template<typename S1, typename S2>
 bool GJK(S1 shapeA, S2 shapeB,  U32* numberOfLoopsCompleted = NULL)
 {
@@ -1755,6 +1761,10 @@ bool GJK_AllVoronoi(S1 shapeA, S2 shapeB, U32* numberOfLoopsCompleted = NULL)
 }
 
 
+
+
+
+// r rotated 0 degrees
 void CollisionTestsRectRect1()
 {
 	Rectangle g;
@@ -1871,6 +1881,10 @@ void CollisionTestsRectRect2()
 		DebugPrintf(1024, "hits_AllVoronoi %u %u %u %u %u %u %u\n", hits_AllVoronoi[i][0], hits_AllVoronoi[i][1], hits_AllVoronoi[i][2], hits_AllVoronoi[i][3], hits_AllVoronoi[i][4], hits_AllVoronoi[i][5], hits_AllVoronoi[i][6]);
 	}
 }
+
+
+
+
 
 
 // NOTE: These tests are to test whether simplified GJK provides the same results as Casey's implementation.
@@ -2079,27 +2093,13 @@ void CollisionSupportsTests()
 	DebugPrintf(512, "There were %u triangle triangle non-collisions in the set.\n", numberOfTriangleTriangleNonCollisions);
 }
 
+
+
+
+
+
 void CollisionDetection()
 {
-	F32* cubeVertices = NULL;
-	U64 numberOfCubeVertices = 0;
-	U32* cubeIndices = NULL;
-	U64 numberOfCubeIndices = 0;
-	Load3DModel("Assets/3D/Cube.obj", &cubeVertices, &numberOfCubeVertices, &cubeIndices, &numberOfCubeIndices);
-
-	F32* capsuleWallVertices = NULL;
-	U64 numberOfCapsuleWallVertices = 0;
-	U32* capsuleWallIndices = NULL;
-	U64 numberOfCapsuleWallIndices = 0;
-	Load3DModel("Assets/3D/CapsuleWall.obj", &capsuleWallVertices, &numberOfCapsuleWallVertices, &capsuleWallIndices, &numberOfCapsuleWallIndices);
-
-	F32* sphereVertices = NULL;
-	U64 numberOfSphereVertices = 0;
-	U32* sphereIndices = NULL;
-	U64 numberOfSphereIndices = 0;
-	Load3DModel("Assets/3D/sphere.obj", &sphereVertices, &numberOfSphereVertices, &sphereIndices, &numberOfSphereIndices);
-
-
 	bool collisionDetected = false;
 
 	Rectangle shapeA;
@@ -2156,6 +2156,11 @@ struct verifyProgramReturnResult
 };
 verifyProgramReturnResult verifyProgram(GLuint program);
 
+
+
+
+
+
 const GLuint numVertices = 4;
 const GLuint vertexDimensionality = 2;
 const GLuint textureSpaceDimensionality = 2;
@@ -2179,6 +2184,10 @@ GLuint solidColorQuadQuadColorLocation;
 GLuint solidColorCircleInPointShaderProgram;
 GLuint solidColorCircleInPointPCMLocation;
 GLuint solidColorCircleInPointCircleColorLocation;
+
+GLuint solidColorTriangleShaderProgram;
+GLuint solidColorTrianglePCMLocation;
+GLuint solidColorTriangleTriangleColorLocation;
 
 
 
@@ -2216,7 +2225,7 @@ GLuint circleVAO;
 #define numPointsInCircle 1
 #define circlePointDimensionality 2
 
-void InitCollisionTestScene()
+void Init2DCollisionTestScene()
 {
 	collisionCamera.position = vec2(0,0);
 	collisionCamera.viewArea = vec2(10,10);
@@ -2305,6 +2314,216 @@ void InitCollisionTestScene()
 	cs1Circle.origin = vec2(0, 0);
 	cs1Circle.radius = 0.5f;
 }
+
+
+
+
+
+
+struct ViewFrustum
+{
+	F32 left;
+	F32 right;
+	F32 top;
+	F32 bottom;
+	F32 near;
+	F32 far;
+};
+
+ViewFrustum CreateViewFrustum(F32 xFOV, F32 yFOV, F32 near, F32 far)
+{
+	ViewFrustum result;
+
+	result.near = near;
+	result.far = far;
+
+	result.right = near * tan(DegreesToRadians(xFOV)/2.0f);
+	result.left = -result.right;
+
+	result.top = near * tan(DegreesToRadians(yFOV)/2.0f);
+	result.bottom = -result.top;
+
+	return result;
+}
+
+mat4 GetPerspectiveProjection(ViewFrustum frustum)
+{
+	mat4 result;
+
+	result[0] = vec4((2.0f*frustum.near)/(frustum.right-frustum.left), 0.0f, 0.0f, 0.0f);
+	result[1] = vec4(0.0f, (2.0f*frustum.near)/(frustum.top-frustum.bottom), 0.0f, 0.0f);
+	result[2] = vec4((frustum.right+frustum.left)/(frustum.right-frustum.left), (frustum.top+frustum.bottom)/(frustum.top-frustum.bottom), -(frustum.far+frustum.near)/(frustum.far-frustum.near), -1.0f);
+	result[3] = vec4(0.0f, 0.0f, -(2.0f*frustum.far*frustum.near)/(frustum.far-frustum.near), 0.0f);
+
+	return result;
+}
+
+GLuint cubeVAO;
+U64 numberOfCubeVertices;
+U64 numberOfCubeIndices;
+
+GLuint capsuleVAO;
+U64 numberOfCapsuleWallVertices;
+U64 numberOfCapsuleWallIndices;
+
+GLuint sphereVAO;
+U64 numberOfSphereVertices;
+U64 numberOfSphereIndices;
+
+struct OrientedBoundingBoxPoints
+{
+	vec4 points[8];
+};
+
+OrientedBoundingBoxPoints operator*(const mat4 &A, const OrientedBoundingBoxPoints &x)
+{
+	OrientedBoundingBoxPoints result;
+	for (U32 i = 0; i < 8; ++i)
+	{
+		result.points[i] = A * x.points[i];
+	}
+	return result;
+}
+
+OrientedBoundingBoxPoints Homogenize(OrientedBoundingBoxPoints points)
+{
+	OrientedBoundingBoxPoints result;
+
+	for (U32 i = 0; i < 8; ++i)
+	{
+		result.points[i] = points.points[i]/points.points[i].w;
+	}
+
+	return result;
+}
+
+OrientedBoundingBoxPoints GetOBBPoints(OrientedBoundingBox box)
+{
+	OrientedBoundingBoxPoints result;
+
+	result.points[0] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
+	result.points[1] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
+	result.points[2] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
+	result.points[3] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
+	result.points[4] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
+	result.points[5] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
+	result.points[6] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
+	result.points[7] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
+
+	return result;
+}
+
+vec3 camera3DPosition;
+vec3 camera3DRotations;
+ViewFrustum camera3DViewFrustum;
+
+OrientedBoundingBox collisionShape1;
+OrientedBoundingBox collisionShape2;
+
+void Init3DCollisionTestScene()
+{
+	F32* cubeVertices = NULL;
+	U32* cubeIndices = NULL;
+	Load3DModel("Assets/3D/Cube.obj", &cubeVertices, &numberOfCubeVertices, &cubeIndices, &numberOfCubeIndices);
+	glGenVertexArrays(1, &cubeVAO);
+	glBindVertexArray(cubeVAO);
+	GLuint cubeVertexBuffer;
+	glGenBuffers(1, &cubeVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices[0])*numberOfCubeVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(cubeVertices[0])*numberOfCubeVertices, cubeVertices);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+	GLuint cubeIndexBuffer;
+	glGenBuffers(1, &cubeIndexBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices[0])*numberOfCubeIndices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(cubeIndices[0])*numberOfCubeIndices, cubeIndices);
+	glBindVertexArray(NULL);
+
+
+
+	F32* capsuleWallVertices = NULL;
+	U32* capsuleWallIndices = NULL;
+	Load3DModel("Assets/3D/CapsuleWall.obj", &capsuleWallVertices, &numberOfCapsuleWallVertices, &capsuleWallIndices, &numberOfCapsuleWallIndices);
+	glGenVertexArrays(1, &capsuleVAO);
+	glBindVertexArray(capsuleVAO);
+	GLuint capsuleVertexBuffer;
+	glGenBuffers(1, &capsuleVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, capsuleVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(capsuleWallVertices[0])*numberOfCapsuleWallVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(capsuleWallVertices[0])*numberOfCapsuleWallVertices, capsuleWallVertices);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+	GLuint capsuleIndexBuffer;
+	glGenBuffers(1, &capsuleIndexBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, capsuleIndexBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(capsuleWallIndices[0])*numberOfCapsuleWallIndices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(capsuleWallIndices[0])*numberOfCapsuleWallIndices, capsuleWallIndices);
+	glBindVertexArray(NULL);
+
+
+	F32* sphereVertices = NULL;
+	U32* sphereIndices = NULL;
+	Load3DModel("Assets/3D/sphere.obj", &sphereVertices, &numberOfSphereVertices, &sphereIndices, &numberOfSphereIndices);
+	glGenVertexArrays(1, &sphereVAO);
+	glBindVertexArray(sphereVAO);
+	GLuint sphereVertexBuffer;
+	glGenBuffers(1, &sphereVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, sphereVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(sphereVertices[0])*numberOfSphereVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sphereVertices[0])*numberOfSphereVertices, sphereVertices);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+	GLuint sphereIndexBuffer;
+	glGenBuffers(1, &sphereIndexBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereIndexBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sphereIndices[0])*numberOfSphereIndices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(sphereIndices[0])*numberOfSphereIndices, sphereIndices);
+	glBindVertexArray(NULL);
+
+	// Create 3D Camera
+	camera3DPosition = vec3(0, 0, -5);
+	camera3DRotations = vec3(0, 0, 0);
+	//camera3DViewFrustum = CreateViewFrustum(55.64f, 33.07f, 1.0f / 3.0f, 100.0f); // NOTE: These FOV values are for fullscreen
+	camera3DViewFrustum = CreateViewFrustum(24.866f, 24.866f, 1.0f / 3.0f, 100.0f);
+	mat4 Pp = GetPerspectiveProjection(camera3DViewFrustum);
+
+	vec4 csNearZero = Pp * vec4(0.0f, 0.0f, -camera3DViewFrustum.near, 1.0f); csNearZero /= csNearZero.w;
+	vec4 csNearMin = Pp * vec4(camera3DViewFrustum.left, camera3DViewFrustum.bottom, -camera3DViewFrustum.near, 1.0f); csNearMin /= csNearMin.w;
+	vec4 csNearMax = Pp * vec4(camera3DViewFrustum.right, camera3DViewFrustum.top, -camera3DViewFrustum.near, 1.0f); csNearMax /= csNearMax.w;
+
+	vec4 csFarZero = Pp * vec4(0.0f, 0.0f, -camera3DViewFrustum.far, 1.0f); csFarZero /= csFarZero.w;
+	vec4 csFarMin = Pp * vec4(-camera3DViewFrustum.far*tan(DegreesToRadians(55.64) / 2.0f), -camera3DViewFrustum.far*tan(DegreesToRadians(33.07f) / 2.0f), -camera3DViewFrustum.far, 1.0f); csFarMin /= csFarMin.w;
+	vec4 csFarMax = Pp * vec4(camera3DViewFrustum.far*tan(DegreesToRadians(55.64) / 2.0f), camera3DViewFrustum.far*tan(DegreesToRadians(33.07f) / 2.0f), -camera3DViewFrustum.far, 1.0f); csFarMax /= csFarMax.w;
+
+	collisionShape1.origin = vec3(0,0,0);
+	collisionShape1.halfDim = vec3(1,1,1);
+	collisionShape1.transform = mat4(1,0,0,0,   0,1,0,0,   0,0,1,0, 0,0,1,1);
+
+	collisionShape2.origin = vec3(0,0,0);
+	collisionShape2.halfDim = vec3(1,1,1);
+	collisionShape2.transform = mat4(1,0,0,0,   0,1,0,0,   0,0,1,0,   -1,-1,1,1);
+
+	OrientedBoundingBoxPoints collisionShape1WorldSpacePoints = GetOBBPoints(collisionShape1);
+
+	mat4 Ccamera = inverse(mat4(1,0,0,0,   0,1,0,0,   0,0,-1,0,   0,0,-5,1));
+	OrientedBoundingBoxPoints collisionShape1CameraSpacePoints = Ccamera * collisionShape1WorldSpacePoints;
+
+	ViewFrustum cvf = CreateViewFrustum(55.64f, 33.07f, 1.0f, 100.0f);
+	mat4 Pproj = GetPerspectiveProjection(cvf);
+	OrientedBoundingBoxPoints collisionShape1ClipSpacePoints = Homogenize(Pproj * collisionShape1CameraSpacePoints);
+
+	int x = 5;
+}
+// in the update 
+// set shaders
+// draw the shapes
+
+
+
+
+
 
 U32 numEntities = (10 * 9) + 1;
 Entity* entities;
@@ -2549,19 +2768,20 @@ bool GameInit()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 	glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(textureCoordinates), textureCoordinates);
 
-	texturedQuadShaderProgram = LoadShaderProgram("texturedQuad.vert", "texturedQuad.frag");
-	solidColorQuadShaderProgram = LoadShaderProgram("solidColorQuad.vert", "solidColorQuad.frag");
-	solidColorCircleInPointShaderProgram = LoadShaderProgram("solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
-	glUseProgram(texturedQuadShaderProgram);
-
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)sizeof(vertices) /* NOTE: THIS IS A BYTE OFFSET*/);
 	glEnableVertexAttribArray(1);
 
-	stbi_set_flip_vertically_on_load(1);
+	texturedQuadShaderProgram = LoadShaderProgram("texturedQuad.vert", "texturedQuad.frag");
+	solidColorQuadShaderProgram = LoadShaderProgram("solidColorQuad.vert", "solidColorQuad.frag");
+	solidColorCircleInPointShaderProgram = LoadShaderProgram("solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
+	solidColorTriangleShaderProgram = LoadShaderProgram("solidColorTriangle.vert", "solidColorTriangle.frag");
+	glUseProgram(texturedQuadShaderProgram);
 
+
+	stbi_set_flip_vertically_on_load(1);
 	// textures
 	// read in the texture
 	I32 textureWidth = 0;
@@ -2595,8 +2815,11 @@ bool GameInit()
 	solidColorCircleInPointPCMLocation = glGetUniformLocation(solidColorCircleInPointShaderProgram, "PCM");
 	solidColorCircleInPointCircleColorLocation = glGetUniformLocation(solidColorCircleInPointShaderProgram, "circleColor");
 
+	solidColorTrianglePCMLocation = glGetUniformLocation(solidColorTriangleShaderProgram, "PCM");
+	solidColorTriangleTriangleColorLocation = glGetUniformLocation(solidColorTriangleShaderProgram, "triangleColor");
 	//InitScene();
-	InitCollisionTestScene();
+	//Init2DCollisionTestScene();
+	Init3DCollisionTestScene();
 
 	return true;
 }
@@ -2638,7 +2861,7 @@ enum GJKMode
 };
 GJKMode gjkMode;
 
-void GameUpdate(F32 deltaTime)
+void collisionScene2DUpdate(F32 deltaTime)
 {
 // 	if (GetKey(KeyCode_W))
 // 	{
@@ -2950,6 +3173,38 @@ void GameUpdate(F32 deltaTime)
 			DebugPrintf(1024, "COLLISION SHAPE 2(RECTANGLE)\nTransformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\np[3] = (%f,%f)\n", cs2p0.x, cs2p0.y, cs2p2.x, cs2p2.y, cs2p3.x, cs2p3.y, cs2p1.x, cs2p1.y);
 		}
 	}
+}
+
+
+vec4 collisionShape1_Color = darkGreen;
+void collisionScene3DUpdate(F32 deltaTime)
+{
+	// Do any input things
+
+	glViewport(0, 0, 800, 800);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	mat4 Pprojection = GetPerspectiveProjection(camera3DViewFrustum);
+	mat4 Ccamera = mat4(1,0,0,0,   0,1,0,0,   0,0,-1,0,   camera3DPosition.x,camera3DPosition.y,camera3DPosition.z,1);
+
+	//glpolygonmode edges
+	glUseProgram(solidColorTriangleShaderProgram);
+	glBindVertexArray(cubeVAO);
+	mat4 Bmodel = collisionShape1.transform;
+	mat4 PCM = Pprojection * inverse(Ccamera) * Bmodel;
+	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorTriangleTriangleColorLocation, 1, &collisionShape1_Color[0]);
+	glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
+	// set PCM matrix
+	// set color
+	// indexed draw
+
+}
+
+void GameUpdate(F32 deltaTime)
+{
+	//collisionScene2DUpdate(deltaTime);
+	collisionScene3DUpdate(deltaTime);
 }
 
 bool GameShutdown()
