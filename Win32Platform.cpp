@@ -38,8 +38,8 @@ HDC   windowDC;
 HGLRC windowOpenGLContext;
 
 // NOTE: Input globals
-U16 inputBuffer;
-U16 inputBackBuffer;
+U64 inputBuffer;
+U64 inputBackBuffer;
 
 vec2 hdMouseMovement;
 bool cursorVisibility;
@@ -677,20 +677,81 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 	KeyCode code;
 	switch (vkCode)
 	{
-	case 0x57:
-	code = KeyCode_W;
+
+	case 0x30:
+	code = KeyCode_0;
+	break;
+
+	case 0x31:
+	code = KeyCode_1;
+	break;
+
+	case 0x32:
+	code = KeyCode_2;
+	break;
+
+	case 0x33:
+	code = KeyCode_3;
+	break;
+
+	case 0x34:
+	code = KeyCode_4;
+	break;
+
+	case 0x35:
+	code = KeyCode_5;
+	break;
+
+	case 0x36:
+	code = KeyCode_6;
+	break;
+
+	case 0x37:
+	code = KeyCode_7;
+	break;
+
+	case 0x38:
+	code = KeyCode_8;
+	break;
+
+	case 0x39:
+	code = KeyCode_9;
 	break;
 
 	case 0x41:
 	code = KeyCode_A;
 	break;
 
-	case 0x53:
-	code = KeyCode_S;
+	case 0x42:
+	code = KeyCode_B;
+	break;
+
+	case 0x43:
+	code = KeyCode_C;
 	break;
 
 	case 0x44:
 	code = KeyCode_D;
+	break;
+
+	case 0x45:
+	code = KeyCode_E;
+	break;
+
+	case 0x46:
+	code = KeyCode_F;
+	break;
+
+	case 0x47:
+	code = KeyCode_G;
+	break;
+
+	case 0x48:
+	code = KeyCode_H;
+	break;
+
+	case 0x49:
+	code = KeyCode_I;
 	break;
 
 	case 0x4A:
@@ -705,10 +766,6 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 	code = KeyCode_L;
 	break;
 
-	case VK_SPACE:
-	code = KeyCode_SPACEBAR;
-	break;
-
 	case 0x4D:
 	code = KeyCode_M;
 	break;
@@ -717,8 +774,112 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 	code = KeyCode_N;
 	break;
 
-	case 0x42:
-	code = KeyCode_B;
+	case 0x4F:
+	code = KeyCode_O;
+	break;
+
+	case 0x50:
+	code = KeyCode_P;
+	break;
+
+	case 0x51:
+	code = KeyCode_Q;
+	break;
+
+	case 0x52:
+	code = KeyCode_R;
+	break;
+
+	case 0x53:
+	code = KeyCode_S;
+	break;
+
+	case 0x54:
+	code = KeyCode_T;
+	break;
+
+	case 0x55:
+	code = KeyCode_U;
+	break;
+
+	case 0x56:
+	code = KeyCode_V;
+	break;
+
+	case 0x57:
+	code = KeyCode_W;
+	break;
+
+	case 0x58:
+	code = KeyCode_X;
+	break;
+
+	case 0x59:
+	code = KeyCode_Y;
+	break;
+
+	case 0x5A:
+	code = KeyCode_Z;
+	break;
+
+	case VK_OEM_MINUS:
+	code = KeyCode_Minus;
+	break;
+
+	case VK_OEM_PLUS:
+	code = KeyCode_Equal;
+	break;
+
+	case VK_OEM_4:
+	code = KeyCode_LeftBracket;
+	break;
+
+	case VK_OEM_6:
+	code = KeyCode_RightBracket;
+	break;
+
+	case VK_OEM_1:
+	code = KeyCode_SemiColon;
+	break;
+
+	case VK_OEM_7: // NOTE: Why?
+	code = KeyCode_BackSlash;
+	break;
+
+	case VK_OEM_COMMA:
+	code = KeyCode_Comma;
+	break;
+
+	case VK_OEM_PERIOD:
+	code = KeyCode_Period;
+	break;
+
+	case VK_OEM_2:
+	code = KeyCode_ForwardSlash;
+	break;
+
+	case VK_LEFT:
+	code = KeyCode_Left;
+	break;
+
+	case VK_UP:
+	code = KeyCode_Up;
+	break;
+
+	case VK_RIGHT:
+	code = KeyCode_Right;
+	break;
+
+	case VK_DOWN:
+	code = KeyCode_Down;
+	break;
+
+	case VK_SPACE:
+	code = KeyCode_Spacebar;
+	break;
+
+	case VK_OEM_3: // NOTE: why?
+	code = KeyCode_Quote;
 	break;
 
 	default:

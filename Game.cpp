@@ -2516,7 +2516,7 @@ void Init3DCollisionTestScene()
 
 	int x = 5;*/
 
-	vec3 collisionShape1_Rotation = vec3(0, 0, DegreesToRadians(45.0f));
+	/*vec3 collisionShape1_Rotation = vec3(0, 0, DegreesToRadians(45.0f));
 	mat4 Pprojection = GetPerspectiveProjection(camera3DViewFrustum);
 	mat4 Ccamera = mat4(cos(collisionShape1_Rotation.z), sin(collisionShape1_Rotation.z), 0, 0, -sin(collisionShape1_Rotation.z), cos(collisionShape1_Rotation.z), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, camera3DPosition.x, camera3DPosition.y, camera3DPosition.z, 1);
 	mat4 Bmodel = collisionShape1.transform;
@@ -2527,7 +2527,7 @@ void Init3DCollisionTestScene()
 	{
 		wsp.points[i] = PCM * vec4(cubeVertices[(i * 3) + 0], cubeVertices[(i * 3) + 1], cubeVertices[(i * 3) + 2], 1.0f);
 	}
-	OrientedBoundingBoxPoints csp = Homogenize(wsp);
+	OrientedBoundingBoxPoints csp = Homogenize(wsp);*/
 }
 
 
@@ -3124,7 +3124,7 @@ void collisionScene2DUpdate(F32 deltaTime)
 	}
 
 	// Print out collision information
-	if (GetKeyDown(KeyCode_SPACEBAR))
+	if (GetKeyDown(KeyCode_Spacebar))
 	{
 		DebugPrintf(512, "\n\n\nCOLLISION SAMPLE %u\n\n", sampleNumber++);
 		(collision) ? DebugPrint("collision = TRUE\n\n") : DebugPrint("collision = FALSE\n\n");
@@ -3186,63 +3186,261 @@ void collisionScene2DUpdate(F32 deltaTime)
 }
 
 
-vec4 collisionShape1_Color = darkGreen;
-vec3 collisionShape1_Rotation = vec3();
+F32 movementSpeed = 2.0f;
+F32 rotationSpeed = 45.0f; // In degrees
+
+bool controllingShape1 = true;
+
+enum csType3D
+{
+	cs3D_OrientedBoundingBox,
+	cs3D_Sphere,
+	cs3D_Capsule,
+
+	cs3D_COUNT
+};
+
+struct CollisionShape_Data
+{
+	vec4 color;
+	vec3 position;
+	vec3 rotation;
+	csType3D type;
+};
+
+CollisionShape_Data* controlledCollisionShape = NULL;
+CollisionShape_Data collisionShape1_Data;
+CollisionShape_Data collisionShape2_Data;
+
+F32 cameraMovementSpeed = 2.0f;
+F32 cameraRotationSpeed = 30.0f;
+
+F32 cameraDistance = 5.0f;
+F32 cameraAzimuthAngle = 0.0f;
+F32 cameraPolarAngle = 0.0f;
+F32 cameraHeight = 0.0f;
+
 void collisionScene3DUpdate(F32 deltaTime)
 {
-	
-	// Do any input things
-	if (GetKey(KeyCode_A))
+	if (GetKeyDown(KeyCode_1))
 	{
-		collisionShape1_Rotation.y -= 45.0f * deltaTime;
+		controllingShape1 = !controllingShape1;
 	}
-	if (GetKey(KeyCode_D))
+	if (controllingShape1)
 	{
-		collisionShape1_Rotation.y += 45.0f * deltaTime;
+		controlledCollisionShape = &collisionShape1_Data;
+	}
+	else
+	{
+		controlledCollisionShape = &collisionShape2_Data;
+	}
+
+	if (GetKey(KeyCode_W))
+	{
+		controlledCollisionShape->position.z += deltaTime * movementSpeed;
 	}
 	if (GetKey(KeyCode_S))
 	{
-		collisionShape1_Rotation.x -= 45.0f * deltaTime;
+		controlledCollisionShape->position.z -= deltaTime * movementSpeed;
 	}
-	if (GetKey(KeyCode_W))
+	if (GetKey(KeyCode_A))
 	{
-		collisionShape1_Rotation.x += 45.0f * deltaTime;
+		controlledCollisionShape->position.x -= deltaTime * movementSpeed;
 	}
+	if (GetKey(KeyCode_D))
+	{
+		controlledCollisionShape->position.x += deltaTime * movementSpeed;
+	}
+	if (GetKey(KeyCode_R))
+	{
+		controlledCollisionShape->position.y += deltaTime * movementSpeed;
+	}
+	if (GetKey(KeyCode_F))
+	{
+		controlledCollisionShape->position.y -= deltaTime * movementSpeed;
+	}
+	if (GetKey(KeyCode_I))
+	{
+		controlledCollisionShape->rotation.x += deltaTime * rotationSpeed;
+	}
+	if (GetKey(KeyCode_K))
+	{
+		controlledCollisionShape->rotation.x -= deltaTime * rotationSpeed;
+	}
+	if (GetKey(KeyCode_J))
+	{
+		controlledCollisionShape->rotation.y -= deltaTime * rotationSpeed;
+	}
+	if (GetKey(KeyCode_L))
+	{
+		controlledCollisionShape->rotation.y += deltaTime * rotationSpeed;
+	}
+	if (GetKey(KeyCode_U))
+	{
+		controlledCollisionShape->rotation.z += deltaTime * rotationSpeed;
+	}
+	if (GetKey(KeyCode_O))
+	{
+		controlledCollisionShape->rotation.z -= deltaTime * rotationSpeed;
+	}
+	if (GetKeyDown(KeyCode_T))
+	{
+		controlledCollisionShape->type = (csType3D)(controlledCollisionShape->type + 1);
+		if (controlledCollisionShape->type == cs3D_COUNT)
+		{
+			controlledCollisionShape->type = cs3D_OrientedBoundingBox;
+		}
+		DebugPrintf(512, "cs3d %i\n", controlledCollisionShape->type);
+	}
+
+	if (GetKey(KeyCode_Up))
+	{
+		cameraPolarAngle += deltaTime * cameraRotationSpeed;
+		cameraHeight += deltaTime * cameraMovementSpeed;
+	}
+	if (GetKey(KeyCode_Down))
+	{
+		cameraPolarAngle -= deltaTime * cameraRotationSpeed;
+		cameraHeight -= deltaTime * cameraMovementSpeed;
+	}
+	if (GetKey(KeyCode_Left))
+	{
+		cameraAzimuthAngle -= deltaTime * cameraRotationSpeed;
+	}
+	if (GetKey(KeyCode_Right))
+	{
+		cameraAzimuthAngle += deltaTime * cameraRotationSpeed;
+	}
+	if (GetKey(KeyCode_Minus))
+	{
+		cameraDistance -= deltaTime * cameraMovementSpeed;
+	}
+	if (GetKey(KeyCode_Equal))
+	{
+		cameraDistance += deltaTime * cameraMovementSpeed;
+	}
+
+// 	if (abs(cameraPolarAngle) > 80.0f)
+// 	{
+// 		cameraPolarAngle = 80.0f;
+// 	}
 
 	glViewport(0, 0, 800, 800);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	mat4 Pprojection = GetPerspectiveProjection(camera3DViewFrustum);
-	mat4 Ccamera = RotationMatrix_X(collisionShape1_Rotation.x) * RotationMatrix_Y(collisionShape1_Rotation.y) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, camera3DPosition.x, camera3DPosition.y, camera3DPosition.z, 1);
+	
+	// Cylindrical Coordinates
+	camera3DPosition.x = cameraDistance * sin(DegreesToRadians(cameraAzimuthAngle));
+	camera3DPosition.y = cameraHeight;
+	camera3DPosition.z = cameraDistance * -cos(DegreesToRadians(cameraAzimuthAngle));
+
+	// Camera Basis
+	vec3 cb_z = normalize(-camera3DPosition);
+	vec3 cb_x = normalize(cross(cb_z, vec3(0,1,0)));
+	vec3 cb_y = normalize(cross(cb_x, cb_z));
+
+	//mat4 Ccamera = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, camera3DPosition.x, camera3DPosition.y, camera3DPosition.z, 1);
+	mat4 cBasis = mat4(cb_x.x, cb_x.y, cb_x.z, 0, cb_y.x, cb_y.y, cb_y.z, 0, cb_z.x, cb_z.y, cb_z.z, 0, 0, 0, 0, 1);
+	mat4 Ccamera = TranslationMatrix(camera3DPosition) * cBasis * ScaleMatrix(vec3(1, 1, -1));
+
+
+	mat4 t1 = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, camera3DPosition.x, camera3DPosition.y, camera3DPosition.z, 1);;
+	mat4 t2 = TranslationMatrix(camera3DPosition);
+	bool eq1 = t1 == t2;
+
+	mat4 s1 = ScaleMatrix(vec3(1,1,-1));
+
+	mat4 f1 = s1 * t1;
+	mat4 f2 = t1 * s1;
+	mat4 wanted = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, camera3DPosition.x, camera3DPosition.y, camera3DPosition.z, 1);
+
+	bool eq2 = f1 == wanted;
+	bool eq3 = f2 == wanted;
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glPointSize(4.0f);
+
+
 	glUseProgram(solidColorTriangleShaderProgram);
-	//glBindVertexArray(cubeVAO);
-	//glBindVertexArray(capsuleVAO);
-	glBindVertexArray(sphereVAO);
-	mat4 Bmodel = /*mat4(.75,0,0,0,   0,.75,0,0,   0,0,.75,0,   0,0,0,1) **/ collisionShape1.transform;
+
+
+	// COLLISION SHAPE 1
+	mat4 Bmodel = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape1_Data.position.x, collisionShape1_Data.position.y, collisionShape1_Data.position.z, 1) * RotationMatrix_Z(collisionShape1_Data.rotation.z) * RotationMatrix_Y(collisionShape1_Data.rotation.y) * RotationMatrix_X(collisionShape1_Data.rotation.x); //collisionShape1.transform;
 	mat4 PCM = Pprojection * inverse(Ccamera) * Bmodel;
 	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorTriangleTriangleColorLocation, 1, &collisionShape1_Color[0]);
-	//glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
-	//glDrawElements(GL_TRIANGLES, numberOfCapsuleWallIndices, GL_UNSIGNED_INT, NULL);
-	glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+	glUniform4fv(solidColorTriangleTriangleColorLocation, 1, &controlledCollisionShape->color[0]);
+	
+	if (collisionShape1_Data.type == cs3D_OrientedBoundingBox)
+	{
+		glBindVertexArray(cubeVAO);
+		glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
+	}
+	else if (collisionShape1_Data.type == cs3D_Sphere)
+	{
+		glBindVertexArray(sphereVAO);
+		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+	}
+	else if (collisionShape1_Data.type == cs3D_Capsule)
+	{
+		// Capsule Wall
+		glBindVertexArray(capsuleVAO);
+		glDrawElements(GL_TRIANGLES, numberOfCapsuleWallIndices, GL_UNSIGNED_INT, NULL);
+
+		// Capsule Sphere 1
+		glBindVertexArray(sphereVAO);
+		Bmodel = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape1_Data.position.x, collisionShape1_Data.position.y, collisionShape1_Data.position.z, 1) * RotationMatrix_Z(collisionShape1_Data.rotation.z) * RotationMatrix_Y(collisionShape1_Data.rotation.y) * RotationMatrix_X(collisionShape1_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1);
+		PCM = Pprojection * inverse(Ccamera) * Bmodel;
+		glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+
+		// Capsule Sphere 2
+		glBindVertexArray(sphereVAO);
+		Bmodel = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape1_Data.position.x, collisionShape1_Data.position.y, collisionShape1_Data.position.z, 1) * RotationMatrix_Z(collisionShape1_Data.rotation.z) * RotationMatrix_Y(collisionShape1_Data.rotation.y) * RotationMatrix_X(collisionShape1_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 1);
+		PCM = Pprojection * inverse(Ccamera) * Bmodel;
+		glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+	}
 	glBindVertexArray(NULL);
 
-// 	glBindVertexArray(sphereVAO);
-// 	PCM = Pprojection * inverse(Ccamera) * mat4(1, 0, 0, 0,     0, 1, 0, 0,     0, 0, 1, 0,     0, 1, 0, 1);
-// 	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
-// 	glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
-// 	glBindVertexArray(NULL);
-// 
-// 	glBindVertexArray(sphereVAO);
-// 	PCM = Pprojection * inverse(Ccamera) * mat4(1, 0, 0, 0,     0, 1, 0, 0,     0, 0, 1, 0,     0, -1, 0, 1);
-// 	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
-// 	glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
-// 	glBindVertexArray(NULL);
-	
 
+
+	// COLLISION SHAPE 2
+	Bmodel = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape2_Data.position.x, collisionShape2_Data.position.y, collisionShape2_Data.position.z, 1) * RotationMatrix_Z(collisionShape2_Data.rotation.z) * RotationMatrix_Y(collisionShape2_Data.rotation.y) * RotationMatrix_X(collisionShape2_Data.rotation.x); //collisionShape1.transform;
+	PCM = Pprojection * inverse(Ccamera) * Bmodel;
+	glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorTriangleTriangleColorLocation, 1, &controlledCollisionShape->color[0]);
+
+	if (collisionShape2_Data.type == cs3D_OrientedBoundingBox)
+	{
+		glBindVertexArray(cubeVAO);
+		glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
+	}
+	else if (collisionShape2_Data.type == cs3D_Sphere)
+	{
+		glBindVertexArray(sphereVAO);
+		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+	}
+	else if (collisionShape2_Data.type == cs3D_Capsule)
+	{
+		// Capsule Wall
+		glBindVertexArray(capsuleVAO);
+		glDrawElements(GL_TRIANGLES, numberOfCapsuleWallIndices, GL_UNSIGNED_INT, NULL);
+
+		// Capsule Sphere 1
+		glBindVertexArray(sphereVAO);
+		Bmodel = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape2_Data.position.x, collisionShape2_Data.position.y, collisionShape2_Data.position.z, 1) * RotationMatrix_Z(collisionShape2_Data.rotation.z) * RotationMatrix_Y(collisionShape2_Data.rotation.y) * RotationMatrix_X(collisionShape2_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1);
+		PCM = Pprojection * inverse(Ccamera) * Bmodel;
+		glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+
+		// Capsule Sphere 2
+		glBindVertexArray(sphereVAO);
+		Bmodel = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape2_Data.position.x, collisionShape2_Data.position.y, collisionShape2_Data.position.z, 1) * RotationMatrix_Z(collisionShape2_Data.rotation.z) * RotationMatrix_Y(collisionShape2_Data.rotation.y) * RotationMatrix_X(collisionShape2_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 1);
+		PCM = Pprojection * inverse(Ccamera) * Bmodel;
+		glUniformMatrix4fv(solidColorTrianglePCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+	}
+	glBindVertexArray(NULL);
 }
 
 void GameUpdate(F32 deltaTime)

@@ -21,6 +21,18 @@ inline F32 DegreesToRadians(F32 angleInDegrees)
 	return result;
 }
 
+inline mat4 TranslationMatrix(vec3 translation)
+{
+	mat4 result = mat4(1,0,0,0,   0,1,0,0,   0,0,1,0,   translation.x,translation.y,translation.z,1);
+	return result;
+}
+
+inline mat4 ScaleMatrix(vec3 scale)
+{
+	mat4 result = mat4(scale.x,0,0,0,   0,scale.y,0,0,   0,0,scale.z,0,   0,0,0,1);
+	return result;
+}
+
 inline mat4 RotationMatrix_X(F32 angleInDegrees)
 {
 	F32 angleInRadians = DegreesToRadians(angleInDegrees);
