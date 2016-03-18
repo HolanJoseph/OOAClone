@@ -207,9 +207,9 @@ inline vec3 Support(Capsule* A, vec3 direction)
 /*
 2D COMBO SUPPORTS
 */
-inline vec2 Support(Rectangle* A, Rectangle* B, vec2* direction)
+template<typename S1, typename S2>
+inline vec2 Support(S1* A, S2* B, vec2* direction)
 {
-	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec2 maxA = Support(A, *direction);
 
 	// find the point in B that has the largest value with dot(Bj, Direction)
@@ -218,100 +218,112 @@ inline vec2 Support(Rectangle* A, Rectangle* B, vec2* direction)
 	return result;
 }
 
-inline vec2 Support(Rectangle* A, Circle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
-
-inline vec2 Support(Rectangle* A, Triangle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
-
-inline vec2 Support(Circle* A, Circle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
-
-inline vec2 Support(Circle* A, Rectangle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
-
-inline vec2 Support(Circle* A, Triangle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
-
-inline vec2 Support(Triangle* A, Triangle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
-
-inline vec2 Support(Triangle* A, Rectangle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
-
-inline vec2 Support(Triangle* A, Circle* B, vec2* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -*direction);
-	vec2 result = maxA - maxB;
-	return result;
-}
+// inline vec2 Support(Rectangle* A, Rectangle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Rectangle* A, Circle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Rectangle* A, Triangle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Circle* A, Circle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Circle* A, Rectangle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Circle* A, Triangle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Triangle* A, Triangle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Triangle* A, Rectangle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec2 Support(Triangle* A, Circle* B, vec2* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec2 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec2 maxB = Support(B, -*direction);
+// 	vec2 result = maxA - maxB;
+// 	return result;
+// }
 
 
 
 /*
 3D COMBO SUPPORTS
 */
-inline vec3 Support(OrientedBoundingBox* A, OrientedBoundingBox* B, vec3* direction)
+template<typename S1, typename S2>
+inline vec3 Support(S1* A, S2* B, vec3* direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec3 maxA = Support(A, *direction);
@@ -322,93 +334,104 @@ inline vec3 Support(OrientedBoundingBox* A, OrientedBoundingBox* B, vec3* direct
 	return result;
 }
 
-inline vec3 Support(OrientedBoundingBox* A, Sphere* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
-
-inline vec3 Support(OrientedBoundingBox* A, Capsule* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
-
-inline vec3 Support(Sphere* A, Sphere* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
-
-inline vec3 Support(Sphere* A, OrientedBoundingBox* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
-
-inline vec3 Support(Sphere* A, Capsule* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
-
-inline vec3 Support(Capsule* A, Capsule* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
-
-inline vec3 Support(Capsule* A, OrientedBoundingBox* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
-
-inline vec3 Support(Capsule* A, Sphere* B, vec3* direction)
-{
-	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
-
-	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
-	vec3 result = maxA - maxB;
-	return result;
-}
+// inline vec3 Support(OrientedBoundingBox* A, OrientedBoundingBox* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(OrientedBoundingBox* A, Sphere* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(OrientedBoundingBox* A, Capsule* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(Sphere* A, Sphere* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(Sphere* A, OrientedBoundingBox* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(Sphere* A, Capsule* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(Capsule* A, Capsule* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(Capsule* A, OrientedBoundingBox* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
+// 
+// inline vec3 Support(Capsule* A, Sphere* B, vec3* direction)
+// {
+// 	// find the point in A that has the largest value with dot(Ai, Direction)
+// 	vec3 maxA = Support(A, *direction);
+// 
+// 	// find the point in B that has the largest value with dot(Bj, Direction)
+// 	vec3 maxB = Support(B, -*direction);
+// 	vec3 result = maxA - maxB;
+// 	return result;
+// }
 
 
 
