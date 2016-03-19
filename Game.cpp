@@ -16,7 +16,7 @@
 #include "AssetLoading.h"
 #include "CollisionDetection.h"
 
-//#define COLLISION3D 1
+#define COLLISION3D 1
 
 struct verifyShaderReturnResult
 {
@@ -112,7 +112,7 @@ void Init2DCollisionTestScene()
 
 	cs2Rectangle.origin = vec2(0,0);
 	cs2Rectangle.halfDim = vec2(.5f, .5f);
-	cs2Rectangle.transform = mat3(1,0,0,   0,1,0,   .5f,.5f,1);
+	cs2Rectangle.transform = mat4(1,0,0,0,   0,1,0,0,   0,0,1,0,   .5f,.5f,0,1);
 
 	cs1Rectangle.origin = vec2(0, 0);
 	cs1Rectangle.halfDim = vec2(.5f, .5f);
@@ -173,10 +173,10 @@ void Init2DCollisionTestScene()
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
-	cs1Triangle.origin = vec2(0, 0);
-	cs1Triangle.points[0] = vec2(equalateralTrianglePoints[0], equalateralTrianglePoints[1]);
-	cs1Triangle.points[1] = vec2(equalateralTrianglePoints[2], equalateralTrianglePoints[3]);
-	cs1Triangle.points[2] = vec2(equalateralTrianglePoints[4], equalateralTrianglePoints[5]);
+	cs1Triangle.origin = vec3(0, 0, 0);
+	cs1Triangle.points[0] = vec3(equalateralTrianglePoints[0], equalateralTrianglePoints[1], 0);
+	cs1Triangle.points[1] = vec3(equalateralTrianglePoints[2], equalateralTrianglePoints[3], 0);
+	cs1Triangle.points[2] = vec3(equalateralTrianglePoints[4], equalateralTrianglePoints[5], 0);
 
 	// Circle
 	glGenVertexArrays(1, &circleVAO);
@@ -191,7 +191,7 @@ void Init2DCollisionTestScene()
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
-	cs1Circle.origin = vec2(0, 0);
+	cs1Circle.origin = vec3(0, 0, 0);
 	cs1Circle.radius = 0.5f;
 }
 
@@ -423,6 +423,18 @@ void Init3DCollisionTestScene()
 	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 	free(textureData);
+
+	collisionShape1_obb.halfDim = vec3(1, 1, 1);
+	collisionShape1_sphere.radius = 1;
+	collisionShape1_capsule.points[0] = vec3(0,1,0);
+	collisionShape1_capsule.points[1] = vec3(0, -1, 0);
+	collisionShape1_capsule.radius = 1;
+
+	collisionShape2_obb.halfDim = vec3(1, 1, 1);
+	collisionShape2_sphere.radius = 1;
+	collisionShape2_capsule.points[0] = vec3(0, 1, 0);
+	collisionShape2_capsule.points[1] = vec3(0, -1, 0);
+	collisionShape2_capsule.radius = 1;
 
 	/*mat4 Pp = GetPerspectiveProjection(camera3DViewFrustum);
 
@@ -983,11 +995,11 @@ void collisionScene2DUpdate(F32 deltaTime)
 	
 	
 	
-	mat3 Bmodelcs2 = cs2Rectangle.transform;
-	mat3 Bmodelcs1 = mat3(1, 0, 0, 0, 1, 0, cs1Pos.x, cs1Pos.y, 1) * mat3(cos(cs1RotationAngle), sin(cs1RotationAngle), 0, -sin(cs1RotationAngle), cos(cs1RotationAngle), 0, 0, 0, 1);
+	mat4 Bmodelcs2 = cs2Rectangle.transform;
+	mat4 Bmodelcs1 = mat4(1, 0, 0,0,    0, 1, 0,0,   0,0,1,0,    cs1Pos.x, cs1Pos.y,0, 1) * mat4(cos(cs1RotationAngle), sin(cs1RotationAngle), 0,0,    -sin(cs1RotationAngle), cos(cs1RotationAngle), 0,0,   0,0,1,0,    0, 0,0, 1);
 	cs1Rectangle.transform = Bmodelcs1;
 	cs1Triangle.transform = Bmodelcs1;
-	cs1Circle.origin = cs1Pos;
+	cs1Circle.origin = vec3(cs1Pos.x, cs1Pos.y, 0);
 	bool collision = false;
 	if (cs1Type == cs_Rectangle)
 	{
@@ -1028,14 +1040,16 @@ void collisionScene2DUpdate(F32 deltaTime)
 	// cs2
 	glUseProgram(solidColorQuadShaderProgram);
 	glBindVertexArray(texturedQuadVAO);
-	PCM = Oprojection * inverse(Ccamera) * Bmodelcs2;
+	mat3 Bmodelcs2_in3 = mat3(vec3(Bmodelcs2[0].x, Bmodelcs2[0].y, Bmodelcs2[0].w), vec3(Bmodelcs2[1].x, Bmodelcs2[1].y, Bmodelcs2[1].w), vec3(Bmodelcs2[3].x, Bmodelcs2[3].y, Bmodelcs2[3].w));
+	PCM = Oprojection * inverse(Ccamera) * Bmodelcs2_in3;
 	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
 	glUniform4fv(solidColorQuadQuadColorLocation, 1, &cs2Color[0]);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 	
 	// cs1
 	glUseProgram(solidColorQuadShaderProgram);
-	PCM = Oprojection * inverse(Ccamera) * Bmodelcs1;
+	mat3 Bmodelcs1_in3 = mat3(vec3(Bmodelcs1[0].x, Bmodelcs1[0].y, Bmodelcs1[0].w), vec3(Bmodelcs1[1].x, Bmodelcs1[1].y, Bmodelcs1[1].w), vec3(Bmodelcs1[3].x, Bmodelcs1[3].y, Bmodelcs1[3].w));
+	PCM = Oprojection * inverse(Ccamera) * Bmodelcs1_in3;
 	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
 	glUniform4fv(solidColorQuadQuadColorLocation, 1, &cs1Color[0]);
 	if (cs1Type == cs_Rectangle)
@@ -1075,14 +1089,14 @@ void collisionScene2DUpdate(F32 deltaTime)
 			{
 				DebugPrintf(1024, "origin = (%f, %f)\n", cs1Rectangle.origin.x, cs1Rectangle.origin.y);
 				DebugPrintf(1024, "halfDim = (%f, %f)\n\n", cs1Rectangle.halfDim.x, cs1Rectangle.halfDim.y);
-				mat3 t = cs1Rectangle.transform;
-				DebugPrintf(2048, "transform = %f %f %f\n            %f %f %f\n            %f %f %f\n\n", t[0][0], t[1][0], t[2][0], t[0][1], t[1][1], t[2][1], t[0][2], t[1][2], t[2][2]);
+				mat4 t = cs1Rectangle.transform;
+				DebugPrintf(2048, "transform = %f %f %f %f\n            %f %f %f %f\n            %f %f %f %f\n            %f %f %f %f\n\n", t[0][0], t[1][0], t[2][0], t[3][0], t[0][1], t[1][1], t[2][1], t[3][1], t[0][2], t[1][2], t[2][2], t[3][2], t[0][3], t[1][3], t[2][3], t[3][3]);
 			}
 
-			vec3 cs1p0 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x - cs1Rectangle.halfDim.x, cs1Rectangle.origin.y - cs1Rectangle.halfDim.y, 1.0f);
-			vec3 cs1p1 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x - cs1Rectangle.halfDim.x, cs1Rectangle.origin.y + cs1Rectangle.halfDim.y, 1.0f);
-			vec3 cs1p2 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x + cs1Rectangle.halfDim.x, cs1Rectangle.origin.y - cs1Rectangle.halfDim.y, 1.0f);
-			vec3 cs1p3 = cs1Rectangle.transform * vec3(cs1Rectangle.origin.x + cs1Rectangle.halfDim.x, cs1Rectangle.origin.y + cs1Rectangle.halfDim.y, 1.0f);
+			vec4 cs1p0 = cs1Rectangle.transform * vec4(cs1Rectangle.origin.x - cs1Rectangle.halfDim.x, cs1Rectangle.origin.y - cs1Rectangle.halfDim.y, 0.0f, 1.0f);
+			vec4 cs1p1 = cs1Rectangle.transform * vec4(cs1Rectangle.origin.x - cs1Rectangle.halfDim.x, cs1Rectangle.origin.y + cs1Rectangle.halfDim.y, 0.0f, 1.0f);
+			vec4 cs1p2 = cs1Rectangle.transform * vec4(cs1Rectangle.origin.x + cs1Rectangle.halfDim.x, cs1Rectangle.origin.y - cs1Rectangle.halfDim.y, 0.0f, 1.0f);
+			vec4 cs1p3 = cs1Rectangle.transform * vec4(cs1Rectangle.origin.x + cs1Rectangle.halfDim.x, cs1Rectangle.origin.y + cs1Rectangle.halfDim.y, 0.0f, 1.0f);
 			DebugPrintf(1024, "Transformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\np[3] = (%f,%f)\n\n", cs1p0.x, cs1p0.y, cs1p2.x, cs1p2.y, cs1p3.x, cs1p3.y, cs1p1.x, cs1p1.y);
 		}
 		else if (cs1Type == cs_Triangle)
@@ -1092,17 +1106,17 @@ void collisionScene2DUpdate(F32 deltaTime)
 			if (detailsMode)
 			{
 				DebugPrintf(1024, "origin = (%f, %f)\n\n", cs1Triangle.origin.x, cs1Triangle.origin.y);
-				mat3 t = cs1Triangle.transform;
-				DebugPrintf(2048, "transform = %f %f %f\n            %f %f %f\n            %f %f %f\n", t[0][0], t[1][0], t[2][0], t[0][1], t[1][1], t[2][1], t[0][2], t[1][2], t[2][2]);
-				vec2 p0 = cs1Triangle.points[0];
-				vec2 p1 = cs1Triangle.points[1];
-				vec2 p2 = cs1Triangle.points[2];
+				mat4 t = cs1Triangle.transform;
+				DebugPrintf(2048, "transform = %f %f %f %f\n            %f %f %f %f\n            %f %f %f %f\n            %f %f %f %f\n\n", t[0][0], t[1][0], t[2][0], t[3][0], t[0][1], t[1][1], t[2][1], t[3][1], t[0][2], t[1][2], t[2][2], t[3][2], t[0][3], t[1][3], t[2][3], t[3][3]);
+				vec3 p0 = cs1Triangle.points[0];
+				vec3 p1 = cs1Triangle.points[1];
+				vec3 p2 = cs1Triangle.points[2];
 				DebugPrintf(2048, "Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\n\n", p0.x, p0.y, p1.x, p1.y, p2.x, p2.y);
 			}
 
-			vec3 cs1p0 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[0].x, cs1Triangle.origin.y + cs1Triangle.points[0].y, 1.0f);
-			vec3 cs1p1 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[1].x, cs1Triangle.origin.y + cs1Triangle.points[1].y, 1.0f);
-			vec3 cs1p2 = cs1Triangle.transform * vec3(cs1Triangle.origin.x + cs1Triangle.points[2].x, cs1Triangle.origin.y + cs1Triangle.points[2].y, 1.0f);
+			vec4 cs1p0 = cs1Triangle.transform * vec4(cs1Triangle.origin.x + cs1Triangle.points[0].x, cs1Triangle.origin.y + cs1Triangle.points[0].y, 0.0f, 1.0f);
+			vec4 cs1p1 = cs1Triangle.transform * vec4(cs1Triangle.origin.x + cs1Triangle.points[1].x, cs1Triangle.origin.y + cs1Triangle.points[1].y, 0.0f, 1.0f);
+			vec4 cs1p2 = cs1Triangle.transform * vec4(cs1Triangle.origin.x + cs1Triangle.points[2].x, cs1Triangle.origin.y + cs1Triangle.points[2].y, 0.0f, 1.0f);
 			DebugPrintf(1024, "Transformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\n\n", cs1p0.x, cs1p0.y, cs1p1.x, cs1p1.y, cs1p2.x, cs1p2.y);
 		}
 		else if (cs1Type == cs_Circle)
@@ -1114,10 +1128,10 @@ void collisionScene2DUpdate(F32 deltaTime)
 		
 		if (showcs2)
 		{
-			vec3 cs2p0 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x - cs2Rectangle.halfDim.x, cs2Rectangle.origin.y - cs2Rectangle.halfDim.y, 1.0f);
-			vec3 cs2p1 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x - cs2Rectangle.halfDim.x, cs2Rectangle.origin.y + cs2Rectangle.halfDim.y, 1.0f);
-			vec3 cs2p2 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x + cs2Rectangle.halfDim.x, cs2Rectangle.origin.y - cs2Rectangle.halfDim.y, 1.0f);
-			vec3 cs2p3 = cs2Rectangle.transform * vec3(cs2Rectangle.origin.x + cs2Rectangle.halfDim.x, cs2Rectangle.origin.y + cs2Rectangle.halfDim.y, 1.0f);
+			vec4 cs2p0 = cs2Rectangle.transform * vec4(cs2Rectangle.origin.x - cs2Rectangle.halfDim.x, cs2Rectangle.origin.y - cs2Rectangle.halfDim.y, 0.0f, 1.0f);
+			vec4 cs2p1 = cs2Rectangle.transform * vec4(cs2Rectangle.origin.x - cs2Rectangle.halfDim.x, cs2Rectangle.origin.y + cs2Rectangle.halfDim.y, 0.0f, 1.0f);
+			vec4 cs2p2 = cs2Rectangle.transform * vec4(cs2Rectangle.origin.x + cs2Rectangle.halfDim.x, cs2Rectangle.origin.y - cs2Rectangle.halfDim.y, 0.0f, 1.0f);
+			vec4 cs2p3 = cs2Rectangle.transform * vec4(cs2Rectangle.origin.x + cs2Rectangle.halfDim.x, cs2Rectangle.origin.y + cs2Rectangle.halfDim.y, 0.0f, 1.0f);
 			DebugPrintf(1024, "COLLISION SHAPE 2(RECTANGLE)\nTransformed Points\np[0] = (%f,%f)\np[1] = (%f,%f)\np[2] = (%f,%f)\np[3] = (%f,%f)\n", cs2p0.x, cs2p0.y, cs2p2.x, cs2p2.y, cs2p3.x, cs2p3.y, cs2p1.x, cs2p1.y);
 		}
 	}
@@ -1231,7 +1245,7 @@ void collisionScene3DUpdate(F32 deltaTime)
 	{
 		controlledCollisionShape->rotation.z -= deltaTime * rotationSpeed;
 	}
-	if (GetKeyDown(KeyCode_T))
+	if (GetKeyDown(KeyCode_3))
 	{
 		controlledCollisionShape->type = (csType3D)(controlledCollisionShape->type + 1);
 		if (controlledCollisionShape->type == cs3D_COUNT)
@@ -1300,65 +1314,65 @@ void collisionScene3DUpdate(F32 deltaTime)
 	collisionShape2_sphere.origin = vec3(Bmodel_cs2[3].x, Bmodel_cs2[3].y, Bmodel_cs2[3].z);
 	collisionShape2_capsule.transform = Bmodel_cs2;
 
-// 	switch (collisionShape1_Data.type)
-// 	{
-// 	case cs3D_OrientedBoundingBox:
-// 	{
-// 									 switch (collisionShape2_Data.type)
-// 									 {
-// 									 case cs3D_OrientedBoundingBox:
-// 									 collision = GJK(collisionShape1_obb, collisionShape2_obb);
-// 									 break;
-// 
-// 									 case cs3D_Sphere:
-// 									 collision = GJK(collisionShape1_obb, collisionShape2_sphere);
-// 									 break;
-// 
-// 									 case cs3D_Capsule:
-// 									 collision = GJK(collisionShape1_obb, collisionShape2_capsule);
-// 									 break;
-// 									 }
-// 	}
-// 	break;
-// 
-// 	case cs3D_Sphere:
-// 	{
-// 						switch (collisionShape2_Data.type)
-// 						{
-// 						case cs3D_OrientedBoundingBox:
-// 						collision = GJK(collisionShape1_sphere, collisionShape2_obb);
-// 						break;
-// 
-// 						case cs3D_Sphere:
-// 						collision = GJK(collisionShape1_sphere, collisionShape2_sphere);
-// 						break;
-// 
-// 						case cs3D_Capsule:
-// 						collision = GJK(collisionShape1_sphere, collisionShape2_capsule);
-// 						break;
-// 						}
-// 	}
-// 	break;
-// 
-// 	case cs3D_Capsule:
-// 	{
-// 						 switch (collisionShape2_Data.type)
-// 						 {
-// 						 case cs3D_OrientedBoundingBox:
-// 						 collision = GJK(collisionShape1_capsule, collisionShape2_obb);
-// 						 break;
-// 
-// 						 case cs3D_Sphere:
-// 						 collision = GJK(collisionShape1_capsule, collisionShape2_sphere);
-// 						 break;
-// 
-// 						 case cs3D_Capsule:
-// 						 collision = GJK(collisionShape1_capsule, collisionShape2_capsule);
-// 						 break;
-// 						 }
-// 	}
-// 	break;
-// 	}
+	switch (collisionShape1_Data.type)
+	{
+	case cs3D_OrientedBoundingBox:
+	{
+									 switch (collisionShape2_Data.type)
+									 {
+									 case cs3D_OrientedBoundingBox:
+									 collision = GJK_AllVoronoi(collisionShape1_obb, collisionShape2_obb);
+									 break;
+
+									 case cs3D_Sphere:
+									 collision = GJK_AllVoronoi(collisionShape1_obb, collisionShape2_sphere);
+									 break;
+
+									 case cs3D_Capsule:
+									 collision = GJK_AllVoronoi(collisionShape1_obb, collisionShape2_capsule);
+									 break;
+									 }
+	}
+	break;
+
+	case cs3D_Sphere:
+	{
+						switch (collisionShape2_Data.type)
+						{
+						case cs3D_OrientedBoundingBox:
+						collision = GJK_AllVoronoi(collisionShape1_sphere, collisionShape2_obb);
+						break;
+
+						case cs3D_Sphere:
+						collision = GJK_AllVoronoi(collisionShape1_sphere, collisionShape2_sphere);
+						break;
+
+						case cs3D_Capsule:
+						collision = GJK_AllVoronoi(collisionShape1_sphere, collisionShape2_capsule);
+						break;
+						}
+	}
+	break;
+
+	case cs3D_Capsule:
+	{
+						 switch (collisionShape2_Data.type)
+						 {
+						 case cs3D_OrientedBoundingBox:
+						 collision = GJK_AllVoronoi(collisionShape1_capsule, collisionShape2_obb);
+						 break;
+
+						 case cs3D_Sphere:
+						 collision = GJK_AllVoronoi(collisionShape1_capsule, collisionShape2_sphere);
+						 break;
+
+						 case cs3D_Capsule:
+						 collision = GJK_AllVoronoi(collisionShape1_capsule, collisionShape2_capsule);
+						 break;
+						 }
+	}
+	break;
+	}
 
 	if (collision)
 	{
