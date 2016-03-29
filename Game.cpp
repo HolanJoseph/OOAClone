@@ -16,6 +16,10 @@
 #include "AssetLoading.h"
 #include "CollisionDetection.h"
 
+#include "CollisionDetection_Tests.h"
+
+#include "CollisionDetection_Visualization.h"
+
 #define COLLISION3D 1
 
 struct verifyShaderReturnResult
@@ -250,49 +254,6 @@ GLuint sphereVAO;
 U64 numberOfSphereVertices;
 U64 numberOfSphereIndices;
 
-struct OrientedBoundingBoxPoints
-{
-	vec4 points[8];
-};
-
-OrientedBoundingBoxPoints operator*(const mat4 &A, const OrientedBoundingBoxPoints &x)
-{
-	OrientedBoundingBoxPoints result;
-	for (U32 i = 0; i < 8; ++i)
-	{
-		result.points[i] = A * x.points[i];
-	}
-	return result;
-}
-
-OrientedBoundingBoxPoints Homogenize(OrientedBoundingBoxPoints points)
-{
-	OrientedBoundingBoxPoints result;
-
-	for (U32 i = 0; i < 8; ++i)
-	{
-		result.points[i] = points.points[i]/points.points[i].w;
-	}
-
-	return result;
-}
-
-OrientedBoundingBoxPoints GetOBBPoints(OrientedBoundingBox box)
-{
-	OrientedBoundingBoxPoints result;
-
-	result.points[0] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
-	result.points[1] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
-	result.points[2] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
-	result.points[3] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z + box.halfDim.z, 1.0f);
-	result.points[4] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
-	result.points[5] = box.transform * vec4(box.origin.x - box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
-	result.points[6] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y - box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
-	result.points[7] = box.transform * vec4(box.origin.x + box.halfDim.x, box.origin.y + box.halfDim.y, box.origin.z - box.halfDim.z, 1.0f);
-
-	return result;
-}
-
 vec3 camera3DPosition;
 vec3 camera3DRotations;
 ViewFrustum camera3DViewFrustum;
@@ -309,6 +270,14 @@ Capsule				collisionShape2_capsule;
 GLuint frontTexture;
 GLuint rightTexture;
 GLuint topTexture;
+
+GLuint front_1_Texture;
+GLuint right_1_Texture;
+GLuint top_1_Texture;
+
+GLuint front_2_Texture;
+GLuint right_2_Texture;
+GLuint top_2_Texture;
 
 void Init3DCollisionTestScene()
 {
@@ -423,6 +392,95 @@ void Init3DCollisionTestScene()
 	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 	free(textureData);
+
+
+
+	textureWidth = 0;
+	textureHeight = 0;
+	textureImageComponents = 0;
+	textureNumImageComponentsDesired = 4;
+	textureData = LoadTexture("Assets/3D/Front1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &front_1_Texture);
+	glBindTexture(GL_TEXTURE_2D, front_1_Texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+	free(textureData);
+
+
+	textureWidth = 0;
+	textureHeight = 0;
+	textureImageComponents = 0;
+	textureNumImageComponentsDesired = 4;
+	textureData = LoadTexture("Assets/3D/Right1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &right_1_Texture);
+	glBindTexture(GL_TEXTURE_2D, right_1_Texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+	free(textureData);
+
+
+	textureWidth = 0;
+	textureHeight = 0;
+	textureImageComponents = 0;
+	textureNumImageComponentsDesired = 4;
+	textureData = LoadTexture("Assets/3D/Top1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &top_1_Texture);
+	glBindTexture(GL_TEXTURE_2D, top_1_Texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+	free(textureData);
+
+
+
+	textureWidth = 0;
+	textureHeight = 0;
+	textureImageComponents = 0;
+	textureNumImageComponentsDesired = 4;
+	textureData = LoadTexture("Assets/3D/Front2.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &front_2_Texture);
+	glBindTexture(GL_TEXTURE_2D, front_2_Texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+	free(textureData);
+
+
+	textureWidth = 0;
+	textureHeight = 0;
+	textureImageComponents = 0;
+	textureNumImageComponentsDesired = 4;
+	textureData = LoadTexture("Assets/3D/Right2.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &right_2_Texture);
+	glBindTexture(GL_TEXTURE_2D, right_2_Texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+	free(textureData);
+
+
+	textureWidth = 0;
+	textureHeight = 0;
+	textureImageComponents = 0;
+	textureNumImageComponentsDesired = 4;
+	textureData = LoadTexture("Assets/3D/Top2.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &top_2_Texture);
+	glBindTexture(GL_TEXTURE_2D, top_2_Texture);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+	free(textureData);
+
+
+
 
 	collisionShape1_obb.halfDim = vec3(1, 1, 1);
 	collisionShape1_sphere.radius = 1;
@@ -814,7 +872,7 @@ bool smoothMode = true;
 enum GJKMode
 {
 	gjk_Simple,
-	gjk_Casey,
+	//gjk_Casey,
 	gjk_AllVoronoi,
 
 	gjk_COUNT
@@ -1005,24 +1063,24 @@ void collisionScene2DUpdate(F32 deltaTime)
 	{
 		if (gjkMode == gjk_Simple)
 		{
-			collision = GJK(cs1Rectangle, cs2Rectangle);
+			collision = DetectCollision(cs1Rectangle, cs2Rectangle).collided;
 		}
-		else if (gjkMode == gjk_Casey)
-		{
-			collision = GJK_Casey(cs1Rectangle, cs2Rectangle);
-		}
+// 		else if (gjkMode == gjk_Casey)
+// 		{
+// 			collision = GJK_Casey(cs1Rectangle, cs2Rectangle);
+// 		}
 		else if (gjkMode == gjk_AllVoronoi)
 		{
-			collision = GJK_AllVoronoi(cs1Rectangle, cs2Rectangle);
+			collision = DetectCollision_AllVoronoi(cs1Rectangle, cs2Rectangle).collided;
 		}
 	}
 	if (cs1Type == cs_Triangle)
 	{
-		collision = GJK(cs1Triangle, cs2Rectangle);
+		collision = DetectCollision(cs1Triangle, cs2Rectangle).collided;
 	}
 	if (cs1Type == cs_Circle)
 	{
-		collision = GJK(cs1Circle, cs2Rectangle);
+		collision = DetectCollision(cs1Circle, cs2Rectangle).collided;
 	}
 
 	if (collision)
@@ -1177,13 +1235,23 @@ enum CameraMode
 	Orthographic_Front,
 	Orthographic_Right,
 	Orthographic_Top,
+	Orthographic_Front_1,
+	Orthographic_Right_1,
+	Orthographic_Top_1,
+	Orthographic_Front_2,
+	Orthographic_Right_2,
+	Orthographic_Top_2,
 
 	CameraMode_COUNT
 };
 CameraMode gjkTestCameraMode = Orthographic_Front;
 
+bool moved;
+
 void collisionScene3DUpdate(F32 deltaTime)
 {
+	moved = false;
+
 	if (GetKeyDown(KeyCode_1))
 	{
 		controllingShape1 = !controllingShape1;
@@ -1200,50 +1268,62 @@ void collisionScene3DUpdate(F32 deltaTime)
 	if (GetKey(KeyCode_W))
 	{
 		controlledCollisionShape->position.z += deltaTime * movementSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_S))
 	{
 		controlledCollisionShape->position.z -= deltaTime * movementSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_A))
 	{
 		controlledCollisionShape->position.x -= deltaTime * movementSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_D))
 	{
 		controlledCollisionShape->position.x += deltaTime * movementSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_R))
 	{
 		controlledCollisionShape->position.y += deltaTime * movementSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_F))
 	{
 		controlledCollisionShape->position.y -= deltaTime * movementSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_I))
 	{
 		controlledCollisionShape->rotation.x += deltaTime * rotationSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_K))
 	{
 		controlledCollisionShape->rotation.x -= deltaTime * rotationSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_J))
 	{
 		controlledCollisionShape->rotation.y -= deltaTime * rotationSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_L))
 	{
 		controlledCollisionShape->rotation.y += deltaTime * rotationSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_U))
 	{
 		controlledCollisionShape->rotation.z += deltaTime * rotationSpeed;
+		moved = true;
 	}
 	if (GetKey(KeyCode_O))
 	{
 		controlledCollisionShape->rotation.z -= deltaTime * rotationSpeed;
+		moved = true;
 	}
 	if (GetKeyDown(KeyCode_3))
 	{
@@ -1253,6 +1333,7 @@ void collisionScene3DUpdate(F32 deltaTime)
 			controlledCollisionShape->type = cs3D_OrientedBoundingBox;
 		}
 		DebugPrintf(512, "cs3d %i\n", controlledCollisionShape->type);
+		moved = true;
 	}
 
 	if (GetKey(KeyCode_Up))
@@ -1292,6 +1373,17 @@ void collisionScene3DUpdate(F32 deltaTime)
 		//DebugPrintf(512, "CameraMode %i\n", gjkTestCameraMode);
 	}
 
+	if (GetKeyDown(KeyCode_4))
+	{
+		gjkMode = (GJKMode)(gjkMode + 1);
+		if (gjkMode == gjk_COUNT)
+		{
+			gjkMode = gjk_Simple;
+		}
+		DebugPrintf(512, "gjkMode = %i\n", gjkMode);
+		moved = true;
+	}
+
 // 	if (abs(cameraPolarAngle) > 80.0f)
 // 	{
 // 		cameraPolarAngle = 80.0f;
@@ -1301,7 +1393,8 @@ void collisionScene3DUpdate(F32 deltaTime)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	// 3D GJK
-	bool collision = false;
+	CollisionInfo collision_AllVoronoi;
+	CollisionInfo collision_Simple;
 
 	mat4 Bmodel_cs1 = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape1_Data.position.x, collisionShape1_Data.position.y, collisionShape1_Data.position.z, 1) * RotationMatrix_Z(collisionShape1_Data.rotation.z) * RotationMatrix_Y(collisionShape1_Data.rotation.y) * RotationMatrix_X(collisionShape1_Data.rotation.x); //collisionShape1.transform;
 	mat4 Bmodel_cs2 = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape2_Data.position.x, collisionShape2_Data.position.y, collisionShape2_Data.position.z, 1) * RotationMatrix_Z(collisionShape2_Data.rotation.z) * RotationMatrix_Y(collisionShape2_Data.rotation.y) * RotationMatrix_X(collisionShape2_Data.rotation.x); //collisionShape1.transform;
@@ -1320,16 +1413,44 @@ void collisionScene3DUpdate(F32 deltaTime)
 	{
 									 switch (collisionShape2_Data.type)
 									 {
-									 case cs3D_OrientedBoundingBox:
-									 collision = GJK_AllVoronoi(collisionShape1_obb, collisionShape2_obb);
+									 case cs3D_OrientedBoundingBox:{
+// 																	   ConvexHullPoints convexHullPoints = GetConvexHullPoints((OrientedBoundingBox)collisionShape1_obb, (OrientedBoundingBox)collisionShape2_obb);
+// 																	   DebugPrint("plot points\n ");
+// 																	   for (U32 i = 0; i < convexHullPoints.count - 1; ++i)
+// 																	   {
+// 																		   DebugPrintf(256, "(%.1f,%.1f,%.1f),\n", convexHullPoints.points[i].x, convexHullPoints.points[i].y, convexHullPoints.points[i].z);
+// 																	   }
+// 																	   DebugPrintf(256, "(%.1f,%.1f,%.1f)\n", convexHullPoints.points[convexHullPoints.count - 1].x, convexHullPoints.points[convexHullPoints.count - 1].y, convexHullPoints.points[convexHullPoints.count - 1].z);
+																	   if (gjkMode == gjk_Simple)
+																	   {
+																		   collision_Simple = DetectCollision(collisionShape1_obb, collisionShape2_obb);
+																	   }
+																	   else
+																	   {
+																		   collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_obb, collisionShape2_obb);
+																	   }}
 									 break;
 
 									 case cs3D_Sphere:
-									 collision = GJK_AllVoronoi(collisionShape1_obb, collisionShape2_sphere);
+									 if (gjkMode == gjk_Simple)
+									 {
+										 collision_Simple = DetectCollision(collisionShape1_obb, collisionShape2_sphere);
+									 }
+									 else
+									 {
+										 collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_obb, collisionShape2_sphere);
+									 }
 									 break;
 
 									 case cs3D_Capsule:
-									 collision = GJK_AllVoronoi(collisionShape1_obb, collisionShape2_capsule);
+									 if (gjkMode == gjk_Simple)
+									 {
+										 collision_Simple = DetectCollision(collisionShape1_obb, collisionShape2_capsule);
+									 }
+									 else
+									 {
+										 collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_obb, collisionShape2_capsule);
+									 }
 									 break;
 									 }
 	}
@@ -1340,15 +1461,36 @@ void collisionScene3DUpdate(F32 deltaTime)
 						switch (collisionShape2_Data.type)
 						{
 						case cs3D_OrientedBoundingBox:
-						collision = GJK_AllVoronoi(collisionShape1_sphere, collisionShape2_obb);
+						if (gjkMode == gjk_Simple)
+						{
+							collision_Simple = DetectCollision(collisionShape1_sphere, collisionShape2_obb);
+						}
+						else
+						{
+							collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_sphere, collisionShape2_obb);
+						}
 						break;
 
 						case cs3D_Sphere:
-						collision = GJK_AllVoronoi(collisionShape1_sphere, collisionShape2_sphere);
+						if (gjkMode == gjk_Simple)
+						{
+							collision_Simple = DetectCollision(collisionShape1_sphere, collisionShape2_sphere);
+						}
+						else
+						{
+							collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_sphere, collisionShape2_sphere);
+						}
 						break;
 
 						case cs3D_Capsule:
-						collision = GJK_AllVoronoi(collisionShape1_sphere, collisionShape2_capsule);
+						if (gjkMode == gjk_Simple)
+						{
+							collision_Simple = DetectCollision(collisionShape1_sphere, collisionShape2_capsule);
+						} 
+						else
+						{
+							collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_sphere, collisionShape2_capsule);
+						}
 						break;
 						}
 	}
@@ -1359,22 +1501,57 @@ void collisionScene3DUpdate(F32 deltaTime)
 						 switch (collisionShape2_Data.type)
 						 {
 						 case cs3D_OrientedBoundingBox:
-						 collision = GJK_AllVoronoi(collisionShape1_capsule, collisionShape2_obb);
+						 if (gjkMode == gjk_Simple)
+						 {
+							 collision_Simple = DetectCollision(collisionShape1_capsule, collisionShape2_obb);
+						 } 
+						 else
+						 {
+							 collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_capsule, collisionShape2_obb);
+						 }
 						 break;
 
 						 case cs3D_Sphere:
-						 collision = GJK_AllVoronoi(collisionShape1_capsule, collisionShape2_sphere);
+						 if (gjkMode == gjk_Simple)
+						 {
+							 collision_Simple = DetectCollision(collisionShape1_capsule, collisionShape2_sphere);
+						 } 
+						 else
+						 {
+							 collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_capsule, collisionShape2_sphere);
+						 }
 						 break;
 
 						 case cs3D_Capsule:
-						 collision = GJK_AllVoronoi(collisionShape1_capsule, collisionShape2_capsule);
+						 if (gjkMode == gjk_Simple)
+						 {
+							 collision_Simple = DetectCollision(collisionShape1_capsule, collisionShape2_capsule);
+						 } 
+						 else
+						 {
+							collision_AllVoronoi = DetectCollision_AllVoronoi(collisionShape1_capsule, collisionShape2_capsule);
+						 }
 						 break;
 						 }
 	}
 	break;
 	}
 
-	if (collision)
+	//Assert(collision_AllVoronoi == collision_Simple);
+	bool collision = false;
+	F32 penetrationDepth = 100000.0f;
+	if (gjkMode == gjk_Simple)
+	{
+		collision = collision_Simple.collided;
+		penetrationDepth = collision_Simple.distance;
+	}
+	if (gjkMode == gjk_AllVoronoi)
+	{
+		collision = collision_AllVoronoi.collided;
+		penetrationDepth = collision_AllVoronoi.distance;
+	}
+
+	if (collision/*collision_AllVoronoi*/)
 	{
 		collisionShape1_Data.color = darkGreen;
 		collisionShape2_Data.color = lightGreen;
@@ -1405,9 +1582,21 @@ void collisionScene3DUpdate(F32 deltaTime)
 	vec3 cameraPosition_Right = vec3(10,0,0);
 	vec3 cameraPosition_Top = vec3(0,10,0);
 
-	mat4 cBasis_Front = mat4(vec4(1,0,0,0), vec4(0,1,0,0), vec4(0,0,1,0), vec4(0,0,0,1));
-	mat4 cBasis_Right = mat4(vec4(0,0,1,0), vec4(0,1,0,0), vec4(-1,0,0,0), vec4(0,0,0,1));
-	mat4 cBasis_Top = mat4(vec4(1,0,0,0), vec4(0,0,1,0), vec4(0,-1,0,0), vec4(0,0,0,1));
+	// World
+	mat4 cBasis_Front = mat4(vec4(1,0,0,0), vec4(0,1,0,0), vec4(0,0,1,0), vec4(0,0,0,1));  // x y  z w
+	mat4 cBasis_Right = mat4(vec4(0,0,1,0), vec4(0,1,0,0), -vec4(1,0,0,0), vec4(0,0,0,1)); // z y -x w
+	mat4 cBasis_Top = mat4(vec4(1,0,0,0), vec4(0,0,1,0), -vec4(0,1,0,0), vec4(0,0,0,1));   // x z -y w
+
+	// CS1
+	mat4 cBasis_Front_1 = mat4(normalize(Bmodel_cs1[0]), normalize(Bmodel_cs1[1]), normalize(Bmodel_cs1[2]), vec4(0,0,0,1));
+	mat4 cBasis_Right_1 = mat4(normalize(Bmodel_cs1[2]), normalize(Bmodel_cs1[1]), normalize(-Bmodel_cs1[0]), vec4(0, 0, 0, 1));
+	mat4 cBasis_Top_1 = mat4(normalize(Bmodel_cs1[0]), normalize(Bmodel_cs1[2]), normalize(-Bmodel_cs1[1]), vec4(0, 0, 0, 1));
+
+	// CS2
+	mat4 cBasis_Front_2 = mat4(Bmodel_cs2[0], Bmodel_cs2[1], Bmodel_cs2[2], vec4(0, 0, 0, 1));
+	mat4 cBasis_Right_2 = mat4(Bmodel_cs2[2], Bmodel_cs2[1], -Bmodel_cs2[0], vec4(0, 0, 0, 1));
+	mat4 cBasis_Top_2 = mat4(Bmodel_cs2[0], Bmodel_cs2[2], -Bmodel_cs2[1], vec4(0, 0, 0, 1));
+
 	//mat4 Ccamera = TranslationMatrix(camera3DPosition) * cBasis * ScaleMatrix(vec3(1, 1, -1));
 
 	vec3 cPosition;
@@ -1426,6 +1615,36 @@ void collisionScene3DUpdate(F32 deltaTime)
 	{
 		cPosition = cameraPosition_Top;
 		cBasis = cBasis_Top;
+	}
+	else if (gjkTestCameraMode == Orthographic_Front_1)
+	{
+		cPosition = vec3(0, 0, 0);// cameraPosition_Front;
+		cBasis = cBasis_Front_1;
+	}
+	else if (gjkTestCameraMode == Orthographic_Right_1)
+	{
+		cPosition = vec3(0,0,0);
+		cBasis = cBasis_Right_1;
+	}
+	else if (gjkTestCameraMode == Orthographic_Top_1)
+	{
+		cPosition = vec3(0, 0, 0); // cameraPosition_Top;
+		cBasis = cBasis_Top_1;
+	}
+	else if (gjkTestCameraMode == Orthographic_Front_2)
+	{
+		cPosition = vec3(0, 0, 0);
+		cBasis = cBasis_Front_2;
+	}
+	else if (gjkTestCameraMode == Orthographic_Right_2)
+	{
+		cPosition = vec3(0, 0, 0);
+		cBasis = cBasis_Right_2;
+	}
+	else if (gjkTestCameraMode == Orthographic_Top_2)
+	{
+		cPosition = vec3(0, 0, 0);
+		cBasis = cBasis_Top_2;
 	}
 	else
 	{
@@ -1553,6 +1772,84 @@ void collisionScene3DUpdate(F32 deltaTime)
 		glUniform4fv(solidColorQuadQuadColorLocation, 1, &orientationColor[0]);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 	}
+	else if (gjkTestCameraMode == Orthographic_Front_1)
+	{
+		mat3 PCM;
+		vec4 orientationColor = vec4(0, 1, 0, 1);
+		glUseProgram(texturedQuadShaderProgram);
+		glBindTexture(GL_TEXTURE_2D, front_1_Texture);
+		glBindVertexArray(texturedQuadVAO);
+		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
+		glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glUniform4fv(solidColorQuadQuadColorLocation, 1, &orientationColor[0]);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	}
+	else if (gjkTestCameraMode == Orthographic_Right_1)
+	{
+		mat3 PCM;
+		vec4 orientationColor = vec4(0, 1, 0, 1);
+		glUseProgram(texturedQuadShaderProgram);
+		glBindTexture(GL_TEXTURE_2D, right_1_Texture);
+		glBindVertexArray(texturedQuadVAO);
+		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
+		glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glUniform4fv(solidColorQuadQuadColorLocation, 1, &orientationColor[0]);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	}
+	else if (gjkTestCameraMode == Orthographic_Top_1)
+	{
+		mat3 PCM;
+		vec4 orientationColor = vec4(0, 1, 0, 1);
+		glUseProgram(texturedQuadShaderProgram);
+		glBindTexture(GL_TEXTURE_2D, top_1_Texture);
+		glBindVertexArray(texturedQuadVAO);
+		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
+		glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glUniform4fv(solidColorQuadQuadColorLocation, 1, &orientationColor[0]);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	}
+	else if (gjkTestCameraMode == Orthographic_Front_2)
+	{
+		mat3 PCM;
+		vec4 orientationColor = vec4(0, 1, 0, 1);
+		glUseProgram(texturedQuadShaderProgram);
+		glBindTexture(GL_TEXTURE_2D, front_2_Texture);
+		glBindVertexArray(texturedQuadVAO);
+		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
+		glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glUniform4fv(solidColorQuadQuadColorLocation, 1, &orientationColor[0]);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	}
+	else if (gjkTestCameraMode == Orthographic_Right_2)
+	{
+		mat3 PCM;
+		vec4 orientationColor = vec4(0, 1, 0, 1);
+		glUseProgram(texturedQuadShaderProgram);
+		glBindTexture(GL_TEXTURE_2D, right_2_Texture);
+		glBindVertexArray(texturedQuadVAO);
+		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
+		glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glUniform4fv(solidColorQuadQuadColorLocation, 1, &orientationColor[0]);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	}
+	else if (gjkTestCameraMode == Orthographic_Top_2)
+	{
+		mat3 PCM;
+		vec4 orientationColor = vec4(0, 1, 0, 1);
+		glUseProgram(texturedQuadShaderProgram);
+		glBindTexture(GL_TEXTURE_2D, top_2_Texture);
+		glBindVertexArray(texturedQuadVAO);
+		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
+		glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
+		glUniform4fv(solidColorQuadQuadColorLocation, 1, &orientationColor[0]);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	}
+
+
+// 	if (moved)
+// 	{
+		//DebugPrintf(512, "penetration depth: %f\n", penetrationDepth);
+//	}
 }
 
 void GameUpdate(F32 deltaTime)
