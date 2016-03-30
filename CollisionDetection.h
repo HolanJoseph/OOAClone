@@ -1533,9 +1533,12 @@ inline GJKInfo GJK(S1 shapeA, S2 shapeB)
 	vec3 S = Support(&shapeA, &shapeB, &vec3(1.0f, -1.0f, -1.0f));
 	if (S == vec3(0, 0, 0))
 	{
-		GJKInfo gjkInfo;
-		gjkInfo.collided = true;
-		//return true;
+		GJKInfo result;
+		result.collided = true;
+		result.numberOfLoopsCompleted = 0;
+		result.simplex.type = Simplex::Simplex_Point;
+		result.simplex.A = S;
+		return result;
 	}
 	vec3 simplex[4];
 	Simplex::SimplexType simplexType = Simplex::Simplex_Point;
@@ -1659,6 +1662,15 @@ inline GJKInfo GJK_Casey(S1 shapeA, S2 shapeB)
 	bool collisionDetected = false;
 
 	vec3 S = Support(&shapeA, &shapeB, &vec3(1.0f, -1.0f, -1.0f));
+	if (S == vec3(0, 0, 0))
+	{
+		GJKInfo result;
+		result.collided = true;
+		result.numberOfLoopsCompleted = 0;
+		result.simplex.type = Simplex::Simplex_Point;
+		result.simplex.A = S;
+		return result;
+	}
 	vec3 simplex[4];
 	Simplex::SimplexType simplexType = Simplex::Simplex_Point;
 	simplex[0] = S;
@@ -1730,11 +1742,14 @@ inline GJKInfo GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 	bool collisionDetected = false;
 
 	vec3 S = Support(&shapeA, &shapeB, &vec3(1.0f, -1.0f, -1.0f));
-	if (S == vec3(0,0,0))
+	if (S == vec3(0, 0, 0))
 	{
-		GJKInfo gjkInfo;
-		gjkInfo.collided = true;
-		//return true;
+		GJKInfo result;
+		result.collided = true;
+		result.numberOfLoopsCompleted = 0;
+		result.simplex.type = Simplex::Simplex_Point;
+		result.simplex.A = S;
+		return result;
 	}
 	vec3 simplex[4];
 	Simplex::SimplexType simplexType = Simplex::Simplex_Point;
