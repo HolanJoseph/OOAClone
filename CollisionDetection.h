@@ -15,13 +15,13 @@ struct Rectangle
 	vec2 halfDim;
 };
 
-inline vec3 Support(Rectangle* A, vec3 direction)
+inline vec3 Support(Rectangle A, vec3 direction)
 {
 	vec4 AiPoints[4] = {
-		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y - A->halfDim.y, 0.0f, 1.0f),
-		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y + A->halfDim.y, 0.0f, 1.0f),
-		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y - A->halfDim.y, 0.0f, 1.0f),
-		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y + A->halfDim.y, 0.0f, 1.0f)
+		A.transform * vec4(A.origin.x - A.halfDim.x, A.origin.y - A.halfDim.y, 0.0f, 1.0f),
+		A.transform * vec4(A.origin.x - A.halfDim.x, A.origin.y + A.halfDim.y, 0.0f, 1.0f),
+		A.transform * vec4(A.origin.x + A.halfDim.x, A.origin.y - A.halfDim.y, 0.0f, 1.0f),
+		A.transform * vec4(A.origin.x + A.halfDim.x, A.origin.y + A.halfDim.y, 0.0f, 1.0f)
 	};
 	F32 AiDots[4] = {
 		dot(direction, vec3(AiPoints[0].x, AiPoints[0].y, AiPoints[0].z)),
@@ -53,11 +53,11 @@ struct Circle
 	F32  radius;
 };
 
-inline vec3 Support(Circle* A, vec3 direction)
+inline vec3 Support(Circle A, vec3 direction)
 {
 	// NOTE: Should project direction vector onto plane of the sphere
 	direction = normalize(vec3(direction.x, direction.y, 0));
-	vec3 maxA = A->origin + (A->radius * direction);
+	vec3 maxA = A.origin + (A.radius * direction);
 
 	return maxA;
 }
@@ -72,12 +72,12 @@ struct Triangle
 	vec3 points[3];
 };
 
-inline vec3 Support(Triangle* A, vec3 direction)
+inline vec3 Support(Triangle A, vec3 direction)
 {
 	vec4 AiPoints[3] = {
-		A->transform * vec4(A->origin.x + A->points[0].x, A->origin.y + A->points[0].y, A->origin.z + A->points[0].z, 1.0f),
-		A->transform * vec4(A->origin.x + A->points[1].x, A->origin.y + A->points[1].y, A->origin.z + A->points[1].z, 1.0f),
-		A->transform * vec4(A->origin.x + A->points[2].x, A->origin.y + A->points[2].y, A->origin.z + A->points[2].z, 1.0f)
+		A.transform * vec4(A.origin.x + A.points[0].x, A.origin.y + A.points[0].y, A.origin.z + A.points[0].z, 1.0f),
+		A.transform * vec4(A.origin.x + A.points[1].x, A.origin.y + A.points[1].y, A.origin.z + A.points[1].z, 1.0f),
+		A.transform * vec4(A.origin.x + A.points[2].x, A.origin.y + A.points[2].y, A.origin.z + A.points[2].z, 1.0f)
 	};
 	F32 AiDots[3] = {
 		dot(direction, vec3(AiPoints[0].x, AiPoints[0].y, AiPoints[0].z)),
@@ -110,17 +110,17 @@ struct OrientedBoundingBox
 	vec3 halfDim;
 };
 
-inline vec3 Support(OrientedBoundingBox* A, vec3 direction)
+inline vec3 Support(OrientedBoundingBox A, vec3 direction)
 {
 	vec4 AiPoints[8] = {
-		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z + A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin.x - A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y - A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
-		A->transform * vec4(A->origin.x + A->halfDim.x, A->origin.y + A->halfDim.y, A->origin.z - A->halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x - A.halfDim.x, A.origin.y - A.halfDim.y, A.origin.z + A.halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x - A.halfDim.x, A.origin.y + A.halfDim.y, A.origin.z + A.halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x + A.halfDim.x, A.origin.y - A.halfDim.y, A.origin.z + A.halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x + A.halfDim.x, A.origin.y + A.halfDim.y, A.origin.z + A.halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x - A.halfDim.x, A.origin.y - A.halfDim.y, A.origin.z - A.halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x - A.halfDim.x, A.origin.y + A.halfDim.y, A.origin.z - A.halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x + A.halfDim.x, A.origin.y - A.halfDim.y, A.origin.z - A.halfDim.z, 1.0f),
+		A.transform * vec4(A.origin.x + A.halfDim.x, A.origin.y + A.halfDim.y, A.origin.z - A.halfDim.z, 1.0f),
 	};
 	F32 AiDots[8] = {
 		dot(direction, vec3(AiPoints[0].x, AiPoints[0].y, AiPoints[0].z)),
@@ -156,7 +156,7 @@ struct Sphere
 	F32 radius;
 };
 
-inline vec3 Support(Sphere* A, vec3 direction)
+inline vec3 Support(Sphere A, vec3 direction)
 {
 	if (direction == vec3(0,0,0))
 	{
@@ -165,7 +165,7 @@ inline vec3 Support(Sphere* A, vec3 direction)
 		direction = vec3(RandomF32Between(&randomDirectionGenerator, -1, 1), RandomF32Between(&randomDirectionGenerator, -1, 1), RandomF32Between(&randomDirectionGenerator,-1, 1));
 	}
 	direction = normalize(direction);
-	vec3 maxA = A->origin + (A->radius * direction);
+	vec3 maxA = A.origin + (A.radius * direction);
 
 	return maxA;
 }
@@ -180,11 +180,11 @@ struct Capsule
 	F32 radius;
 };
 
-inline vec3 Support(Capsule* A, vec3 direction)
+inline vec3 Support(Capsule A, vec3 direction)
 {
 	vec4 AiPoints[2] = {
-		A->transform * vec4(A->points[0].x, A->points[0].y, A->points[0].z, 1.0f),
-		A->transform * vec4(A->points[1].x, A->points[1].y, A->points[1].z, 1.0f)
+		A.transform * vec4(A.points[0].x, A.points[0].y, A.points[0].z, 1.0f),
+		A.transform * vec4(A.points[1].x, A.points[1].y, A.points[1].z, 1.0f)
 	};
 	F32 AiDots[2] = {
 		dot(direction, vec3(AiPoints[0])),
@@ -202,7 +202,7 @@ inline vec3 Support(Capsule* A, vec3 direction)
 		}
 	}
 	vec3 maxLinePointA = vec3(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y, AiPoints[maxPositionAi].z);
-	vec3 maxA = maxLinePointA + (normalize(direction) * A->radius);
+	vec3 maxA = maxLinePointA + (normalize(direction) * A.radius);
 
 	return maxA;
 }
@@ -210,13 +210,13 @@ inline vec3 Support(Capsule* A, vec3 direction)
 
 
 template<typename S1, typename S2>
-inline vec3 Support(S1* A, S2* B, vec3* direction)
+inline vec3 Support(S1 A, S2 B, vec3 direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec3 maxA = Support(A, *direction);
+	vec3 maxA = Support(A, direction);
 
 	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec3 maxB = Support(B, -*direction);
+	vec3 maxB = Support(B, -direction);
 
 	vec3 result = maxA - maxB;
 	return result;
@@ -1234,7 +1234,7 @@ inline GJKInfo GJK(S1 shapeA, S2 shapeB)
 {
 	bool collisionDetected = false;
 
-	vec3 S = Support(&shapeA, &shapeB, &vec3(1.0f, -1.0f, -1.0f));
+	vec3 S = Support(shapeA, shapeB, vec3(1.0f, -1.0f, -1.0f));
 	if (S == vec3(0, 0, 0))
 	{
 		GJKInfo result;
@@ -1252,7 +1252,7 @@ inline GJKInfo GJK(S1 shapeA, S2 shapeB)
 	for (; loopCounter < maxNumberOfLoops;)
 	{
 		++loopCounter;
-		vec3 A = Support(&shapeA, &shapeB, &D);
+		vec3 A = Support(shapeA, shapeB, D);
 		if (A == vec3(0.0f, 0.0f, 0.0f))
 		{
 			collisionDetected = true;
@@ -1337,7 +1337,7 @@ inline GJKInfo GJK_Casey(S1 shapeA, S2 shapeB)
 {
 	bool collisionDetected = false;
 
-	vec3 S = Support(&shapeA, &shapeB, &vec3(1.0f, -1.0f, -1.0f));
+	vec3 S = Support(shapeA, shapeB, vec3(1.0f, -1.0f, -1.0f));
 	if (S == vec3(0, 0, 0))
 	{
 		GJKInfo result;
@@ -1354,7 +1354,7 @@ inline GJKInfo GJK_Casey(S1 shapeA, S2 shapeB)
 	for (; loopCounter < 10;)
 	{
 		++loopCounter;
-		vec3 A = Support(&shapeA, &shapeB, &D);
+		vec3 A = Support(shapeA, shapeB, D);
 		if (A == vec3(0.0f, 0.0f, 0.0f))
 		{
 			collisionDetected = true;
@@ -1389,7 +1389,7 @@ inline GJKInfo GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 {
 	bool collisionDetected = false;
 
-	vec3 S = Support(&shapeA, &shapeB, &vec3(1.0f, -1.0f, -1.0f));
+	vec3 S = Support(shapeA, shapeB, vec3(1.0f, -1.0f, -1.0f));
 	if (S == vec3(0, 0, 0))
 	{
 		GJKInfo result;
@@ -1407,7 +1407,7 @@ inline GJKInfo GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 	for (; loopCounter < maxNumberOfLoops;)
 	{
 		++loopCounter;
-		vec3 A = Support(&shapeA, &shapeB, &D);
+		vec3 A = Support(shapeA, shapeB, D);
 		if (A == vec3(0.0f, 0.0f, 0.0f))
 		{
 			collisionDetected = true;
