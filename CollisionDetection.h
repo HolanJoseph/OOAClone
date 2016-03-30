@@ -227,14 +227,6 @@ inline vec3 Support(S1* A, S2* B, vec3* direction)
 
 
 
-// enum SimplexType
-// {
-// 	Simplex_Point = 0,
-// 	Simplex_Line = 1,
-// 	Simplex_Triangle = 2,
-// 	Simplex_Tetrahedron = 3
-// };
-
 struct Simplex
 {
 	enum SimplexType
@@ -244,13 +236,15 @@ struct Simplex
 		Simplex_Triangle = 2,
 		Simplex_Tetrahedron = 3
 	};
-
 	SimplexType type;
+
 	vec3 A;
 	vec3 B;
 	vec3 C;
 	vec3 D;
 };
+
+
 
 struct DoSimplexResult
 {
@@ -259,39 +253,44 @@ struct DoSimplexResult
 	vec3 d;
 };
 
-inline bool DoSimplexLine(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
+inline DoSimplexResult DoSimplexLine(Simplex simplex, vec3 D)
 {
-	bool result = false;
+	DoSimplexResult result;
+	result.containsGoal = false;
 
-	vec3 ab = vec3(simplex[0].x - simplex[1].x, simplex[0].y - simplex[1].y, simplex[0].z - simplex[1].z);
-	vec3 ag = vec3(0 - simplex[1].x, 0 - simplex[1].y, 0 - simplex[1].z);
+	vec3 ab = vec3(simplex.B.x - simplex.A.x, simplex.B.y - simplex.A.y, simplex.B.z - simplex.A.z);
+	vec3 ag = vec3(0 - simplex.A.x, 0 - simplex.A.y, 0 - simplex.A.z);
 
-	vec3 DinR3 = cross(cross(ab, ag), ab);
-	*D = DinR3;
+	result.d = cross(cross(ab, ag), ab);
 
-	*simplexType = Simplex::Simplex_Line;
+	result.simplex.A = simplex.A;
+	result.simplex.B = simplex.B;
+	result.simplex.type = Simplex::Simplex_Line;
 
 	return result;
 }
 
-inline bool DoSimplexLine_Casey(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
+inline DoSimplexResult DoSimplexLine_Casey(Simplex simplex, vec3 D)
 {
-	bool result = false;
+	DoSimplexResult result;
+	result.containsGoal = false;
 
-	vec3 ab = vec3(simplex[0].x - simplex[1].x, simplex[0].y - simplex[1].y, simplex[0].z - simplex[1].z);
-	vec3 ag = vec3(0 - simplex[1].x, 0 - simplex[1].y, 0 - simplex[1].z);
+	vec3 ab = vec3(simplex.B.x - simplex.A.x, simplex.B.y - simplex.A.y, simplex.B.z - simplex.A.z);
+	vec3 ag = vec3(0 - simplex.A.x, 0 - simplex.A.y, 0 - simplex.A.z);
 	if (dot(ab, ag) > 0)
 	{
-		vec3 DinR3 = cross(cross(ab, ag), ab);
-		*D = DinR3;
+		result.d = cross(cross(ab, ag), ab);
+		result.simplex.type = Simplex::Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.B;
 	}
 	else
 	{
 		Assert(false);
 
-		simplex[0] = simplex[1];
-		simplex[1] = vec3();
-		*simplexType = Simplex::Simplex_Point;
+		result.simplex.A = simplex.B;
+		result.simplex.B = vec3();
+		result.simplex.type = Simplex::Simplex_Point;
 	}
 
 	return result;
@@ -371,52 +370,53 @@ inline DoSimplexResult DoSimplexLine_AllVoronoiDouble(Simplex simplex, vec3 D)
 
 
 
-inline bool DoSimplexTriangle(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
+inline DoSimplexResult DoSimplexTriangle(Simplex simplex, vec3 D)
 {
-	bool result = false;
+	DoSimplexResult result;
+	result.containsGoal = false;
 
-	vec3 ab = simplex[1] - simplex[2];
-	vec3 ac = simplex[0] - simplex[2];
-	vec3 ag = vec3(0, 0, 0) - simplex[2];
+	vec3 ab = simplex.B - simplex.A;
+	vec3 ac = simplex.C - simplex.A;
+	vec3 ag = vec3(0, 0, 0) - simplex.A;
 	vec3 abc = cross(ab, ac);
 
 	if (dot(cross(abc, ac), ag) > 0)
 	{
-		// NOTE:	  1  0
-		// simplex = [A, C]
-		simplex[1] = simplex[2];
-		simplex[2] = vec3();
-		*simplexType = Simplex::Simplex_Line;
-		vec3 dInR3 = cross(cross(ac, ag), ac);
-		*D = dInR3;
+		// Case AC
+		result.simplex.type = Simplex::Simplex_Line;
+		result.simplex.A = simplex.A;
+		result.simplex.B = simplex.C;
+		result.d = cross(cross(ac, ag), ac);
 	}
 	else
 	{
 		if (dot(cross(ab, abc), ag) > 0)
 		{
-			// NOTE:	  1  0
-			// simplex = [A, B]
-			simplex[0] = simplex[1];
-			simplex[1] = simplex[2];
-			simplex[2] = vec3();
-			*simplexType = Simplex::Simplex_Line;
-			vec3 dInR3 = cross(cross(ab, ag), ab);
-			*D = dInR3;
+			// Case AB
+			result.simplex.type = Simplex::Simplex_Line;
+			result.simplex.A = simplex.A;
+			result.simplex.B = simplex.B;
+			result.d = cross(cross(ab, ag), ab);
 		}
 		else
 		{
-			// NOTE: In the 2D case this means the origin is within the triangle.
 			if (dot(abc, ag) > 0)
 			{
-				*D = abc;
+				// Case ABC
+				result.simplex.type = Simplex::Simplex_Triangle;
+				result.simplex.A = simplex.A;
+				result.simplex.B = simplex.B;
+				result.simplex.C = simplex.C;
+				result.d = abc;
 			}
 			else
 			{
 				// NOTE: Swap points so plane normal will be in the direction of the new point.
-				vec3 t = simplex[1];
-				simplex[1] = simplex[0];
-				simplex[0] = t;
-				*D = -abc;
+				result.simplex.type = Simplex::Simplex_Triangle;
+				result.simplex.A = simplex.A;
+				result.simplex.B = simplex.C;
+				result.simplex.C = simplex.B;
+				result.d = -abc;
 			}
 		}
 	}
@@ -424,13 +424,14 @@ inline bool DoSimplexTriangle(vec3* simplex, Simplex::SimplexType* simplexType, 
 	return result;
 }
 
-inline bool DoSimplexTriangle_Casey(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
+inline DoSimplexResult DoSimplexTriangle_Casey(Simplex simplex, vec3 D)
 {
-	bool result = false;
+	DoSimplexResult result;
+	result.containsGoal = false;
 
-	vec3 ab = simplex[1] - simplex[2];
-	vec3 ac = simplex[0] - simplex[2];
-	vec3 ag = vec3(0, 0, 0) - simplex[2];
+	vec3 ab = simplex.B - simplex.A;
+	vec3 ac = simplex.C - simplex.A;
+	vec3 ag = vec3(0, 0, 0) - simplex.A;
 	vec3 abc = cross(ab, ac);
 
 	if (dot(cross(abc, ac), ag) > 0)
@@ -438,15 +439,11 @@ inline bool DoSimplexTriangle_Casey(vec3* simplex, Simplex::SimplexType* simplex
 		if (dot(ac, ag) > 0)
 		{
 			// CASE 1
-
-			// NOTE		  1  0
-			// simplex = [A, C]
-			simplex[1] = simplex[2];
-			simplex[2] = vec3();
-			*simplexType = Simplex::Simplex_Line;
-
-			vec3 dInR3 = cross(cross(ac, ag), ac);
-			*D = dInR3;
+			// Case AC
+			result.simplex.type = Simplex::Simplex_Line;
+			result.simplex.A = simplex.A;
+			result.simplex.B = simplex.C;
+			result.d = cross(cross(ac, ag), ac);
 		}
 		else
 		{
@@ -454,30 +451,21 @@ inline bool DoSimplexTriangle_Casey(vec3* simplex, Simplex::SimplexType* simplex
 			if (dot(ab, ag) > 0)
 			{
 				// CASE 4
-
-				// NOTE		  1  0
-				// simplex = [A, B]
-				simplex[0] = simplex[1];
-				simplex[1] = simplex[2];
-				simplex[2] = vec3();
-				*simplexType = Simplex::Simplex_Line;
-
-				vec3 dInR3 = cross(cross(ab, ag), ab);
-				*D = dInR3;
+				// Case AB
+				result.simplex.type = Simplex::Simplex_Line;
+				result.simplex.A = simplex.A;
+				result.simplex.B = simplex.B;
+				result.d = cross(cross(ab, ag), ab);
 			}
 			else
 			{
 				// CASE 5
+				// Case A
 				Assert(false);
 
-				// NOTE		  0
-				// simplex = [A]
-				simplex[0] = simplex[2];
-				simplex[1] = vec3();
-				simplex[2] = vec3();
-				*simplexType = Simplex::Simplex_Point;
-
-				*D = ag;
+				result.simplex.type = Simplex::Simplex_Point;
+				result.simplex.A = simplex.A;
+				result.d = ag;
 			}
 		}
 	}
@@ -489,30 +477,21 @@ inline bool DoSimplexTriangle_Casey(vec3* simplex, Simplex::SimplexType* simplex
 			if (dot(ab, ag) > 0)
 			{
 				// CASE 4
-
-				// NOTE		  1  0
-				// simplex = [A, B]
-				simplex[0] = simplex[1];
-				simplex[1] = simplex[2];
-				simplex[2] = vec3();
-				*simplexType = Simplex::Simplex_Line;
-
-				vec3 dInR3 = cross(cross(ab, ag), ab);
-				*D = dInR3;
+				// Case AB
+				result.simplex.type = Simplex::Simplex_Line;
+				result.simplex.A = simplex.A;
+				result.simplex.B = simplex.B;
+				result.d = cross(cross(ab, ag), ab);
 			}
 			else
 			{
 				// CASE 5
+				// Case A
 				Assert(false);
 
-				// NOTE		  0
-				// simplex = [A]
-				simplex[0] = simplex[2];
-				simplex[1] = vec3();
-				simplex[2] = vec3();
-				*simplexType = Simplex::Simplex_Point;
-
-				*D = ag;
+				result.simplex.type = Simplex::Simplex_Point;
+				result.simplex.A = simplex.A;
+				result.d = ag;
 			}
 		}
 		else
@@ -520,19 +499,23 @@ inline bool DoSimplexTriangle_Casey(vec3* simplex, Simplex::SimplexType* simplex
 			// CASE 2 AND CASE 3
 
 			// NOTE: In the 2D case this means the origin is within the triangle.
-			result = true;
+			result.containsGoal = true;
+			result.simplex.type = Simplex::Simplex_Triangle;
+			result.simplex.A = simplex.A;
+			result.simplex.B = simplex.B;
+			result.simplex.C = simplex.C;
+
 			// NOTE: This is for the 3D case.
 			/*if (dot(abc, ag) > 0)
 			{
-			*D = abc;
+				result.d = abc;
 			}
 			else
 			{
-			// NOTE: Swap points so plane normal will be in the direction of the new point.
-			vec3 t = simplex[1];
-			simplex[1] = simplex[0];
-			simplex[0] = t;
-			*D = -abc;
+				// NOTE: Swap points so plane normal will be in the direction of the new point.
+				result.simplex.B = simplex.C;
+				result.simplex.C = simplex.B;
+				result.d = -abc;
 			}*/
 		}
 	}
@@ -1181,16 +1164,71 @@ inline bool DoSimplex(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
 	{
 	case Simplex::Simplex_Line:
 	{
+								  Simplex s;
+								  s.type = *simplexType;
+								  s.A = simplex[1];
+								  s.B = simplex[0];
 
-						 result = DoSimplexLine(simplex, simplexType, D);
-						 break;
+								  DoSimplexResult rav = DoSimplexLine(s, *D);
+
+								  if (rav.simplex.type == Simplex::Simplex_Point)
+								  {
+									  simplex[0] = rav.simplex.A;
+									  simplex[1] = vec3(0, 0, 0);
+									  simplex[2] = vec3(0, 0, 0);
+									  simplex[3] = vec3(0, 0, 0);
+								  }
+								  else if (rav.simplex.type == Simplex::Simplex_Line)
+								  {
+									  simplex[0] = rav.simplex.B;
+									  simplex[1] = rav.simplex.A;
+									  simplex[2] = vec3(0, 0, 0);
+									  simplex[3] = vec3(0, 0, 0);
+								  }
+
+								  *simplexType = rav.simplex.type;
+								  *D = rav.d;
+								  result = rav.containsGoal;
+								  break;
 	}
 
 	case Simplex::Simplex_Triangle:
 	{
 
-							 result = DoSimplexTriangle(simplex, simplexType, D);
-							 break;
+									  Simplex s;
+									  s.type = *simplexType;
+									  s.A = simplex[2];
+									  s.B = simplex[1];
+									  s.C = simplex[0];
+
+									  DoSimplexResult rav = DoSimplexTriangle(s, *D);
+
+									  if (rav.simplex.type == Simplex::Simplex_Point)
+									  {
+										  simplex[0] = rav.simplex.A;
+										  simplex[1] = vec3(0, 0, 0);
+										  simplex[2] = vec3(0, 0, 0);
+										  simplex[3] = vec3(0, 0, 0);
+									  }
+									  else if (rav.simplex.type == Simplex::Simplex_Line)
+									  {
+										  simplex[0] = rav.simplex.B;
+										  simplex[1] = rav.simplex.A;
+										  simplex[2] = vec3(0, 0, 0);
+										  simplex[3] = vec3(0, 0, 0);
+									  }
+									  else if (rav.simplex.type == Simplex::Simplex_Triangle)
+									  {
+										  simplex[0] = rav.simplex.C;
+										  simplex[1] = rav.simplex.B;
+										  simplex[2] = rav.simplex.A;
+										  simplex[3] = vec3(0, 0, 0);
+									  }
+
+									  *simplexType = rav.simplex.type;
+									  *D = rav.d;
+									  result = rav.containsGoal;
+									  break;
 	}
 
 	case Simplex::Simplex_Tetrahedron:
@@ -1256,16 +1294,70 @@ inline bool DoSimplex_Casey(vec3* simplex, Simplex::SimplexType* simplexType, ve
 	{
 	case Simplex::Simplex_Line:
 	{
+								  Simplex s;
+								  s.type = *simplexType;
+								  s.A = simplex[1];
+								  s.B = simplex[0];
+								  
+								  DoSimplexResult rav = DoSimplexLine_Casey(s, *D);
 
-						 result = DoSimplexLine_Casey(simplex, simplexType, D);
-						 break;
+								  if (rav.simplex.type == Simplex::Simplex_Point)
+								  {
+									  simplex[0] = rav.simplex.A;
+									  simplex[1] = vec3(0, 0, 0);
+									  simplex[2] = vec3(0, 0, 0);
+									  simplex[3] = vec3(0, 0, 0);
+								  }
+								  else if (rav.simplex.type == Simplex::Simplex_Line)
+								  {
+									  simplex[0] = rav.simplex.B;
+									  simplex[1] = rav.simplex.A;
+									  simplex[2] = vec3(0, 0, 0);
+									  simplex[3] = vec3(0, 0, 0);
+								  }
+
+								  *simplexType = rav.simplex.type;
+								  *D = rav.d;
+								  result = rav.containsGoal;
+							      break;
 	}
 
 	case Simplex::Simplex_Triangle:
 	{
+									  Simplex s;
+									  s.type = *simplexType;
+									  s.A = simplex[2];
+									  s.B = simplex[1];
+									  s.C = simplex[0];
 
-							 result = DoSimplexTriangle_Casey(simplex, simplexType, D);
-							 break;
+									  DoSimplexResult rav = DoSimplexTriangle_Casey(s, *D);
+
+									  if (rav.simplex.type == Simplex::Simplex_Point)
+									  {
+										  simplex[0] = rav.simplex.A;
+										  simplex[1] = vec3(0, 0, 0);
+										  simplex[2] = vec3(0, 0, 0);
+										  simplex[3] = vec3(0, 0, 0);
+									  }
+									  else if (rav.simplex.type == Simplex::Simplex_Line)
+									  {
+										  simplex[0] = rav.simplex.B;
+										  simplex[1] = rav.simplex.A;
+										  simplex[2] = vec3(0, 0, 0);
+										  simplex[3] = vec3(0, 0, 0);
+									  }
+									  else if (rav.simplex.type == Simplex::Simplex_Triangle)
+									  {
+										  simplex[0] = rav.simplex.C;
+										  simplex[1] = rav.simplex.B;
+										  simplex[2] = rav.simplex.A;
+										  simplex[3] = vec3(0, 0, 0);
+									  }
+
+									  *simplexType = rav.simplex.type;
+									  *D = rav.d;
+									  result = rav.containsGoal;
+									  break;
 	}
 
 	case Simplex::Simplex_Tetrahedron:
