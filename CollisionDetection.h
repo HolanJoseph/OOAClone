@@ -231,10 +231,11 @@ struct Simplex
 {
 	enum SimplexType
 	{
-		Simplex_Point = 0,
-		Simplex_Line = 1,
-		Simplex_Triangle = 2,
-		Simplex_Tetrahedron = 3
+		Simplex_Empty = 0,
+		Simplex_Point = 1,
+		Simplex_Line = 2,
+		Simplex_Triangle = 3,
+		Simplex_Tetrahedron = 4
 	};
 	SimplexType type;
 
@@ -243,6 +244,79 @@ struct Simplex
 	vec3 C;
 	vec3 D;
 };
+
+Simplex CreateSimplex(vec3 A)
+{
+	Simplex result;
+	result.type = Simplex::Simplex_Point;
+	result.A = A;
+	return result;
+}
+
+Simplex CreateSimplex(vec3 B, vec3 A)
+{
+	Simplex result;
+	result.type = Simplex::Simplex_Line;
+	result.B = B;
+	result.A = A;
+	return result;
+}
+
+Simplex CreateSimplex(vec3 C, vec3 B, vec3 A)
+{
+	Simplex result;
+	result.type = Simplex::Simplex_Triangle;
+	result.C = C;
+	result.B = B;
+	result.A = A;
+	return result;
+}
+
+Simplex CreateSimplex(vec3 D, vec3 C, vec3 B, vec3 A)
+{
+	Simplex result;
+	result.type = Simplex::Simplex_Tetrahedron;
+	result.D = D;
+	result.C = C;
+	result.B = B;
+	result.A = A;
+	return result;
+}
+
+void AddSimplexPoint(Simplex* simplex, vec3 point)
+{
+	Simplex::SimplexType simplexType = simplex->type;
+	switch (simplexType)
+	{
+	case Simplex::Simplex_Empty:
+	simplex->A = point;
+	break;
+
+	case Simplex::Simplex_Point:
+	simplex->B = simplex->A;
+	simplex->A = point;
+	break;
+
+	case Simplex::Simplex_Line:
+	simplex->C = simplex->B;
+	simplex->B = simplex->A;
+	simplex->A = point;
+	break;
+
+	case Simplex::Simplex_Triangle:
+	simplex->D = simplex->C;
+	simplex->C = simplex->B;
+	simplex->B = simplex->A;
+	simplex->A = point;
+	break;
+
+	case Simplex::Simplex_Tetrahedron:
+	default:
+	Assert(true);
+	break;
+	}
+	simplex->type = (Simplex::SimplexType)(simplexType + 1);
+}
 
 
 
@@ -262,10 +336,7 @@ inline DoSimplexResult DoSimplexLine(Simplex simplex, vec3 D)
 	vec3 ag = vec3(0 - simplex.A.x, 0 - simplex.A.y, 0 - simplex.A.z);
 
 	result.d = cross(cross(ab, ag), ab);
-
-	result.simplex.A = simplex.A;
-	result.simplex.B = simplex.B;
-	result.simplex.type = Simplex::Simplex_Line;
+	result.simplex = CreateSimplex(simplex.B, simplex.A);
 
 	return result;
 }
@@ -280,17 +351,13 @@ inline DoSimplexResult DoSimplexLine_Casey(Simplex simplex, vec3 D)
 	if (dot(ab, ag) > 0)
 	{
 		result.d = cross(cross(ab, ag), ab);
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.A);
 	}
 	else
 	{
 		Assert(false);
-
-		result.simplex.A = simplex.B;
-		result.simplex.B = vec3();
-		result.simplex.type = Simplex::Simplex_Point;
+		
+		result.simplex = CreateSimplex(simplex.B);
 	}
 
 	return result;
@@ -309,23 +376,19 @@ inline DoSimplexResult DoSimplexLine_AllVoronoi(Simplex simplex, vec3 D)
 	if (dot(ab, ag) < 0)
 	{
 		// Voronoi Region A
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.A;
+		result.simplex = CreateSimplex(simplex.A);
 		result.d = ag;
 	}
 	else if (dot(ba, bg) < 0)
 	{
 		// Voronoi Region B
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.B;
+		result.simplex = CreateSimplex(simplex.B);
 		result.d = bg;
 	}
 	else
 	{
 		// Voronoi Region AB
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.A);
 		result.d = cross(cross(ab, ag), ab);
 	}
 
@@ -345,23 +408,19 @@ inline DoSimplexResult DoSimplexLine_AllVoronoiDouble(Simplex simplex, vec3 D)
 	if (dot(ab, ag) < 0)
 	{
 		// Voronoi Region A
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.A;
+		result.simplex = CreateSimplex(simplex.A);
 		result.d = ag;
 	}
 	else if (dot(ba, bg) < 0)
 	{
 		// Voronoi Region B
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.B;
+		result.simplex = CreateSimplex(simplex.B);
 		result.d = bg;
 	}
 	else
 	{
 		// Voronoi Region AB
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.A);
 		result.d = cross(cross(ab, ag), ab);
 	}
 
@@ -383,9 +442,7 @@ inline DoSimplexResult DoSimplexTriangle(Simplex simplex, vec3 D)
 	if (dot(cross(abc, ac), ag) > 0)
 	{
 		// Case AC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.A);
 		result.d = cross(cross(ac, ag), ac);
 	}
 	else
@@ -393,9 +450,7 @@ inline DoSimplexResult DoSimplexTriangle(Simplex simplex, vec3 D)
 		if (dot(cross(ab, abc), ag) > 0)
 		{
 			// Case AB
-			result.simplex.type = Simplex::Simplex_Line;
-			result.simplex.A = simplex.A;
-			result.simplex.B = simplex.B;
+			result.simplex = CreateSimplex(simplex.B, simplex.A);
 			result.d = cross(cross(ab, ag), ab);
 		}
 		else
@@ -403,19 +458,13 @@ inline DoSimplexResult DoSimplexTriangle(Simplex simplex, vec3 D)
 			if (dot(abc, ag) > 0)
 			{
 				// Case ABC
-				result.simplex.type = Simplex::Simplex_Triangle;
-				result.simplex.A = simplex.A;
-				result.simplex.B = simplex.B;
-				result.simplex.C = simplex.C;
+				result.simplex = CreateSimplex(simplex.C, simplex.B, simplex.A);
 				result.d = abc;
 			}
 			else
 			{
 				// NOTE: Swap points so plane normal will be in the direction of the new point.
-				result.simplex.type = Simplex::Simplex_Triangle;
-				result.simplex.A = simplex.A;
-				result.simplex.B = simplex.C;
-				result.simplex.C = simplex.B;
+				result.simplex = CreateSimplex(simplex.B, simplex.C, simplex.A);
 				result.d = -abc;
 			}
 		}
@@ -440,9 +489,7 @@ inline DoSimplexResult DoSimplexTriangle_Casey(Simplex simplex, vec3 D)
 		{
 			// CASE 1
 			// Case AC
-			result.simplex.type = Simplex::Simplex_Line;
-			result.simplex.A = simplex.A;
-			result.simplex.B = simplex.C;
+			result.simplex = CreateSimplex(simplex.C, simplex.A);
 			result.d = cross(cross(ac, ag), ac);
 		}
 		else
@@ -452,9 +499,7 @@ inline DoSimplexResult DoSimplexTriangle_Casey(Simplex simplex, vec3 D)
 			{
 				// CASE 4
 				// Case AB
-				result.simplex.type = Simplex::Simplex_Line;
-				result.simplex.A = simplex.A;
-				result.simplex.B = simplex.B;
+				result.simplex = CreateSimplex(simplex.B, simplex.A);
 				result.d = cross(cross(ab, ag), ab);
 			}
 			else
@@ -463,8 +508,7 @@ inline DoSimplexResult DoSimplexTriangle_Casey(Simplex simplex, vec3 D)
 				// Case A
 				Assert(false);
 
-				result.simplex.type = Simplex::Simplex_Point;
-				result.simplex.A = simplex.A;
+				result.simplex = CreateSimplex(simplex.A);
 				result.d = ag;
 			}
 		}
@@ -478,9 +522,7 @@ inline DoSimplexResult DoSimplexTriangle_Casey(Simplex simplex, vec3 D)
 			{
 				// CASE 4
 				// Case AB
-				result.simplex.type = Simplex::Simplex_Line;
-				result.simplex.A = simplex.A;
-				result.simplex.B = simplex.B;
+				result.simplex = CreateSimplex(simplex.B, simplex.A);
 				result.d = cross(cross(ab, ag), ab);
 			}
 			else
@@ -489,8 +531,7 @@ inline DoSimplexResult DoSimplexTriangle_Casey(Simplex simplex, vec3 D)
 				// Case A
 				Assert(false);
 
-				result.simplex.type = Simplex::Simplex_Point;
-				result.simplex.A = simplex.A;
+				result.simplex = CreateSimplex(simplex.A);
 				result.d = ag;
 			}
 		}
@@ -500,10 +541,7 @@ inline DoSimplexResult DoSimplexTriangle_Casey(Simplex simplex, vec3 D)
 
 			// NOTE: In the 2D case this means the origin is within the triangle.
 			result.containsGoal = true;
-			result.simplex.type = Simplex::Simplex_Triangle;
-			result.simplex.A = simplex.A;
-			result.simplex.B = simplex.B;
-			result.simplex.C = simplex.C;
+			result.simplex = CreateSimplex(simplex.C, simplex.B, simplex.A);
 
 			// NOTE: This is for the 3D case.
 			/*if (dot(abc, ag) > 0)
@@ -557,31 +595,27 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoi(Simplex simplex, vec3 D)
 	F32 perpAB_DOT_ag = dot(cross(ab, sn), ag);
 	F32 perpAC_DOT_ag = dot(cross(sn, ac), ag);
 	F32 perpBC_DOT_bg = dot(cross(bc, sn), bg);
-	//F32 perpCB_DOT_cg = dot(cross(sn, cb), cg);
 	F32 sn_DOT_ag = dot(sn, ag);
 
 	if (ab_DOT_ag < 0 &&
 		ac_DOT_ag < 0)
 	{
 		// Voronoi Region A
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.A;
+		result.simplex = CreateSimplex(simplex.A);
 		result.d = ag;
 	}
 	else if (ba_DOT_bg < 0 &&
 		bc_DOT_bg < 0)
 	{
 		// Voronoi Region B
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.B;
+		result.simplex = CreateSimplex(simplex.B);
 		result.d = bg;
 	}
 	else if (ca_DOT_cg < 0 &&
 		cb_DOT_cg < 0)
 	{
 		// Voronoi Region C
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.C;
+		result.simplex = CreateSimplex(simplex.C);
 		result.d = cg;
 	}
 	else if (ab_DOT_ag >= 0 &&
@@ -589,9 +623,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoi(Simplex simplex, vec3 D)
 		perpAB_DOT_ag > 0)
 	{
 		// Voronoi Region AB
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.A);
 		result.d = cross(cross(ab, ag), ab);
 	}
 	else if (ac_DOT_ag >= 0 &&
@@ -599,9 +631,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoi(Simplex simplex, vec3 D)
 		perpAC_DOT_ag > 0)
 	{
 		// Voronoi Region AC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.A);
 		result.d = cross(cross(ac, ag), ac);
 	}
 	else if (bc_DOT_bg >= 0 &&
@@ -609,9 +639,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoi(Simplex simplex, vec3 D)
 		perpBC_DOT_bg > 0)
 	{
 		// Voronoi Region BC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.B;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B);
 		result.d = cross(cross(bc, bg), bc);
 	}
 	else if (perpAB_DOT_ag <= 0 &&
@@ -620,10 +648,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoi(Simplex simplex, vec3 D)
 		sn_DOT_ag > 0)
 	{
 		// Voronoi Region ABC Above
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
-		result.simplex.C = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.C, simplex.A);
 		result.d = sn;
 	}
 	else if (perpAB_DOT_ag <= 0 &&
@@ -632,14 +657,10 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoi(Simplex simplex, vec3 D)
 		sn_DOT_ag <= 0)
 	{
 		// Voronoi Region ABC Below
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B, simplex.A);
 		result.d = -sn;
 	}
 
-	//result.d = normalize(result.d);
 	return result;
 }
 
@@ -683,24 +704,21 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoiDouble(Simplex simplex, vec3 
 		ac_DOT_ag < 0)
 	{
 		// Voronoi Region A
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.A;
+		result.simplex = CreateSimplex(simplex.A);
 		result.d = ag;
 	}
 	else if (ba_DOT_bg < 0 &&
 		bc_DOT_bg < 0)
 	{
 		// Voronoi Region B
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.B;
+		result.simplex = CreateSimplex(simplex.B);
 		result.d = bg;
 	}
 	else if (ca_DOT_cg < 0 &&
 		cb_DOT_cg < 0)
 	{
 		// Voronoi Region C
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.C;
+		result.simplex = CreateSimplex(simplex.C);
 		result.d = cg;
 	}
 	else if (ab_DOT_ag >= 0 &&
@@ -708,9 +726,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoiDouble(Simplex simplex, vec3 
 		perpAB_DOT_ag > 0)
 	{
 		// Voronoi Region AB
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.A);
 		result.d = cross(cross(ab, ag), ab);
 		if (result.d == vec3(0, 0, 0))
 		{
@@ -722,9 +738,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoiDouble(Simplex simplex, vec3 
 		perpAC_DOT_ag > 0)
 	{
 		// Voronoi Region AC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.A);
 		result.d = normalize(cross(cross(ac, ag), ac));
 		if (result.d == vec3(0, 0, 0))
 		{
@@ -736,9 +750,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoiDouble(Simplex simplex, vec3 
 		perpBC_DOT_bg > 0)
 	{
 		// Voronoi Region BC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.B;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B);
 		result.d = cross(cross(bc, bg), bc);
 		if (result.d == vec3(0,0,0))
 		{
@@ -751,10 +763,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoiDouble(Simplex simplex, vec3 
 		sn_DOT_ag > 0)
 	{
 		// Voronoi Region ABC Above
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
-		result.simplex.C = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.C, simplex.A);
 		result.d = sn;
 	}
 	else if (perpAB_DOT_ag <= 0 &&
@@ -763,10 +772,7 @@ inline DoSimplexResult DoSimplexTriangle_AllVoronoiDouble(Simplex simplex, vec3 
 		sn_DOT_ag <= 0)
 	{
 		// Voronoi Region ABC Below
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B, simplex.A);
 		result.d = -sn;
 	}
 
@@ -821,9 +827,7 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 		dot(AG, cross(normalADB, AB)) > 0)
 	{
 		// Voronoi AB
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.A);
 		result.d = cross(cross(AB, AG), AB);
 	}
 	else if (dot(AG, AC) >= 0 &&
@@ -832,9 +836,7 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 		dot(AG, cross(normalABC, AC)) > 0)
 	{
 		// Voronoi AC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.A);
 		result.d = cross(cross(AC, AG), AC);
 	}
 	else if (dot(AG, AD) >= 0 &&
@@ -843,9 +845,7 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 		dot(AG, cross(normalACD, AD)) > 0)
 	{
 		// Voronoi AD
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.A);
 		result.d = cross(cross(AD, AG), AD);
 	}
 	else if (dot(BG, BC) >= 0 &&
@@ -854,9 +854,7 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 		dot(BG, cross(normalBDC, BC)) > 0)
 	{
 		// Voronoi BC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.B;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B);
 		result.d = cross(cross(BC, BG), BC);
 	}
 	else if (dot(BG, BD) >= 0 &&
@@ -865,18 +863,13 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 		dot(BG, cross(normalBAD, BD)) > 0)
 	{
 		// Voronoi BD
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.B;
-		result.simplex.B = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.B);
 		result.d = cross(cross(BD, BG), BD);
 	}
 	else if ((dot(AG, normalABC))*(dot(AD, normalABC))<0)
 	{
 		// Voronoi ABC
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B, simplex.A);
 		if (dot(AG, normalABC)>0)
 		{
 			result.d = normalABC;
@@ -889,10 +882,7 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 	else if ((dot(AG, normalADB))*(dot(AC, normalADB))<0)
 	{
 		// Voronoi ABD
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.B, simplex.A);
 		if (dot(AG, normalADB)>0)
 		{
 			result.d = normalADB;
@@ -905,10 +895,7 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 	else if ((dot(AG, normalACD))*(dot(AB, normalACD))<0)
 	{
 		// Voronoi ACD
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
-		result.simplex.C = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.C, simplex.A);
 		if (dot(AG, normalACD)>0)
 		{
 			result.d = normalACD;
@@ -923,11 +910,7 @@ inline DoSimplexResult DoSimplexTetrahedron(Simplex simplex, vec3 D)
 	{
 		// Voronoi ABCD
 		result.containsGoal = true;
-		result.simplex.type = Simplex::Simplex_Tetrahedron;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.C;
-		result.simplex.D = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.C, simplex.B, simplex.A);
 		// NOTE: If d is needed from here remember it is not set.
 	}
 
@@ -976,8 +959,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(AG, AD)<0)
 	{
 		// Voronoi A
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.A;
+		result.simplex = CreateSimplex(simplex.A);
 		result.d = AG;
 	}
 	else if (dot(BG, BA)<0 &&
@@ -985,8 +967,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(BG, BD)<0)
 	{
 		// Voronoi B
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.B;
+		result.simplex = CreateSimplex(simplex.B);
 		result.d = BG;
 	}
 	else if (dot(CG, CA)<0 &&
@@ -994,8 +975,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(CG, CD)<0)
 	{
 		// Voronoi C
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.C;
+		result.simplex = CreateSimplex(simplex.C);
 		result.d = CG;
 	}
 	else if (dot(DG, DA)<0 &&
@@ -1003,8 +983,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(DG, DC)<0)
 	{
 		// Voronoi D
-		result.simplex.type = Simplex::Simplex_Point;
-		result.simplex.A = simplex.D;
+		result.simplex = CreateSimplex(simplex.D);
 		result.d = DG;
 	}
 	// NOTE: Sign on the plane tests may need to be >= but i dont think so, investigate if errors crop up
@@ -1014,9 +993,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(AG, cross(normalADB, AB))>0)
 	{
 		// Voronoi AB
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
+		result.simplex = CreateSimplex(simplex.B, simplex.A);
 		result.d = cross(cross(AB, AG), AB);
 	}
 	else if (dot(AG, AC) >= 0 &&
@@ -1025,9 +1002,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(AG, cross(normalABC, AC))>0)
 	{
 		// Voronoi AC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.A);
 		result.d = cross(cross(AC, AG), AC);
 	}
 	else if (dot(AG, AD) >= 0 &&
@@ -1036,9 +1011,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(AG, cross(normalACD, AD))>0)
 	{
 		// Voronoi AD
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.A);
 		result.d = cross(cross(AD, AG), AD);
 	}
 	else if (dot(BG, BC) >= 0 &&
@@ -1047,9 +1020,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(BG, cross(normalBDC, BC))>0)
 	{
 		// Voronoi BC
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.B;
-		result.simplex.B = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B);
 		result.d = cross(cross(BC, BG), BC);
 	}
 	else if (dot(BG, BD) >= 0 &&
@@ -1058,9 +1029,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(BG, cross(normalBAD, BD))>0)
 	{
 		// Voronoi BD
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.B;
-		result.simplex.B = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.B);
 		result.d = cross(cross(BD, BG), BD);
 	}
 	else if (dot(CG, CD) >= 0 &&
@@ -1069,18 +1038,13 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 		dot(BG, cross(normalBAD, BD))>0)
 	{
 		// Voronoi CD
-		result.simplex.type = Simplex::Simplex_Line;
-		result.simplex.A = simplex.C;
-		result.simplex.B = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.C); 
 		result.d = cross(cross(CD, CG), CD);
 	}
 	else if ((dot(AG, normalABC))*(dot(AD, normalABC))<0)
 	{
 		// Voronoi ABC
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.C;
+		result.simplex = CreateSimplex(simplex.C, simplex.B, simplex.A);
 		if (dot(AG, normalABC)>0)
 		{
 			result.d = normalABC;
@@ -1093,10 +1057,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 	else if ((dot(AG, normalADB))*(dot(AC, normalADB))<0)
 	{
 		// Voronoi ABD
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.B, simplex.A);
 		if (dot(AG, normalADB)>0)
 		{
 			result.d = normalADB;
@@ -1109,10 +1070,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 	else if ((dot(AG, normalACD))*(dot(AB, normalACD))<0)
 	{
 		// Voronoi ACD
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.C;
-		result.simplex.C = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.C, simplex.A);
 		if (dot(AG, normalACD)>0)
 		{
 			result.d = normalACD;
@@ -1126,10 +1084,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 	else if ((dot(BG, normalBDC))*(dot(BA, normalBDC))<0)
 	{
 		// Voronoi BCD
-		result.simplex.type = Simplex::Simplex_Triangle;
-		result.simplex.A = simplex.B;
-		result.simplex.B = simplex.C;
-		result.simplex.C = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.C, simplex.B);
 		if (dot(BG, normalBDC)>0)
 		{
 			result.d = normalBDC;
@@ -1143,11 +1098,7 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 	{
 		// Voronoi ABCD
 		result.containsGoal = true;
-		result.simplex.type = Simplex::Simplex_Tetrahedron;
-		result.simplex.A = simplex.A;
-		result.simplex.B = simplex.B;
-		result.simplex.C = simplex.C;
-		result.simplex.D = simplex.D;
+		result.simplex = CreateSimplex(simplex.D, simplex.C, simplex.B, simplex.A);
 		// NOTE: If d is needed from here remember it is not set.
 	}
 
@@ -1156,124 +1107,28 @@ inline DoSimplexResult DoSimplexTetrahedron_AllVoronoi(Simplex simplex, vec3 D)
 
 
 
-inline bool DoSimplex(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
+inline DoSimplexResult DoSimplex(Simplex simplex, vec3 D)
 {
-	bool result = false;
+	DoSimplexResult result;
+	result.containsGoal = false;
 
-	switch (*simplexType)
+	switch (simplex.type)
 	{
 	case Simplex::Simplex_Line:
 	{
-								  Simplex s;
-								  s.type = *simplexType;
-								  s.A = simplex[1];
-								  s.B = simplex[0];
-
-								  DoSimplexResult rav = DoSimplexLine(s, *D);
-
-								  if (rav.simplex.type == Simplex::Simplex_Point)
-								  {
-									  simplex[0] = rav.simplex.A;
-									  simplex[1] = vec3(0, 0, 0);
-									  simplex[2] = vec3(0, 0, 0);
-									  simplex[3] = vec3(0, 0, 0);
-								  }
-								  else if (rav.simplex.type == Simplex::Simplex_Line)
-								  {
-									  simplex[0] = rav.simplex.B;
-									  simplex[1] = rav.simplex.A;
-									  simplex[2] = vec3(0, 0, 0);
-									  simplex[3] = vec3(0, 0, 0);
-								  }
-
-								  *simplexType = rav.simplex.type;
-								  *D = rav.d;
-								  result = rav.containsGoal;
+								  result = DoSimplexLine(simplex, D);
 								  break;
 	}
 
 	case Simplex::Simplex_Triangle:
 	{
-
-									  Simplex s;
-									  s.type = *simplexType;
-									  s.A = simplex[2];
-									  s.B = simplex[1];
-									  s.C = simplex[0];
-
-									  DoSimplexResult rav = DoSimplexTriangle(s, *D);
-
-									  if (rav.simplex.type == Simplex::Simplex_Point)
-									  {
-										  simplex[0] = rav.simplex.A;
-										  simplex[1] = vec3(0, 0, 0);
-										  simplex[2] = vec3(0, 0, 0);
-										  simplex[3] = vec3(0, 0, 0);
-									  }
-									  else if (rav.simplex.type == Simplex::Simplex_Line)
-									  {
-										  simplex[0] = rav.simplex.B;
-										  simplex[1] = rav.simplex.A;
-										  simplex[2] = vec3(0, 0, 0);
-										  simplex[3] = vec3(0, 0, 0);
-									  }
-									  else if (rav.simplex.type == Simplex::Simplex_Triangle)
-									  {
-										  simplex[0] = rav.simplex.C;
-										  simplex[1] = rav.simplex.B;
-										  simplex[2] = rav.simplex.A;
-										  simplex[3] = vec3(0, 0, 0);
-									  }
-
-									  *simplexType = rav.simplex.type;
-									  *D = rav.d;
-									  result = rav.containsGoal;
+									  result = DoSimplexTriangle(simplex, D);
 									  break;
 	}
 
 	case Simplex::Simplex_Tetrahedron:
 	{
-								Simplex s;
-								s.type = *simplexType;
-								s.A = simplex[3];
-								s.B = simplex[2];
-								s.C = simplex[1];
-								s.D = simplex[0];
-
-								DoSimplexResult rav = DoSimplexTetrahedron(s, *D);
-
-								if (rav.simplex.type == Simplex::Simplex_Point)
-								{
-									simplex[0] = rav.simplex.A;
-									simplex[1] = vec3(0, 0, 0);
-									simplex[2] = vec3(0, 0, 0);
-									simplex[3] = vec3(0, 0, 0);
-								}
-								else if (rav.simplex.type == Simplex::Simplex_Line)
-								{
-									simplex[0] = rav.simplex.B;
-									simplex[1] = rav.simplex.A;
-									simplex[2] = vec3(0, 0, 0);
-									simplex[3] = vec3(0, 0, 0);
-								}
-								else if (rav.simplex.type == Simplex::Simplex_Triangle)
-								{
-									simplex[0] = rav.simplex.C;
-									simplex[1] = rav.simplex.B;
-									simplex[2] = rav.simplex.A;
-									simplex[3] = vec3(0, 0, 0);
-								}
-								else if (rav.simplex.type == Simplex::Simplex_Tetrahedron)
-								{
-									simplex[0] = rav.simplex.D;
-									simplex[1] = rav.simplex.C;
-									simplex[2] = rav.simplex.B;
-									simplex[3] = rav.simplex.A;
-								}
-
-								*simplexType = rav.simplex.type;
-								*D = rav.d;
-								result = rav.containsGoal;
+								result = DoSimplexTetrahedron(simplex, D);
 								break;
 	}
 
@@ -1286,84 +1141,29 @@ inline bool DoSimplex(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
 	return result;
 }
 
-inline bool DoSimplex_Casey(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
+inline DoSimplexResult DoSimplex_Casey(Simplex simplex, vec3 D)
 {
-	bool result = false;
+	DoSimplexResult result;
+	result.containsGoal = false;
 
-	switch (*simplexType)
+	switch (simplex.type)
 	{
 	case Simplex::Simplex_Line:
 	{
-								  Simplex s;
-								  s.type = *simplexType;
-								  s.A = simplex[1];
-								  s.B = simplex[0];
-								  
-								  DoSimplexResult rav = DoSimplexLine_Casey(s, *D);
-
-								  if (rav.simplex.type == Simplex::Simplex_Point)
-								  {
-									  simplex[0] = rav.simplex.A;
-									  simplex[1] = vec3(0, 0, 0);
-									  simplex[2] = vec3(0, 0, 0);
-									  simplex[3] = vec3(0, 0, 0);
-								  }
-								  else if (rav.simplex.type == Simplex::Simplex_Line)
-								  {
-									  simplex[0] = rav.simplex.B;
-									  simplex[1] = rav.simplex.A;
-									  simplex[2] = vec3(0, 0, 0);
-									  simplex[3] = vec3(0, 0, 0);
-								  }
-
-								  *simplexType = rav.simplex.type;
-								  *D = rav.d;
-								  result = rav.containsGoal;
+								  result = DoSimplexLine_Casey(simplex, D);
 							      break;
 	}
 
 	case Simplex::Simplex_Triangle:
 	{
-									  Simplex s;
-									  s.type = *simplexType;
-									  s.A = simplex[2];
-									  s.B = simplex[1];
-									  s.C = simplex[0];
-
-									  DoSimplexResult rav = DoSimplexTriangle_Casey(s, *D);
-
-									  if (rav.simplex.type == Simplex::Simplex_Point)
-									  {
-										  simplex[0] = rav.simplex.A;
-										  simplex[1] = vec3(0, 0, 0);
-										  simplex[2] = vec3(0, 0, 0);
-										  simplex[3] = vec3(0, 0, 0);
-									  }
-									  else if (rav.simplex.type == Simplex::Simplex_Line)
-									  {
-										  simplex[0] = rav.simplex.B;
-										  simplex[1] = rav.simplex.A;
-										  simplex[2] = vec3(0, 0, 0);
-										  simplex[3] = vec3(0, 0, 0);
-									  }
-									  else if (rav.simplex.type == Simplex::Simplex_Triangle)
-									  {
-										  simplex[0] = rav.simplex.C;
-										  simplex[1] = rav.simplex.B;
-										  simplex[2] = rav.simplex.A;
-										  simplex[3] = vec3(0, 0, 0);
-									  }
-
-									  *simplexType = rav.simplex.type;
-									  *D = rav.d;
-									  result = rav.containsGoal;
+									  result = DoSimplexTriangle_Casey(simplex, D);
 									  break;
 	}
 
 	case Simplex::Simplex_Tetrahedron:
 	{
-								result = true;// DoSimplexTetrahedron(simplex, simplexType, D);
-								break;
+										 result.containsGoal = true; // = DoSimplexTetrahedron(simplex, D);
+										 break;
 	}
 
 	default:
@@ -1376,132 +1176,36 @@ inline bool DoSimplex_Casey(vec3* simplex, Simplex::SimplexType* simplexType, ve
 }
 
 //#define DOUBLES 1
-inline bool DoSimplex_AllVoronoi(vec3* simplex, Simplex::SimplexType* simplexType, vec3* D)
+inline DoSimplexResult DoSimplex_AllVoronoi(Simplex simplex, vec3 D)
 {
-	bool result = false;
+	DoSimplexResult result;
+	result.containsGoal = false;
 
-	switch (*simplexType)
+	switch (simplex.type)
 	{
 	case Simplex::Simplex_Line:
 	{
-						 Simplex s;
-						 s.type = *simplexType;
-						 s.A = simplex[1]; 
-						 s.B = simplex[0]; 
-
 #ifndef DOUBLES
-						 DoSimplexResult rav = DoSimplexLine_AllVoronoi(s, *D);
+						 result = DoSimplexLine_AllVoronoi(simplex, D);
 #else
-						 DoSimplexResult rav = DoSimplexLine_AllVoronoiDouble(s, *D);
+						 result = DoSimplexLine_AllVoronoiDouble(simplex, D);
 #endif
-
-						 if (rav.simplex.type == Simplex::Simplex_Point)
-						 {
-							 simplex[0] = rav.simplex.A;
-							 simplex[1] = vec3(0, 0, 0);
-							 simplex[2] = vec3(0, 0, 0);
-							 simplex[3] = vec3(0, 0, 0);
-						 }
-						 else if (rav.simplex.type == Simplex::Simplex_Line)
-						 {
-							 simplex[0] = rav.simplex.B;
-							 simplex[1] = rav.simplex.A;
-							 simplex[2] = vec3(0, 0, 0);
-							 simplex[3] = vec3(0, 0, 0);
-						 }
-
-						 *simplexType = rav.simplex.type;
-						 *D = rav.d;
-						 result = rav.containsGoal;
 						 break;
 	}
 
 	case Simplex::Simplex_Triangle:
 	{
-							 Simplex s;
-							 s.type = *simplexType;
-							 s.A = simplex[2]; 
-							 s.B = simplex[1]; 
-							 s.C = simplex[0]; 
-
 #ifndef DOUBLES
-							 DoSimplexResult rav = DoSimplexTriangle_AllVoronoi(s, *D);
+							 result = DoSimplexTriangle_AllVoronoi(simplex, D);
 #else
-							 DoSimplexResult rav = DoSimplexTriangle_AllVoronoiDouble(s, *D);
+							 result = DoSimplexTriangle_AllVoronoiDouble(simplex, D);
 #endif
-
-							 if (rav.simplex.type == Simplex::Simplex_Point)
-							 {
-								 simplex[0] = rav.simplex.A;
-								 simplex[1] = vec3(0, 0, 0);
-								 simplex[2] = vec3(0, 0, 0);
-								 simplex[3] = vec3(0, 0, 0);
-							 }
-							 else if (rav.simplex.type == Simplex::Simplex_Line)
-							 {
-								 simplex[0] = rav.simplex.B;
-								 simplex[1] = rav.simplex.A;
-								 simplex[2] = vec3(0, 0, 0);
-								 simplex[3] = vec3(0, 0, 0);
-							 }
-							 else if (rav.simplex.type == Simplex::Simplex_Triangle)
-							 {
-								 simplex[0] = rav.simplex.C;
-								 simplex[1] = rav.simplex.B;
-								 simplex[2] = rav.simplex.A;
-								 simplex[3] = vec3(0, 0, 0);
-								 //rav.containsGoal = true;
-							 }
-
-							 *simplexType = rav.simplex.type;
-							 *D = rav.d;
-							 result = rav.containsGoal;
 							 break;
 	}
 
 	case Simplex::Simplex_Tetrahedron:
 	{
-								Simplex s;
-								s.type = *simplexType;
-								s.A = simplex[3];
-								s.B = simplex[2];
-								s.C = simplex[1];
-								s.D = simplex[0];
-
-								DoSimplexResult rav = DoSimplexTetrahedron_AllVoronoi(s, *D);
-
-								if (rav.simplex.type == Simplex::Simplex_Point)
-								{
-									simplex[0] = rav.simplex.A;
-									simplex[1] = vec3(0, 0, 0);
-									simplex[2] = vec3(0, 0, 0);
-									simplex[3] = vec3(0, 0, 0);
-								}
-								else if (rav.simplex.type == Simplex::Simplex_Line)
-								{
-									simplex[0] = rav.simplex.B;
-									simplex[1] = rav.simplex.A;
-									simplex[2] = vec3(0, 0, 0);
-									simplex[3] = vec3(0, 0, 0);
-								}
-								else if (rav.simplex.type == Simplex::Simplex_Triangle)
-								{
-									simplex[0] = rav.simplex.C;
-									simplex[1] = rav.simplex.B;
-									simplex[2] = rav.simplex.A;
-									simplex[3] = vec3(0, 0, 0);
-								}
-								else if (rav.simplex.type == Simplex::Simplex_Tetrahedron)
-								{
-									simplex[0] = rav.simplex.D;
-									simplex[1] = rav.simplex.C;
-									simplex[2] = rav.simplex.B;
-									simplex[3] = rav.simplex.A;
-								}
-
-								*simplexType = rav.simplex.type;
-								*D = rav.d;
-								result = rav.containsGoal;
+								result = DoSimplexTetrahedron_AllVoronoi(simplex, D);
 								break;
 	}
 
@@ -1540,9 +1244,7 @@ inline GJKInfo GJK(S1 shapeA, S2 shapeB)
 		result.simplex.A = S;
 		return result;
 	}
-	vec3 simplex[4];
-	Simplex::SimplexType simplexType = Simplex::Simplex_Point;
-	simplex[0] = S;
+	Simplex simplex = CreateSimplex(S);
 	vec3 D = -S;
 
 	U32 maxNumberOfLoops = 20;
@@ -1561,9 +1263,11 @@ inline GJKInfo GJK(S1 shapeA, S2 shapeB)
 			collisionDetected = false;
 			break;
 		}
-		simplexType = (Simplex::SimplexType)(simplexType + 1);
-		simplex[simplexType] = A;
-		if (DoSimplex(simplex, &simplexType, &D))
+		AddSimplexPoint(&simplex, A);
+		DoSimplexResult dsr = DoSimplex(simplex, D);
+		simplex = dsr.simplex;
+		D = dsr.d;
+		if (dsr.containsGoal)
 		{
 			collisionDetected = true;
 			break;
@@ -1576,82 +1280,54 @@ inline GJKInfo GJK(S1 shapeA, S2 shapeB)
 		DebugPrint("GJK: collision exceeded max number of iterations.\n");
 	}
 
-	if (collisionDetected)
-	{
-		switch (simplexType)
-		{
-		case Simplex::Simplex_Point:
-		{
-							  Assert(true);
-		}
-		break;
-
-		case Simplex::Simplex_Line:
-		{
-							 RandomNumberGenerator randomNumberGenerator;
-							 SeedRandomNumberGenerator(&randomNumberGenerator, 1);
-							 simplex[2] = simplex[0];
-							 while (simplex[2] == simplex[0] || simplex[2] == simplex[1])
-							 {
-								vec3 randomDirection = vec3(RandomF32Between(&randomNumberGenerator, -1, 1), RandomF32Between(&randomNumberGenerator, -1, 1), RandomF32Between(&randomNumberGenerator, -1, 1));
-								simplex[2] = Support(&shapeA, &shapeB, &randomDirection);
-							 }
-
-							 simplexType = Simplex::Simplex_Tetrahedron;
-							 vec3 AB = simplex[1] - simplex[2];
-							 vec3 AC = simplex[0] - simplex[2];
-							 vec3 normal_ABC = cross(AB, AC);
-							 simplex[3] = Support(&shapeA, &shapeB, &normal_ABC); 
-		}
-		break;
-
-		case Simplex::Simplex_Triangle:
-		{
-								 simplexType = Simplex::Simplex_Tetrahedron;
-								 vec3 AB = simplex[1] - simplex[2];
-								 vec3 AC = simplex[0] - simplex[2];
-								 vec3 normal_ABC = cross(AB, AC);
-								 simplex[3] = Support(&shapeA, &shapeB, &normal_ABC);
-		}
-		break;
-
-		default:
-		break;
-		}
-	}
+// 	if (collisionDetected)
+// 	{
+// 		switch (simplexType)
+// 		{
+// 		case Simplex::Simplex_Point:
+// 		{
+// 							  Assert(true);
+// 		}
+// 		break;
+// 
+// 		case Simplex::Simplex_Line:
+// 		{
+// 							 RandomNumberGenerator randomNumberGenerator;
+// 							 SeedRandomNumberGenerator(&randomNumberGenerator, 1);
+// 							 simplex[2] = simplex[0];
+// 							 while (simplex[2] == simplex[0] || simplex[2] == simplex[1])
+// 							 {
+// 								vec3 randomDirection = vec3(RandomF32Between(&randomNumberGenerator, -1, 1), RandomF32Between(&randomNumberGenerator, -1, 1), RandomF32Between(&randomNumberGenerator, -1, 1));
+// 								simplex[2] = Support(&shapeA, &shapeB, &randomDirection);
+// 							 }
+// 
+// 							 simplexType = Simplex::Simplex_Tetrahedron;
+// 							 vec3 AB = simplex[1] - simplex[2];
+// 							 vec3 AC = simplex[0] - simplex[2];
+// 							 vec3 normal_ABC = cross(AB, AC);
+// 							 simplex[3] = Support(&shapeA, &shapeB, &normal_ABC); 
+// 		}
+// 		break;
+// 
+// 		case Simplex::Simplex_Triangle:
+// 		{
+// 								 simplexType = Simplex::Simplex_Tetrahedron;
+// 								 vec3 AB = simplex[1] - simplex[2];
+// 								 vec3 AC = simplex[0] - simplex[2];
+// 								 vec3 normal_ABC = cross(AB, AC);
+// 								 simplex[3] = Support(&shapeA, &shapeB, &normal_ABC);
+// 		}
+// 		break;
+// 
+// 		default:
+// 		break;
+// 		}
+// 	}
 
 	GJKInfo result;
 	result.collided = collisionDetected;
 	result.numberOfLoopsCompleted = loopCounter;
-	result.simplex.type = simplexType;
-
-	switch (simplexType)
-	{
-	case Simplex::Simplex_Point:
-	result.simplex.A = simplex[0];
-	break;
-
-	case Simplex::Simplex_Line:
-	result.simplex.A = simplex[1];
-	result.simplex.B = simplex[0];
-	break;
-
-	case Simplex::Simplex_Triangle:
-	result.simplex.A = simplex[2];
-	result.simplex.B = simplex[1];
-	result.simplex.C = simplex[0];
-	break;
-
-	case Simplex::Simplex_Tetrahedron:
-	result.simplex.A = simplex[3];
-	result.simplex.B = simplex[2];
-	result.simplex.C = simplex[1];
-	result.simplex.D = simplex[0];
-	break;
-
-	default:
-	break;
-	}
+	result.simplex = simplex;
 
 	return result;
 }
@@ -1671,9 +1347,7 @@ inline GJKInfo GJK_Casey(S1 shapeA, S2 shapeB)
 		result.simplex.A = S;
 		return result;
 	}
-	vec3 simplex[4];
-	Simplex::SimplexType simplexType = Simplex::Simplex_Point;
-	simplex[0] = S;
+	Simplex simplex = CreateSimplex(S);
 	vec3 D = -S;
 
 	U32 loopCounter = 0;
@@ -1691,9 +1365,11 @@ inline GJKInfo GJK_Casey(S1 shapeA, S2 shapeB)
 			collisionDetected = false;
 			break;
 		}
-		simplexType = (Simplex::SimplexType)(simplexType + 1);
-		simplex[simplexType] = A;
-		if (DoSimplex_Casey(simplex, &simplexType, &D))
+		AddSimplexPoint(&simplex, A);
+		DoSimplexResult dsr = DoSimplex_Casey(simplex, D);
+		simplex = dsr.simplex;
+		D = dsr.d;
+		if (dsr.containsGoal)
 		{
 			collisionDetected = true;
 			break;
@@ -1703,35 +1379,7 @@ inline GJKInfo GJK_Casey(S1 shapeA, S2 shapeB)
 	GJKInfo result;
 	result.collided = collisionDetected;
 	result.numberOfLoopsCompleted = loopCounter;
-	result.simplex.type = simplexType;
-
-	switch (simplexType)
-	{
-	case Simplex::Simplex_Point:
-	result.simplex.A = simplex[0];
-	break;
-
-	case Simplex::Simplex_Line:
-	result.simplex.A = simplex[1];
-	result.simplex.B = simplex[0];
-	break;
-
-	case Simplex::Simplex_Triangle:
-	result.simplex.A = simplex[2];
-	result.simplex.B = simplex[1];
-	result.simplex.C = simplex[0];
-	break;
-
-	case Simplex::Simplex_Tetrahedron:
-	result.simplex.A = simplex[3];
-	result.simplex.B = simplex[2];
-	result.simplex.C = simplex[1];
-	result.simplex.D = simplex[0];
-	break;
-
-	default:
-	break;
-	}
+	result.simplex = simplex;
 
 	return result;
 }
@@ -1751,9 +1399,7 @@ inline GJKInfo GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 		result.simplex.A = S;
 		return result;
 	}
-	vec3 simplex[4];
-	Simplex::SimplexType simplexType = Simplex::Simplex_Point;
-	simplex[0] = S;
+	Simplex simplex = CreateSimplex(S);
 	vec3 D = -S;
 
 	U32 maxNumberOfLoops = 20;
@@ -1772,9 +1418,11 @@ inline GJKInfo GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 			collisionDetected = false;
 			break;
 		}
-		simplexType = (Simplex::SimplexType)(simplexType + 1);
-		simplex[simplexType] = A;
-		if (DoSimplex_AllVoronoi(simplex, &simplexType, &D))
+		AddSimplexPoint(&simplex, A);
+		DoSimplexResult dsr = DoSimplex_AllVoronoi(simplex, D);
+		simplex = dsr.simplex;
+		D = dsr.d;
+		if (dsr.containsGoal)
 		{
 			collisionDetected = true;
 			break;
@@ -1790,35 +1438,7 @@ inline GJKInfo GJK_AllVoronoi(S1 shapeA, S2 shapeB)
 	GJKInfo result;
 	result.collided = collisionDetected;
 	result.numberOfLoopsCompleted = loopCounter;
-	result.simplex.type = simplexType;
-
-	switch (simplexType)
-	{
-	case Simplex::Simplex_Point:
-	result.simplex.A = simplex[0];
-	break;
-
-	case Simplex::Simplex_Line:
-	result.simplex.A = simplex[1];
-	result.simplex.B = simplex[0];
-	break;
-
-	case Simplex::Simplex_Triangle:
-	result.simplex.A = simplex[2];
-	result.simplex.B = simplex[1];
-	result.simplex.C = simplex[0];
-	break;
-
-	case Simplex::Simplex_Tetrahedron:
-	result.simplex.A = simplex[3];
-	result.simplex.B = simplex[2];
-	result.simplex.C = simplex[1];
-	result.simplex.D = simplex[0];
-	break;
-
-	default:
-	break;
-	}
+	result.simplex = simplex;
 
 	return result;
 }
