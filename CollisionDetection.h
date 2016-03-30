@@ -1686,6 +1686,7 @@ inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex, F32 tolerance)
 
 
 
+
 struct CollisionInfo
 {
 	bool collided;
@@ -1704,6 +1705,7 @@ inline CollisionInfo DetectCollision(S1 shapeA, S2 shapeB)
 	{
 // 		EPAInfo epaInfo = EPA(shapeA, shapeB, gjkInfo.simplex, .0001);
 // 
+
 		result.collided = true;
 // 		result.normal = epaInfo.normal;
 // 		result.distance = epaInfo.distance;
@@ -1740,11 +1742,11 @@ inline CollisionInfo DetectCollision_AllVoronoi(S1 shapeA, S2 shapeB)
 	GJKInfo gjkInfo = GJK_AllVoronoi(shapeA, shapeB);
 	if (gjkInfo.collided)
 	{
-// 		EPAInfo epaInfo = EPA(shapeA, shapeB, gjkInfo.simplex, .0001);
-//
+		// 		EPAInfo epaInfo = EPA(shapeA, shapeB, gjkInfo.simplex, .0001);
+		//
 		result.collided = true;
-// 		result.normal = epaInfo.normal;
-// 		result.distance = epaInfo.distance;
+		// 		result.normal = epaInfo.normal;
+		// 		result.distance = epaInfo.distance;
 	}
 
 	return result;
