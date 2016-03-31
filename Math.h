@@ -21,9 +21,21 @@ inline F32 DegreesToRadians(F32 angleInDegrees)
 	return result;
 }
 
+inline mat3 TranslationMatrix(vec2 translation)
+{
+	mat3 result = mat3(1, 0, 0, 0, 1, 0, translation.x, translation.y, 1);
+	return result;
+}
+
 inline mat4 TranslationMatrix(vec3 translation)
 {
 	mat4 result = mat4(1,0,0,0,   0,1,0,0,   0,0,1,0,   translation.x,translation.y,translation.z,1);
+	return result;
+}
+
+inline mat3 ScaleMatrix(vec2 scale)
+{
+	mat3 result = mat3(scale.x, 0, 0, 0, scale.y, 0, 0, 0, 1);
 	return result;
 }
 
@@ -51,5 +63,12 @@ inline mat4 RotationMatrix_Z(F32 angleInDegrees)
 {
 	F32 anglueInRadians = DegreesToRadians(angleInDegrees);
 	mat4 result = mat4(cos(anglueInRadians),sin(anglueInRadians),0,0,   -sin(anglueInRadians),cos(anglueInRadians),0,0,   0,0,1,0,   0,0,0,1);
+	return result;
+}
+
+inline mat3 RotationMatrix_2D(F32 angleInDegrees)
+{
+	F32 anglueInRadians = DegreesToRadians(angleInDegrees);
+	mat3 result = mat3(cos(anglueInRadians), sin(anglueInRadians), 0, -sin(anglueInRadians), cos(anglueInRadians), 0, 0, 0, 1);
 	return result;
 }

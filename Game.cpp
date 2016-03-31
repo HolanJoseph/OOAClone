@@ -15,12 +15,17 @@
 
 #include "AssetLoading.h"
 #include "CollisionDetection.h"
+#include "CollisionDetection2D.h"
 
 #include "CollisionDetection_Tests.h"
 
 #include "CollisionDetection_Visualization.h"
 
-#define COLLISION3D 1
+#include "CollisionDetection2D_Applet.h"
+
+//#define COLLISION2DOLD 1
+//#define COLLISION3D 1
+#define COLLISION2DAPPLET 1
 
 struct verifyShaderReturnResult
 {
@@ -833,10 +838,12 @@ bool GameInit()
 	solidColorTrianglePCMLocation = glGetUniformLocation(solidColorTriangleShaderProgram, "PCM");
 	solidColorTriangleTriangleColorLocation = glGetUniformLocation(solidColorTriangleShaderProgram, "triangleColor");
 	//InitScene();
-#ifndef COLLISION3D
+#ifdef COLLISION2DOLD
 	Init2DCollisionTestScene();
-#else
+#elif COLLISION3D
 	Init3DCollisionTestScene();
+#elif COLLISION2DAPPLET
+	InitializeCollisionDetection2DApplet();
 #endif
 
 	return true;
@@ -1854,10 +1861,12 @@ void collisionScene3DUpdate(F32 deltaTime)
 
 void GameUpdate(F32 deltaTime)
 {
-#ifndef COLLISION3D
+#ifdef COLLISION2DOLD
 	collisionScene2DUpdate(deltaTime);
-#else
+#elif COLLISION3D
 	collisionScene3DUpdate(deltaTime);
+#elif COLLISION2DAPPLET
+	UpdateCollisionDetection2DApplet(deltaTime);
 #endif
 }
 

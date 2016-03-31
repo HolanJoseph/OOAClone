@@ -31,6 +31,11 @@ struct Transform
 struct Rectangle_2D
 {
 	vec2 halfDim;
+
+	Rectangle_2D()
+	{
+		halfDim = vec2(1, 1);
+	}
 };
 
 inline vec2 Support(Rectangle_2D A, Transform transform, vec2 direction)
@@ -68,6 +73,11 @@ inline vec2 Support(Rectangle_2D A, Transform transform, vec2 direction)
 struct Circle_2D
 {
 	F32  radius;
+
+	Circle_2D()
+	{
+		radius = 1;
+	}
 };
 
 inline vec2 Support(Circle_2D A, Transform transform, vec2 direction)
@@ -85,6 +95,13 @@ inline vec2 Support(Circle_2D A, Transform transform, vec2 direction)
 struct Triangle_2D
 {
 	vec2 points[3];
+
+	Triangle_2D()
+	{
+		points[0] = vec2(-0.6f, -0.3f);
+		points[1] = vec2(0.6f, -0.3f);
+		points[2] = vec2(0.0f, 0.6f);
+	}
 };
 
 inline vec2 Support(Triangle_2D A, Transform transform, vec2 direction)
@@ -366,49 +383,38 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, S2 shapeB)
 		DebugPrint("GJK_2D: collision exceeded max number of iterations.\n");
 	}
 
-	// 	if (collisionDetected)
-	// 	{
-	// 		switch (simplexType)
-	// 		{
-	// 		case Simplex::Simplex_Point:
-	// 		{
-	// 							  Assert(true);
-	// 		}
-	// 		break;
-	// 
-	// 		case Simplex::Simplex_Line:
-	// 		{
-	// 							 RandomNumberGenerator randomNumberGenerator;
-	// 							 SeedRandomNumberGenerator(&randomNumberGenerator, 1);
-	// 							 simplex[2] = simplex[0];
-	// 							 while (simplex[2] == simplex[0] || simplex[2] == simplex[1])
-	// 							 {
-	// 								vec3 randomDirection = vec3(RandomF32Between(&randomNumberGenerator, -1, 1), RandomF32Between(&randomNumberGenerator, -1, 1), RandomF32Between(&randomNumberGenerator, -1, 1));
-	// 								simplex[2] = Support(&shapeA, &shapeB, &randomDirection);
-	// 							 }
-	// 
-	// 							 simplexType = Simplex::Simplex_Tetrahedron;
-	// 							 vec3 AB = simplex[1] - simplex[2];
-	// 							 vec3 AC = simplex[0] - simplex[2];
-	// 							 vec3 normal_ABC = cross(AB, AC);
-	// 							 simplex[3] = Support(&shapeA, &shapeB, &normal_ABC); 
-	// 		}
-	// 		break;
-	// 
-	// 		case Simplex::Simplex_Triangle:
-	// 		{
-	// 								 simplexType = Simplex::Simplex_Tetrahedron;
-	// 								 vec3 AB = simplex[1] - simplex[2];
-	// 								 vec3 AC = simplex[0] - simplex[2];
-	// 								 vec3 normal_ABC = cross(AB, AC);
-	// 								 simplex[3] = Support(&shapeA, &shapeB, &normal_ABC);
-	// 		}
-	// 		break;
-	// 
-	// 		default:
-	// 		break;
-	// 		}
-	// 	}
+	if (collisionDetected)
+	{
+		switch (simplex.type)
+		{
+		case Simplex_2D::Simplex_Point_2D:
+		{
+									   Assert(true);
+		}
+		break;
+
+		case Simplex_2D::Simplex_Line_2D:
+		{
+									  RandomNumberGenerator randomNumberGenerator;
+									  SeedRandomNumberGenerator(&randomNumberGenerator, 1);
+
+									  vec2 newPoint = simplex.A;
+									  while (newPoint == simplex.A || newPoint == simplex.B)
+									  {
+										  F32 randomX = RandomF32Between(&randomNumberGenerator, -1, 1);
+										  F32 randomY = RandomF32Between(&randomNumberGenerator, -1, 1);
+										  vec2 randomDirection = vec2(randomX, randomY);
+										  newPoint = Support(shapeA, shapeB, randomDirection);
+									  }
+									  AddSimplexPoint(&simplex, newPoint);
+		}
+		break;
+
+		case Simplex_2D::Simplex_Triangle_2D:
+		default:
+		break;
+		}
+	}
 
 	GJKInfo result;
 	result.collided = collisionDetected;
@@ -564,7 +570,7 @@ struct CollisionInfo_2D
 };
 
 template<typename S1, typename S2>
-inline CollisionInfo_2D DetectCollision(S1 shapeA, S2 shapeB)
+inline CollisionInfo_2D DetectCollision_2D(S1 shapeA, S2 shapeB)
 {
 	CollisionInfo_2D result;
 	result.collided = false;
