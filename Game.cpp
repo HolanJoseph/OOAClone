@@ -769,10 +769,10 @@ bool GameInit()
 	// NOTE: quad for testing, corrected for aspect ratio
 	GLfloat vertices[numVertices * vertexDimensionality] =
 	{
-		-0.50f, -0.50f,
-		 0.50f, -0.50f,
-		 0.50f,  0.50f,
-		-0.50f,  0.50f
+		-1.0f, -1.0f,
+		 1.0f, -1.0f,
+		 1.0f,  1.0f,
+		-1.0f,  1.0f
 	};
 
 	GLfloat textureCoordinates[numVertices * textureSpaceDimensionality] =
@@ -843,6 +843,7 @@ bool GameInit()
 #elif COLLISION3D
 	Init3DCollisionTestScene();
 #elif COLLISION2DAPPLET
+	Init2DCollisionTestScene();
 	InitializeCollisionDetection2DApplet();
 #endif
 

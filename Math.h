@@ -8,6 +8,7 @@ using glm::vec2;
 using glm::vec3;
 using glm::dvec3;
 using glm::vec4;
+using glm::mat2;
 using glm::mat3;
 using glm::mat4;
 using glm::dot;
@@ -70,5 +71,12 @@ inline mat3 RotationMatrix_2D(F32 angleInDegrees)
 {
 	F32 anglueInRadians = DegreesToRadians(angleInDegrees);
 	mat3 result = mat3(cos(anglueInRadians), sin(anglueInRadians), 0, -sin(anglueInRadians), cos(anglueInRadians), 0, 0, 0, 1);
+	return result;
+}
+
+inline mat2 RotationMatrix2x2_2D(F32 angleInDegrees)
+{
+	F32 anglueInRadians = DegreesToRadians(angleInDegrees);
+	mat2 result = mat2(cos(anglueInRadians), sin(anglueInRadians), -sin(anglueInRadians), cos(anglueInRadians));
 	return result;
 }

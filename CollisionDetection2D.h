@@ -25,7 +25,28 @@
 
 struct Transform
 {
-	mat3 transform;
+	vec2 position;
+	F32  rotationAngle;
+	F32  scale;
+
+	Transform()
+	{
+		position = vec2(0, 0);
+		rotationAngle = 0;
+		scale = 1;
+	}
+
+	mat3 LocalToWorldTransform()
+	{
+		mat3 result = TranslationMatrix(position) * RotationMatrix_2D(rotationAngle) * ScaleMatrix(vec2(scale, scale));
+		return result;
+	}
+
+	mat3 WorldToLocalTransform()
+	{
+		mat3 result = inverse(LocalToWorldTransform());
+		return result;
+	}
 };
 
 struct Rectangle_2D
@@ -40,17 +61,19 @@ struct Rectangle_2D
 
 inline vec2 Support(Rectangle_2D A, Transform transform, vec2 direction)
 {
-	vec3 AiPoints[4] = {
-		transform.transform * vec3(- A.halfDim.x, - A.halfDim.y, 1.0f),
-		transform.transform * vec3(- A.halfDim.x,   A.halfDim.y, 1.0f),
-		transform.transform * vec3(  A.halfDim.x, - A.halfDim.y, 1.0f),
-		transform.transform * vec3(  A.halfDim.x,   A.halfDim.y, 1.0f)
+	vec2 direction_ALocal = vec2(transform.WorldToLocalTransform() * vec3(direction.x, direction.y, 0));
+
+	vec2 AiPoints[4] = {
+		vec2(- A.halfDim.x, - A.halfDim.y),
+		vec2(- A.halfDim.x,   A.halfDim.y),
+		vec2(  A.halfDim.x, - A.halfDim.y),
+		vec2(  A.halfDim.x,   A.halfDim.y)
 	};
 	F32 AiDots[4] = {
-		dot(direction, vec2(AiPoints[0].x, AiPoints[0].y)),
-		dot(direction, vec2(AiPoints[1].x, AiPoints[1].y)),
-		dot(direction, vec2(AiPoints[2].x, AiPoints[2].y)),
-		dot(direction, vec2(AiPoints[3].x, AiPoints[3].y))
+		dot(direction_ALocal, AiPoints[0]),
+		dot(direction_ALocal, AiPoints[1]),
+		dot(direction_ALocal, AiPoints[2]),
+		dot(direction_ALocal, AiPoints[3])
 	};
 
 	U32 maxPositionAi = 0;
@@ -63,9 +86,10 @@ inline vec2 Support(Rectangle_2D A, Transform transform, vec2 direction)
 			maxDotAi = AiDots[i];
 		}
 	}
-	vec2 maxA = vec2(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y);
+	vec2 maxA = AiPoints[maxPositionAi];
+	vec2 maxA_World = vec2(transform.LocalToWorldTransform() * vec3(maxA.x, maxA.y, 1));
 
-	return maxA;
+	return maxA_World;
 }
 
 
@@ -82,12 +106,12 @@ struct Circle_2D
 
 inline vec2 Support(Circle_2D A, Transform transform, vec2 direction)
 {
-	// NOTE: Should project direction vector onto plane of the sphere
-	direction = normalize(direction);
-	vec2 translationVector = vec2(transform.transform[2].x, transform.transform[2].y);
-	vec2 maxA = (A.radius * direction) + translationVector;
+	vec2 direction_ALocal = normalize(vec2(transform.WorldToLocalTransform() * vec3(direction.x, direction.y, 0)));
 
-	return maxA;
+	vec2 maxA = A.radius * direction_ALocal;
+	vec2 maxA_World = vec2(transform.LocalToWorldTransform() * vec3(maxA.x, maxA.y, 1));
+
+	return maxA_World;
 }
 
 
@@ -106,15 +130,18 @@ struct Triangle_2D
 
 inline vec2 Support(Triangle_2D A, Transform transform, vec2 direction)
 {
-	vec3 AiPoints[3] = {
-		transform.transform * vec3(A.points[0].x, A.points[0].y, 1.0f),
-		transform.transform * vec3(A.points[1].x, A.points[1].y, 1.0f),
-		transform.transform * vec3(A.points[2].x, A.points[2].y, 1.0f)
+	vec2 direction_ALocal = vec2(transform.WorldToLocalTransform() * vec3(direction.x, direction.y, 0));
+
+	// NOTE: AiPoints is unnecessary here, just for uniformity.
+	vec2 AiPoints[3] = {
+		vec2(A.points[0].x, A.points[0].y),
+		vec2(A.points[1].x, A.points[1].y),
+		vec2(A.points[2].x, A.points[2].y)
 	};
 	F32 AiDots[3] = {
-		dot(direction, vec2(AiPoints[0].x, AiPoints[0].y)),
-		dot(direction, vec2(AiPoints[1].x, AiPoints[1].y)),
-		dot(direction, vec2(AiPoints[2].x, AiPoints[2].y))
+		dot(direction_ALocal, AiPoints[0]),
+		dot(direction_ALocal, AiPoints[1]),
+		dot(direction_ALocal, AiPoints[2])
 	};
 
 	U32 maxPositionAi = 0;
@@ -127,21 +154,22 @@ inline vec2 Support(Triangle_2D A, Transform transform, vec2 direction)
 			maxDotAi = AiDots[i];
 		}
 	}
-	vec2 maxA = vec2(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y);
+	vec2 maxA = AiPoints[maxPositionAi];
+	vec2 maxA_World = vec2(transform.LocalToWorldTransform() * vec3(maxA.x, maxA.y, 1));
 
-	return maxA;
+	return maxA_World;
 }
 
 
 
 template<typename S1, typename S2>
-inline vec2 Support(S1 A, S2 B, vec2 direction)
+inline vec2 Support(S1 A, mat3 A_Transform, S2 B, mat3 B_Transform, vec2 direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
-	vec2 maxA = Support(A, direction);
+	vec2 maxA = Support(A, A_Transform, direction);
 
 	// find the point in B that has the largest value with dot(Bj, Direction)
-	vec2 maxB = Support(B, -direction);
+	vec2 maxB = Support(B, B_Transform, -direction);
 
 	vec2 result = maxA - maxB;
 	return result;
@@ -436,21 +464,21 @@ struct EPAInfo_2D
 	F32 distance;
 };
 
-struct EPAPoint_2D
+struct ListPoint_2D
 {
 	vec2 point;
-	EPAPoint_2D* next;
+	ListPoint_2D* next;
 };
 
-struct EPAPointList_2D 
+struct PointList_2D 
 {
-	EPAPoint_2D* first;
+	ListPoint_2D* first;
 	U32 count;
 };
 
-EPAPointList_2D CreateEPAPointList()
+PointList_2D CreatePointList()
 {
-	EPAPointList_2D result;
+	PointList_2D result;
 
 	result.first = NULL;
 	result.count = 0;
@@ -458,26 +486,35 @@ EPAPointList_2D CreateEPAPointList()
 	return result;
 }
 
-void AddPoint(EPAPointList_2D* list, vec2 point)
+void AddPoint(PointList_2D* list, vec2 point)
 {
-	EPAPoint_2D* currentPoint = list->first;
-	while (currentPoint->next != NULL)
+	ListPoint_2D* currentPoint = list->first;
+	if (currentPoint == NULL)
 	{
-		currentPoint = currentPoint->next;
+		currentPoint = (ListPoint_2D*)malloc(sizeof(ListPoint_2D));
+		currentPoint->point = point;
+		currentPoint->next = NULL;
 	}
+	else
+	{
+		while (currentPoint->next != NULL)
+		{
+			currentPoint = currentPoint->next;
+		}
 
-	currentPoint->next = (EPAPoint_2D*)malloc(sizeof(EPAPoint_2D));
-	currentPoint->next->point = point;
-	currentPoint->next->next = NULL;
+		currentPoint->next = (ListPoint_2D*)malloc(sizeof(ListPoint_2D));
+		currentPoint->next->point = point;
+		currentPoint->next->next = NULL;
+	}
 
 	list->count += 1;
 }
 
-void InsertAfter(EPAPointList_2D* list, EPAPoint_2D* insertionPoint, vec2 point)
+void InsertAfter(PointList_2D* list, ListPoint_2D* insertionPoint, vec2 point)
 {
-	EPAPoint_2D* next = insertionPoint->next;
+	ListPoint_2D* next = insertionPoint->next;
 
-	EPAPoint_2D* newPoint = (EPAPoint_2D*)malloc(sizeof(EPAPoint_2D));
+	ListPoint_2D* newPoint = (ListPoint_2D*)malloc(sizeof(ListPoint_2D));
 	newPoint->point = point;
 	newPoint->next = NULL;
 
@@ -487,10 +524,10 @@ void InsertAfter(EPAPointList_2D* list, EPAPoint_2D* insertionPoint, vec2 point)
 	list->count += 1;
 }
 
-void DestroyEPAPointList(EPAPointList_2D* list)
+void DestroyPointList(PointList_2D* list)
 {
-	EPAPoint_2D* prev = NULL;
-	EPAPoint_2D* curr = list->first;
+	ListPoint_2D* prev = NULL;
+	ListPoint_2D* curr = list->first;
 
 	while (curr != NULL)
 	{
@@ -508,7 +545,7 @@ inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex)
 {
 	EPAInfo result;
 
-	EPAPointList_2D pointList = CreateEPAPointList();
+	PointList_2D pointList = CreatePointList();
 	AddPoint(&pointList, simplex.A);
 	AddPoint(&pointList, simplex.B);
 	AddPoint(&pointList, simplex.C);
@@ -517,10 +554,10 @@ inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex)
 
 	for (U32 i = 0; i < MAXEPAITERATIONS_2D; ++i)
 	{
-		EPAPoint_2D* a = pointList.first;
-		EPAPoint_2D* b = a->next;
+		ListPoint_2D* a = pointList.first;
+		ListPoint_2D* b = a->next;
 
-		EPAPoint_2D* closestEdge_point1 = NULL;
+		ListPoint_2D* closestEdge_point1 = NULL;
 		F32 closestEdge_distance = UNREASONABLEFLOATNUMBER;
 		vec2 closestEdge_normal;
 		while (b != NULL)
@@ -552,7 +589,7 @@ inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex)
 		}
 	}
 
-	DestroyEPAPointList(&pointList);
+	DestroyPointList(&pointList);
 
 	return result;
 }
