@@ -65,15 +65,15 @@ inline vec2 Support(Rectangle_2D A, Transform transform, vec2 direction)
 
 	vec2 AiPoints[4] = {
 		vec2(- A.halfDim.x, - A.halfDim.y),
-		vec2(- A.halfDim.x,   A.halfDim.y),
-		vec2(  A.halfDim.x, - A.halfDim.y),
-		vec2(  A.halfDim.x,   A.halfDim.y)
+		vec2(-A.halfDim.x, A.halfDim.y),
+		vec2(A.halfDim.x, -A.halfDim.y),
+		vec2(A.halfDim.x, A.halfDim.y)
 	};
 	F32 AiDots[4] = {
-		dot(direction_ALocal, AiPoints[0]),
-		dot(direction_ALocal, AiPoints[1]),
-		dot(direction_ALocal, AiPoints[2]),
-		dot(direction_ALocal, AiPoints[3])
+		dot(direction_ALocal, vec2(AiPoints[0].x, AiPoints[0].y)),
+		dot(direction_ALocal, vec2(AiPoints[1].x, AiPoints[1].y)),
+		dot(direction_ALocal, vec2(AiPoints[2].x, AiPoints[2].y)),
+		dot(direction_ALocal, vec2(AiPoints[3].x, AiPoints[3].y))
 	};
 
 	U32 maxPositionAi = 0;
@@ -86,10 +86,11 @@ inline vec2 Support(Rectangle_2D A, Transform transform, vec2 direction)
 			maxDotAi = AiDots[i];
 		}
 	}
-	vec2 maxA = AiPoints[maxPositionAi];
-	vec2 maxA_World = vec2(transform.LocalToWorldTransform() * vec3(maxA.x, maxA.y, 1));
+	vec2 maxA = vec2(AiPoints[maxPositionAi].x, AiPoints[maxPositionAi].y);
+	vec3 maxA3_World = transform.LocalToWorldTransform() * vec3(maxA.x, maxA.y, 1);
+	vec2 maxA_World = vec2(maxA3_World.x, maxA3_World.y);
 
-	return maxA_World;
+	return  maxA_World;
 }
 
 
@@ -163,7 +164,7 @@ inline vec2 Support(Triangle_2D A, Transform transform, vec2 direction)
 
 
 template<typename S1, typename S2>
-inline vec2 Support(S1 A, mat3 A_Transform, S2 B, mat3 B_Transform, vec2 direction)
+inline vec2 Support(S1 A, Transform A_Transform, S2 B, Transform B_Transform, vec2 direction)
 {
 	// find the point in A that has the largest value with dot(Ai, Direction)
 	vec2 maxA = Support(A, A_Transform, direction);
@@ -363,11 +364,11 @@ struct GJKInfo_2D
 };
 
 template<typename S1, typename S2>
-inline GJKInfo_2D GJK_2D(S1 shapeA, S2 shapeB)
+inline GJKInfo_2D GJK_2D(S1 shapeA, Transform shapeATransform, S2 shapeB, Transform shapeBTransform, const U64 MAXITERATIONS = MAXGJKITERATIONS_2D)
 {
 	bool collisionDetected = false;
 
-	vec2 s = Support(shapeA, shapeB, vec2(1.0f, -1.0f));
+	vec2 s = Support(shapeA, shapeATransform, shapeB, shapeBTransform, vec2(1.0f, -1.0f));
 	if (s == vec2(0, 0))
 	{
 		GJKInfo_2D result;
@@ -380,10 +381,10 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, S2 shapeB)
 	vec2 d = -s;
 
 	U32 loopCounter = 0;
-	for (; loopCounter < MAXGJKITERATIONS_2D;)
+	for (; loopCounter < MAXITERATIONS;)
 	{
 		++loopCounter;
-		vec2 A = Support(shapeA, shapeB, d);
+		vec2 A = Support(shapeA, shapeATransform, shapeB, shapeBTransform, d);
 		if (A == vec2(0, 0))
 		{
 			collisionDetected = true;
@@ -395,9 +396,9 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, S2 shapeB)
 			break;
 		}
 		AddSimplexPoint(&simplex, A);
-		DoSimplexResult_2D dsr = DoSimplex(simplex, d);
+		DoSimplexResult_2D dsr = DoSimplex(simplex);
 		simplex = dsr.simplex;
-		d = dsr.d;
+		d = dsr.direction;
 		if (dsr.containsGoal)
 		{
 			collisionDetected = true;
@@ -405,7 +406,7 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, S2 shapeB)
 		}
 	}
 
-	if (loopCounter == maxNumberOfLoops)
+	if (loopCounter == MAXITERATIONS)
 	{
 		collisionDetected = true;
 		DebugPrint("GJK_2D: collision exceeded max number of iterations.\n");
@@ -432,7 +433,7 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, S2 shapeB)
 										  F32 randomX = RandomF32Between(&randomNumberGenerator, -1, 1);
 										  F32 randomY = RandomF32Between(&randomNumberGenerator, -1, 1);
 										  vec2 randomDirection = vec2(randomX, randomY);
-										  newPoint = Support(shapeA, shapeB, randomDirection);
+										  newPoint = Support(shapeA, shapeATransform, shapeB, shapeBTransform, randomDirection);
 									  }
 									  AddSimplexPoint(&simplex, newPoint);
 		}
@@ -444,7 +445,7 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, S2 shapeB)
 		}
 	}
 
-	GJKInfo result;
+	GJKInfo_2D result;
 	result.collided = collisionDetected;
 	result.numberOfLoopsCompleted = loopCounter;
 	result.simplex = simplex;

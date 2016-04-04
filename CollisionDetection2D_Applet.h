@@ -24,6 +24,8 @@
 #include "glew/GL/glew.h"
 #include <gl/GL.h>
 
+#include <vector>
+
 // NOTE: NEXT IS GRAPHICS, HOLY CRAP
 extern GLuint solidColorQuadShaderProgram;
 extern GLuint solidColorQuadPCMLocation;
@@ -83,8 +85,8 @@ struct Collidable_CD2D
 		Mode_Uninitialized,
 
 		Mode_Rectangle,
-		Mode_Circle,
 		Mode_Triangle,
+		Mode_Circle,
 
 		Mode_Count
 	};
@@ -105,6 +107,8 @@ vec4 backgroundColor;
 vec4 gridColor;
 vec4 xAxisColor;
 vec4 yAxisColor;
+vec4 minkowskiPointColor;
+vec4 gjkPointColor;
 
 Camera_CD2D     camera_CD2D;
 Collidable_CD2D shape1_CD2D;
@@ -116,7 +120,8 @@ bool			controllingShape1_CD2D;
 #define NUMBER_OF_RECTANGLE_POINTS 4
 #define NUMBER_OF_CIRCLE_POINTS 20
 
-#define pointSize_px 5
+#define minkowskiPointSize_px 9
+#define gjkPointSize_px 5
 
 inline void InitializeLineVAO()
 {
@@ -154,8 +159,11 @@ inline void InitializeCollisionDetection2DApplet()
 	backgroundColor = vec4(0.22f, 0.22f, 0.22f, 1.0f);
 	xAxisColor = vec4(1, 0, 0, 1);
 	yAxisColor = vec4(0, 1, 0, 1);
+	minkowskiPointColor = vec4(1, 1, 0, 1);
+	gjkPointColor = vec4(0, 0, 1, 1);
 
-	shape1_CD2D.transform.position = vec2(1, 0);
+	shape1_CD2D.transform.position = vec2(2, 0);
+	shape1_CD2D.transform.rotationAngle = 45.0f;
 	shape2_CD2D.transform.position = vec2(-1, 0);
 
 	camera_CD2D.ResizeViewArea(vec2(5,5));
@@ -186,7 +194,7 @@ inline void DrawGrid(vec4 color, Camera_CD2D* camera)
 	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality);
 }
 
-inline void DrawPoint(vec2 p, vec4 color, Camera_CD2D* camera)
+inline void DrawPoint(vec2 p, U32 pointSize, vec4 color, Camera_CD2D* camera)
 {
 	mat3 P_projection = camera->GetProjectionMatrix();
 	mat3 C_camera = TranslationMatrix(camera->position);
@@ -201,7 +209,7 @@ inline void DrawPoint(vec2 p, vec4 color, Camera_CD2D* camera)
 
 	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
 	glUniform4fv(solidColorQuadQuadColorLocation, 1, &color[0]);
-	glPointSize(pointSize_px);
+	glPointSize(pointSize);
 	glDrawArrays(GL_POINTS, 0, 1);
 }
 
@@ -233,13 +241,13 @@ inline void DrawRectangle(Rectangle_2D* rectangle, mat3* PCM, vec4 color)
 	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 }
 
-inline void DrawCircle(Circle_2D* circle, mat3* PCM, vec4 color)
+inline void DrawCircle(Circle_2D* circle, F32 scale, mat3* PCM, vec4 color)
 {
 	glUseProgram(solidColorCircleInPointShaderProgram);
 	glBindVertexArray(circleVAO);
 	glUniformMatrix3fv(solidColorCircleInPointPCMLocation, 1, GL_FALSE, &(*PCM)[0][0]);
 	glUniform4fv(solidColorCircleInPointCircleColorLocation, 1, &color[0]);
-	glPointSize(circle->radius * unitCircleSize_px);
+	glPointSize(scale * circle->radius * unitCircleSize_px);
 	glDrawArrays(GL_POINTS, 0, 1);
 }
 
@@ -266,7 +274,7 @@ inline void DrawCollidable(Collidable_CD2D* collidable, vec4 color, Camera_CD2D*
 	break;
 
 	case Collidable_CD2D::Mode_Circle:
-	DrawCircle(&collidable->circle, &PCM, color);
+	DrawCircle(&collidable->circle, collidable->transform.scale, &PCM, color);
 	break;
 
 	case Collidable_CD2D::Mode_Triangle:
@@ -335,23 +343,7 @@ void UpdateCollidable(Collidable_CD2D* collidable, F32 dt)
 }
 
 
-struct PointCloud
-{
-	vec2* points;
-	U64 count;
-
-	PointCloud()
-	{
-		points = NULL;
-		count = 0;
-	}
-};
-
-void DestroyPointCloud(PointCloud* pointClound)
-{
-	free(pointClound->points);
-	pointClound->count = 0;
-}
+typedef std::vector<vec2> PointCloud;
 
 PointCloud CreateCollidablePointCloud(Collidable_CD2D* shape)
 {
@@ -362,37 +354,31 @@ PointCloud CreateCollidablePointCloud(Collidable_CD2D* shape)
 	{
 	case Collidable_CD2D::Mode_Rectangle:
 	{
-											result.count = NUMBER_OF_RECTANGLE_POINTS;
-											result.points = (vec2*)malloc(sizeof(vec2)*result.count);
-											result.points[0] = vec2(lToW * vec3(-shape->rectangle.halfDim.x, -shape->rectangle.halfDim.y, 1.0f));
-											result.points[1] = vec2(lToW * vec3(-shape->rectangle.halfDim.x,  shape->rectangle.halfDim.y, 1.0f));
-											result.points[2] = vec2(lToW * vec3( shape->rectangle.halfDim.x, -shape->rectangle.halfDim.y, 1.0f));
-											result.points[3] = vec2(lToW * vec3( shape->rectangle.halfDim.x,  shape->rectangle.halfDim.y, 1.0f));
+											result.push_back(vec2(lToW * vec3(-shape->rectangle.halfDim.x, -shape->rectangle.halfDim.y, 1.0f)));
+											result.push_back(vec2(lToW * vec3(-shape->rectangle.halfDim.x,  shape->rectangle.halfDim.y, 1.0f)));
+											result.push_back(vec2(lToW * vec3( shape->rectangle.halfDim.x, -shape->rectangle.halfDim.y, 1.0f)));
+											result.push_back(vec2(lToW * vec3( shape->rectangle.halfDim.x,  shape->rectangle.halfDim.y, 1.0f)));
 	}
 	break;
 
 	case Collidable_CD2D::Mode_Circle:
 	{
-										 result.count = NUMBER_OF_CIRCLE_POINTS;
-										 result.points = (vec2*)malloc(sizeof(vec2)*result.count);
 										 vec2 direction = vec2(1, 0);
 										 F32 angleIncrement = 360.0f / (F32)NUMBER_OF_CIRCLE_POINTS;
 										 F32 angle = 0;
 										 for (U32 i = 0; i < NUMBER_OF_CIRCLE_POINTS; ++i, angle += angleIncrement)
 										 {
 											 vec2 rotatedDirection = RotationMatrix2x2_2D(angle) * direction;
-											 result.points[i] = Support(shape->circle, shape->transform, rotatedDirection);
+											 result.push_back(Support(shape->circle, shape->transform, rotatedDirection));
 										 }
 	}
 	break;
 
 	case Collidable_CD2D::Mode_Triangle:
 	{
-										   result.count = NUMBER_OF_TRIANGLE_POINTS;
-										   result.points = (vec2*)malloc(sizeof(vec2)*result.count);
-										   result.points[0] = vec2(lToW * vec3(shape->triangle.points[0].x, shape->triangle.points[0].y, 1.0f));
-										   result.points[1] = vec2(lToW * vec3(shape->triangle.points[1].x, shape->triangle.points[1].y, 1.0f));
-										   result.points[2] = vec2(lToW * vec3(shape->triangle.points[2].x, shape->triangle.points[2].y, 1.0f));
+										   result.push_back(vec2(lToW * vec3(shape->triangle.points[0].x, shape->triangle.points[0].y, 1.0f)));
+										   result.push_back(vec2(lToW * vec3(shape->triangle.points[1].x, shape->triangle.points[1].y, 1.0f)));
+										   result.push_back(vec2(lToW * vec3(shape->triangle.points[2].x, shape->triangle.points[2].y, 1.0f)));
 	}
 	break;
 	}
@@ -408,29 +394,141 @@ PointCloud CreateMinkowskiDifferencePointCloud(Collidable_CD2D* shape1, Collidab
 	PointCloud shape1PointCloud = CreateCollidablePointCloud(shape1);
 	PointCloud shape2PointCloud = CreateCollidablePointCloud(shape2);
 
-	result.count = shape1PointCloud.count * shape2PointCloud.count;
-	result.points = (vec2*)malloc(sizeof(vec2)*result.count);
-
-	for (U64 i = 0; i < shape1PointCloud.count; ++i)
+	for (U64 i = 0; i < shape1PointCloud.size(); ++i)
 	{
-		vec2 shape1Point = shape1PointCloud.points[i];
+		vec2 shape1Point = shape1PointCloud[i];
 
-		for (U64 j = 0; j < shape2PointCloud.count; ++j)
+		for (U64 j = 0; j < shape2PointCloud.size(); ++j)
 		{
-			vec2 shape2Point = shape2PointCloud.points[j];
-			result.points[(i*shape2PointCloud.count) + j] = shape1Point - shape2Point;
+			vec2 shape2Point = shape2PointCloud[j];
+			result.push_back(shape1Point - shape2Point);
 		}
 	}
 
-
-	DestroyPointCloud(&shape1PointCloud);
-	DestroyPointCloud(&shape2PointCloud);
+	// Dealloc shape pointclouds?
 	return result;
 }
 
-PointCloud CreateConvexHull(Collidable_CD2D* shape1, Collidable_CD2D* shape2)
+PointCloud RemoveDuplicatePoints(PointCloud* points)
 {
-	PointCloud result;
+	PointCloud uniquePoints;
+
+	for (size_t i = 0; i < points->size(); ++i)
+	{
+		bool unique = true;
+
+		for (size_t j = 0; j < uniquePoints.size(); ++j)
+		{
+			if ((*points)[i] == uniquePoints[j])
+			{
+				unique = false;
+				break;
+			}
+		}
+
+		if (unique)
+		{
+			uniquePoints.push_back((*points)[i]);
+		}
+	}
+
+	return uniquePoints;
+}
+
+GJKInfo_2D GJKDispatch(Collidable_CD2D* collidable1, Collidable_CD2D* collidable2, U64 iterationCount = MAXGJKITERATIONS_2D)
+{
+	GJKInfo_2D result;
+
+	switch (collidable1->mode)
+	{
+	case Collidable_CD2D::Mode_Rectangle:
+	{
+											switch (collidable2->mode)
+											{
+											case Collidable_CD2D::Mode_Rectangle:
+											{
+																					result = GJK_2D(collidable1->rectangle, collidable1->transform, collidable2->rectangle, collidable2->transform, iterationCount);
+											}
+											break;
+
+											case Collidable_CD2D::Mode_Circle:
+											{
+																				 result = GJK_2D(collidable1->rectangle, collidable1->transform, collidable2->circle, collidable2->transform, iterationCount);
+											}
+											break;
+
+											case Collidable_CD2D::Mode_Triangle:
+											{
+																				   result = GJK_2D(collidable1->rectangle, collidable1->transform, collidable2->triangle, collidable2->transform, iterationCount);
+											}
+											break;
+
+											default:
+											break;
+											}
+	}
+	break;
+
+	case Collidable_CD2D::Mode_Circle:
+	{
+										 switch (collidable2->mode)
+										 {
+										 case Collidable_CD2D::Mode_Rectangle:
+										 {
+																				 result = GJK_2D(collidable1->circle, collidable1->transform, collidable2->rectangle, collidable2->transform, iterationCount);
+										 }
+										 break;
+
+										 case Collidable_CD2D::Mode_Circle:
+										 {
+																			  result = GJK_2D(collidable1->circle, collidable1->transform, collidable2->circle, collidable2->transform, iterationCount);
+										 }
+										 break;
+
+										 case Collidable_CD2D::Mode_Triangle:
+										 {
+																				result = GJK_2D(collidable1->circle, collidable1->transform, collidable2->triangle, collidable2->transform, iterationCount);
+										 }
+										 break;
+
+										 default:
+										 break;
+										 }
+	}
+	break;
+
+	case Collidable_CD2D::Mode_Triangle:
+	{
+										   switch (collidable2->mode)
+										   {
+										   case Collidable_CD2D::Mode_Rectangle:
+										   {
+																				   result = GJK_2D(collidable1->triangle, collidable1->transform, collidable2->rectangle, collidable2->transform, iterationCount);
+										   }
+										   break;
+
+										   case Collidable_CD2D::Mode_Circle:
+										   {
+																				result = GJK_2D(collidable1->triangle, collidable1->transform, collidable2->circle, collidable2->transform, iterationCount);
+										   }
+										   break;
+
+										   case Collidable_CD2D::Mode_Triangle:
+										   {
+																				  result = GJK_2D(collidable1->triangle, collidable1->transform, collidable2->triangle, collidable2->transform, iterationCount);
+										   }
+										   break;
+
+										   default:
+										   break;
+										   }
+	}
+	break;
+
+	default:
+	break;
+	}
+
 	return result;
 }
 
@@ -455,6 +553,16 @@ inline void UpdateCollisionDetection2DApplet(F32 dt)
 		UpdateCollidable(&shape2_CD2D, dt);
 	}
 
+	GJKInfo_2D gjk = GJKDispatch(&shape1_CD2D, &shape2_CD2D);
+	if (gjk.collided)
+	{
+		color_CD2D = vec4(0.298f, 0.686f, 0.314f, 1.0f);
+	}
+	else
+	{
+		color_CD2D = vec4(0.957f, 0.263f, 0.212f, 1.0f);
+	}
+
 	// Draw grid
 	DrawGrid(gridColor, &camera_CD2D);
 	DrawLine(vec2(0, -10), vec2(0, 10), yAxisColor, &camera_CD2D);
@@ -464,17 +572,43 @@ inline void UpdateCollisionDetection2DApplet(F32 dt)
 	DrawCollidable(&shape1_CD2D, color_CD2D, &camera_CD2D);
 	DrawCollidable(&shape2_CD2D, color_CD2D, &camera_CD2D);
 	
-	// Draw convex hull
-	PointCloud convexHull = CreateMinkowskiDifferencePointCloud(&shape1_CD2D, &shape2_CD2D);
-	for (U64 i = 0; i < convexHull.count; ++i)
+	// Draw Minkowski Difference
+	PointCloud minkowskiDifference = CreateMinkowskiDifferencePointCloud(&shape1_CD2D, &shape2_CD2D);
+	for (U64 i = 0; i < minkowskiDifference.size(); ++i)
 	{
-		DrawPoint(convexHull.points[i], vec4(1, .5, 1, 1), &camera_CD2D);
+		DrawPoint(minkowskiDifference[i], minkowskiPointSize_px, minkowskiPointColor, &camera_CD2D);
 	}
-	DestroyPointCloud(&convexHull);
-	// Draw GJK points 
+
+	// Draw GJK points
+	switch (gjk.simplex.type)
+	{
+	case Simplex_2D::Simplex_Point_2D:
+	DrawPoint(gjk.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	break;
+
+	case Simplex_2D::Simplex_Line_2D:
+	DrawPoint(gjk.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawPoint(gjk.simplex.B, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawLine(gjk.simplex.A, gjk.simplex.B, gjkPointColor, &camera_CD2D);
+	break;
+
+	case Simplex_2D::Simplex_Triangle_2D:
+	DrawPoint(gjk.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawPoint(gjk.simplex.B, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawPoint(gjk.simplex.C, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawLine(gjk.simplex.A, gjk.simplex.B, gjkPointColor, &camera_CD2D);
+	DrawLine(gjk.simplex.B, gjk.simplex.C, gjkPointColor, &camera_CD2D);
+	DrawLine(gjk.simplex.C, gjk.simplex.A, gjkPointColor, &camera_CD2D);
+	break;
+
+	default:
+	break;
+	}
+
+
 	// Draw GJK line segments
 	
-}
+ }
 
 
 
