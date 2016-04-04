@@ -273,7 +273,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	char* windowTitle = "Oracle of Ages Clone";
 // 	U32 windowWidth = 600;
 // 	U32 windowHeight = 540;
- 	U32 windowWidth = 800;
+	U32 windowWidth = 1600;// 800;
 	U32 windowHeight = 800;
 	DWORD windowStyle = WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_OVERLAPPED | WS_SIZEBOX | WS_VISIBLE;
 

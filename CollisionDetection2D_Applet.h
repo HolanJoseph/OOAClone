@@ -109,6 +109,7 @@ vec4 xAxisColor;
 vec4 yAxisColor;
 vec4 minkowskiPointColor;
 vec4 gjkPointColor;
+vec4 seperatorColor;
 
 Camera_CD2D     camera_CD2D;
 Collidable_CD2D shape1_CD2D;
@@ -161,6 +162,7 @@ inline void InitializeCollisionDetection2DApplet()
 	yAxisColor = vec4(0, 1, 0, 1);
 	minkowskiPointColor = vec4(1, 1, 0, 1);
 	gjkPointColor = vec4(0, 0, 1, 1);
+	seperatorColor = vec4(.663, .733, .384, 1);
 
 	shape1_CD2D.transform.position = vec2(2, 0);
 	shape1_CD2D.transform.rotationAngle = 45.0f;
@@ -532,11 +534,9 @@ GJKInfo_2D GJKDispatch(Collidable_CD2D* collidable1, Collidable_CD2D* collidable
 	return result;
 }
 
-inline void UpdateCollisionDetection2DApplet(F32 dt)
+GJKInfo_2D gjkResults;
+inline void UpdateAppletState(F32 dt)
 {
-	glViewport(0, 0, 800, 800);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
 	// Update applet state
 	if (GetKeyDown(KeyCode_1))
 	{
@@ -553,8 +553,8 @@ inline void UpdateCollisionDetection2DApplet(F32 dt)
 		UpdateCollidable(&shape2_CD2D, dt);
 	}
 
-	GJKInfo_2D gjk = GJKDispatch(&shape1_CD2D, &shape2_CD2D);
-	if (gjk.collided)
+	gjkResults = GJKDispatch(&shape1_CD2D, &shape2_CD2D);
+	if (gjkResults.collided)
 	{
 		color_CD2D = vec4(0.298f, 0.686f, 0.314f, 1.0f);
 	}
@@ -563,17 +563,17 @@ inline void UpdateCollisionDetection2DApplet(F32 dt)
 		color_CD2D = vec4(0.957f, 0.263f, 0.212f, 1.0f);
 	}
 
-	// Draw grid
+	/*// Draw grid
 	DrawGrid(gridColor, &camera_CD2D);
 	DrawLine(vec2(0, -10), vec2(0, 10), yAxisColor, &camera_CD2D);
 	DrawLine(vec2(-100, 0), vec2(100, 0), xAxisColor, &camera_CD2D);
 
 	// Draw collidables
 	DrawCollidable(&shape1_CD2D, color_CD2D, &camera_CD2D);
-	DrawCollidable(&shape2_CD2D, color_CD2D, &camera_CD2D);
+	DrawCollidable(&shape2_CD2D, color_CD2D, &camera_CD2D);*/
 	
 	// Draw Minkowski Difference
-	PointCloud minkowskiDifference = CreateMinkowskiDifferencePointCloud(&shape1_CD2D, &shape2_CD2D);
+	/*PointCloud minkowskiDifference = CreateMinkowskiDifferencePointCloud(&shape1_CD2D, &shape2_CD2D);
 	for (U64 i = 0; i < minkowskiDifference.size(); ++i)
 	{
 		DrawPoint(minkowskiDifference[i], minkowskiPointSize_px, minkowskiPointColor, &camera_CD2D);
@@ -603,14 +603,85 @@ inline void UpdateCollisionDetection2DApplet(F32 dt)
 
 	default:
 	break;
-	}
+	}*/
 
 
 	// Draw GJK line segments
 	
  }
 
+inline void DrawCollidablesVisualization()
+{
+	// Draw grid
+	DrawGrid(gridColor, &camera_CD2D);
+	DrawLine(vec2(0, -100), vec2(0, 100), yAxisColor, &camera_CD2D);
+	DrawLine(vec2(-100, 0), vec2(100, 0), xAxisColor, &camera_CD2D);
 
+	// Draw collidables
+	DrawCollidable(&shape1_CD2D, color_CD2D, &camera_CD2D);
+	DrawCollidable(&shape2_CD2D, color_CD2D, &camera_CD2D);
+}
+
+inline void DrawGJKVisualization()
+{
+	// Draw grid
+	DrawGrid(gridColor, &camera_CD2D);
+	DrawLine(vec2(0, -100), vec2(0, 100), yAxisColor, &camera_CD2D);
+	DrawLine(vec2(-100, 0), vec2(100, 0), xAxisColor, &camera_CD2D);
+
+	// Draw Minkowski Difference
+	PointCloud minkowskiDifference = CreateMinkowskiDifferencePointCloud(&shape1_CD2D, &shape2_CD2D);
+	for (U64 i = 0; i < minkowskiDifference.size(); ++i)
+	{
+		DrawPoint(minkowskiDifference[i], minkowskiPointSize_px, minkowskiPointColor, &camera_CD2D);
+	}
+
+	// Draw GJK points
+	switch (gjkResults.simplex.type)
+	{
+	case Simplex_2D::Simplex_Point_2D:
+	DrawPoint(gjkResults.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	break;
+
+	case Simplex_2D::Simplex_Line_2D:
+	DrawPoint(gjkResults.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawPoint(gjkResults.simplex.B, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawLine(gjkResults.simplex.A, gjkResults.simplex.B, gjkPointColor, &camera_CD2D);
+	break;
+
+	case Simplex_2D::Simplex_Triangle_2D:
+	DrawPoint(gjkResults.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawPoint(gjkResults.simplex.B, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawPoint(gjkResults.simplex.C, gjkPointSize_px, gjkPointColor, &camera_CD2D);
+	DrawLine(gjkResults.simplex.A, gjkResults.simplex.B, gjkPointColor, &camera_CD2D);
+	DrawLine(gjkResults.simplex.B, gjkResults.simplex.C, gjkPointColor, &camera_CD2D);
+	DrawLine(gjkResults.simplex.C, gjkResults.simplex.A, gjkPointColor, &camera_CD2D);
+	break;
+
+	default:
+	break;
+	}
+}
+
+inline void UpdateCollisionDetection2DApplet(F32 dt)
+{
+	UpdateAppletState(dt);
+	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	//         x  y  x    y
+	glViewport(0, 0, 800, 800);
+	DrawCollidablesVisualization();
+
+	glViewport(800, 0, 800, 800);
+	DrawGJKVisualization();
+
+	glViewport(0, 0, 1600, 1600);
+	Rectangle_2D sep;
+	mat3 sepPCM = mat3(.005,0,0, 0,1,0, 0,0,1);
+	DrawRectangle(&sep, &sepPCM, seperatorColor);
+	DrawLine(vec2(0, -10), vec2(0, 10), seperatorColor, &camera_CD2D);
+}
 
 inline void ShutdownCollisionDetection2DApplet()
 {
