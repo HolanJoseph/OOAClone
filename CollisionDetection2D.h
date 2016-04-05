@@ -1,8 +1,5 @@
 #pragma once
 
-// Scaling Circles??? 
-// what spaces are the points in?
-
 #include "Types.h"
 #include "Math.h"
 
@@ -458,13 +455,6 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, Transform shapeATransform, S2 shapeB, Transf
 
 
 
-// EPA
-struct EPAInfo_2D
-{
-	vec2 normal;
-	F32 distance;
-};
-
 struct ListPoint_2D
 {
 	vec2 point;
@@ -495,6 +485,7 @@ void AddPoint(PointList_2D* list, vec2 point)
 		currentPoint = (ListPoint_2D*)malloc(sizeof(ListPoint_2D));
 		currentPoint->point = point;
 		currentPoint->next = NULL;
+		list->first = currentPoint;
 	}
 	else
 	{
@@ -541,17 +532,34 @@ void DestroyPointList(PointList_2D* list)
 
 }
 
-template<typename S1, typename S2>
-inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex)
+
+
+
+typedef std::vector<vec2> PointCloud;
+
+// EPA
+struct EPAInfo_2D
 {
-	EPAInfo result;
+	vec2 normal;
+	F32 distance;
+	PointCloud points;
+};
+
+template<typename S1, typename S2>
+inline EPAInfo_2D EPA_2D(S1 shapeA, Transform shapeATransform, S2 shapeB, Transform shapeBTransform, Simplex_2D simplex, const U64 MAXITERATIONS = MAXGJKITERATIONS_2D)
+{
+	Assert(simplex.type == Simplex_2D::Simplex_Triangle_2D);
+
+	EPAInfo_2D result;
 
 	PointList_2D pointList = CreatePointList();
 	AddPoint(&pointList, simplex.A);
 	AddPoint(&pointList, simplex.B);
 	AddPoint(&pointList, simplex.C);
 	
-	vec3 normal_surface = cross(simplex.B - simplex.A, simplex.C - simplex.A);
+	vec2 simplexAB = simplex.B - simplex.A;
+	vec2 simplexAC = simplex.C - simplex.A;
+	vec3 normal_surface = cross(vec3(simplexAB.x, simplexAB.y, 0), vec3(simplexAC.x, simplexAC.y, 0));
 
 	for (U32 i = 0; i < MAXEPAITERATIONS_2D; ++i)
 	{
@@ -564,8 +572,30 @@ inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex)
 		while (b != NULL)
 		{
 			vec2 ab = b->point - a->point;
-			vec2 normal_ab = cross(ab, normal_surface);
-			vec2 ab_distance = dot(normal_ab, a);
+			vec3 ab3 = vec3(ab.x, ab.y, 0);
+			vec3 normal3_ab = cross(ab3, normal_surface);
+			vec2 normal_ab = normalize(vec2(normal3_ab.x, normal3_ab.y));
+			F32 ab_distance = dot(normal_ab, a->point);
+
+			if (ab_distance < closestEdge_distance)
+			{
+				closestEdge_point1 = a;
+				closestEdge_distance = ab_distance;
+				closestEdge_normal = normal_ab;
+			}
+
+			a = a->next;
+			b = b->next;
+		}
+		{	// NOTE: Do the wrap around edge
+			// a = a;
+			b = pointList.first;
+
+			vec2 ab = b->point - a->point;
+			vec3 ab3 = vec3(ab.x, ab.y, 0);
+			vec3 normal3_ab = cross(ab3, normal_surface);
+			vec2 normal_ab = normalize(vec2(normal3_ab.x, normal3_ab.y));
+			F32 ab_distance = dot(normal_ab, a->point);
 
 			if (ab_distance < closestEdge_distance)
 			{
@@ -575,7 +605,7 @@ inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex)
 			}
 		}
 
-		vec2 newPolytopePoint = Support(shapeA, shapeB, closestEdge_normal);
+		vec2 newPolytopePoint = Support(shapeA, shapeATransform, shapeB, shapeBTransform, closestEdge_normal);
 		F32 newPolytopePoint_distance = dot(newPolytopePoint, closestEdge_normal);
 		if (newPolytopePoint_distance - closestEdge_distance < EPATOLERANCE)
 		{
@@ -586,10 +616,16 @@ inline EPAInfo EPA(S1 shapeA, S2 shapeB, Simplex simplex)
 		}
 		else
 		{
-			InsertAfter(&pointList, a, newPolytopePoint);
+			InsertAfter(&pointList, closestEdge_point1, newPolytopePoint);
 		}
 	}
 
+	ListPoint_2D* p = pointList.first;
+	while (p != NULL)
+	{
+		result.points.push_back(p->point);
+		p = p->next;
+	}
 	DestroyPointList(&pointList);
 
 	return result;
@@ -616,11 +652,11 @@ inline CollisionInfo_2D DetectCollision_2D(S1 shapeA, S2 shapeB)
 	GJKInfo_2D gjkInfo = GJK(shapeA, shapeB);
 	if (gjkInfo.collided)
 	{
-		// 		EPAInfo epaInfo = EPA(shapeA, shapeB, gjkInfo.simplex);
-		// 
+		EPAInfo_2D epaInfo = EPA(shapeA, shapeB, gjkInfo.simplex);
+		
 		result.collided = true;
-		// 		result.normal = epaInfo.normal;
-		// 		result.distance = epaInfo.distance;
+		result.normal = epaInfo.normal;
+		result.distance = epaInfo.distance;
 	}
 
 	return result;

@@ -164,9 +164,12 @@ inline void InitializeCollisionDetection2DApplet()
 	gjkPointColor = vec4(0, 0, 1, 1);
 	seperatorColor = vec4(.663, .733, .384, 1);
 
-	shape1_CD2D.transform.position = vec2(2, 0);
-	shape1_CD2D.transform.rotationAngle = 45.0f;
-	shape2_CD2D.transform.position = vec2(-1, 0);
+	shape1_CD2D.transform.position = vec2(-0.650137424, 0.198641479);
+	shape1_CD2D.transform.rotationAngle = 28.6177559f;
+	shape1_CD2D.transform.scale = 1.77565324f;
+	shape2_CD2D.transform.position = vec2(-0.866670012, 0.266644627);
+	shape2_CD2D.transform.rotationAngle = 0;
+	shape2_CD2D.transform.scale = 1.67522526f;
 
 	camera_CD2D.ResizeViewArea(vec2(5,5));
 
@@ -534,7 +537,105 @@ GJKInfo_2D GJKDispatch(Collidable_CD2D* collidable1, Collidable_CD2D* collidable
 	return result;
 }
 
+EPAInfo_2D EPADispatch(Collidable_CD2D* collidable1, Collidable_CD2D* collidable2, Simplex_2D simplex, U64 iterationCount = MAXEPAITERATIONS_2D)
+{
+	EPAInfo_2D result;
+
+	switch (collidable1->mode)
+	{
+	case Collidable_CD2D::Mode_Rectangle:
+	{
+											switch (collidable2->mode)
+											{
+											case Collidable_CD2D::Mode_Rectangle:
+											{
+																					result = EPA_2D(collidable1->rectangle, collidable1->transform, collidable2->rectangle, collidable2->transform, simplex, iterationCount);
+											}
+											break;
+
+											case Collidable_CD2D::Mode_Circle:
+											{
+																				 result = EPA_2D(collidable1->rectangle, collidable1->transform, collidable2->circle, collidable2->transform, simplex, iterationCount);
+											}
+											break;
+
+											case Collidable_CD2D::Mode_Triangle:
+											{
+																				   result = EPA_2D(collidable1->rectangle, collidable1->transform, collidable2->triangle, collidable2->transform, simplex, iterationCount);
+											}
+											break;
+
+											default:
+											break;
+											}
+	}
+	break;
+
+	case Collidable_CD2D::Mode_Circle:
+	{
+										 switch (collidable2->mode)
+										 {
+										 case Collidable_CD2D::Mode_Rectangle:
+										 {
+																				 result = EPA_2D(collidable1->circle, collidable1->transform, collidable2->rectangle, collidable2->transform, simplex, iterationCount);
+										 }
+										 break;
+
+										 case Collidable_CD2D::Mode_Circle:
+										 {
+																			  result = EPA_2D(collidable1->circle, collidable1->transform, collidable2->circle, collidable2->transform, simplex, iterationCount);
+										 }
+										 break;
+
+										 case Collidable_CD2D::Mode_Triangle:
+										 {
+																				result = EPA_2D(collidable1->circle, collidable1->transform, collidable2->triangle, collidable2->transform, simplex, iterationCount);
+										 }
+										 break;
+
+										 default:
+										 break;
+										 }
+	}
+	break;
+
+	case Collidable_CD2D::Mode_Triangle:
+	{
+										   switch (collidable2->mode)
+										   {
+										   case Collidable_CD2D::Mode_Rectangle:
+										   {
+																				   result = EPA_2D(collidable1->triangle, collidable1->transform, collidable2->rectangle, collidable2->transform, simplex, iterationCount);
+										   }
+										   break;
+
+										   case Collidable_CD2D::Mode_Circle:
+										   {
+																				result = EPA_2D(collidable1->triangle, collidable1->transform, collidable2->circle, collidable2->transform, simplex, iterationCount);
+										   }
+										   break;
+
+										   case Collidable_CD2D::Mode_Triangle:
+										   {
+																				  result = EPA_2D(collidable1->triangle, collidable1->transform, collidable2->triangle, collidable2->transform, simplex, iterationCount);
+										   }
+										   break;
+
+										   default:
+										   break;
+										   }
+	}
+	break;
+
+	default:
+	break;
+	}
+
+	return result;
+}
+
 GJKInfo_2D gjkResults;
+EPAInfo_2D epaResults;
 inline void UpdateAppletState(F32 dt)
 {
 	// Update applet state
@@ -563,52 +664,11 @@ inline void UpdateAppletState(F32 dt)
 		color_CD2D = vec4(0.957f, 0.263f, 0.212f, 1.0f);
 	}
 
-	/*// Draw grid
-	DrawGrid(gridColor, &camera_CD2D);
-	DrawLine(vec2(0, -10), vec2(0, 10), yAxisColor, &camera_CD2D);
-	DrawLine(vec2(-100, 0), vec2(100, 0), xAxisColor, &camera_CD2D);
-
-	// Draw collidables
-	DrawCollidable(&shape1_CD2D, color_CD2D, &camera_CD2D);
-	DrawCollidable(&shape2_CD2D, color_CD2D, &camera_CD2D);*/
-	
-	// Draw Minkowski Difference
-	/*PointCloud minkowskiDifference = CreateMinkowskiDifferencePointCloud(&shape1_CD2D, &shape2_CD2D);
-	for (U64 i = 0; i < minkowskiDifference.size(); ++i)
+	if (gjkResults.collided)
 	{
-		DrawPoint(minkowskiDifference[i], minkowskiPointSize_px, minkowskiPointColor, &camera_CD2D);
+		epaResults = EPADispatch(&shape1_CD2D, &shape2_CD2D, gjkResults.simplex);
 	}
-
-	// Draw GJK points
-	switch (gjk.simplex.type)
-	{
-	case Simplex_2D::Simplex_Point_2D:
-	DrawPoint(gjk.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
-	break;
-
-	case Simplex_2D::Simplex_Line_2D:
-	DrawPoint(gjk.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
-	DrawPoint(gjk.simplex.B, gjkPointSize_px, gjkPointColor, &camera_CD2D);
-	DrawLine(gjk.simplex.A, gjk.simplex.B, gjkPointColor, &camera_CD2D);
-	break;
-
-	case Simplex_2D::Simplex_Triangle_2D:
-	DrawPoint(gjk.simplex.A, gjkPointSize_px, gjkPointColor, &camera_CD2D);
-	DrawPoint(gjk.simplex.B, gjkPointSize_px, gjkPointColor, &camera_CD2D);
-	DrawPoint(gjk.simplex.C, gjkPointSize_px, gjkPointColor, &camera_CD2D);
-	DrawLine(gjk.simplex.A, gjk.simplex.B, gjkPointColor, &camera_CD2D);
-	DrawLine(gjk.simplex.B, gjk.simplex.C, gjkPointColor, &camera_CD2D);
-	DrawLine(gjk.simplex.C, gjk.simplex.A, gjkPointColor, &camera_CD2D);
-	break;
-
-	default:
-	break;
-	}*/
-
-
-	// Draw GJK line segments
-	
- }
+}
 
 inline void DrawCollidablesVisualization()
 {
@@ -660,6 +720,13 @@ inline void DrawGJKVisualization()
 
 	default:
 	break;
+	}
+
+	
+	// Draw EPA
+	if (gjkResults.collided)
+	{
+		DrawLine(vec2(0, 0), epaResults.normal * epaResults.distance, vec4(1, 1, 1, 1), &camera_CD2D);
 	}
 }
 
