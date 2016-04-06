@@ -552,14 +552,24 @@ inline EPAInfo_2D EPA_2D(S1 shapeA, Transform shapeATransform, S2 shapeB, Transf
 
 	EPAInfo_2D result;
 
+	// Make sure the winding is correct
+	vec2 simplexAB = simplex.B - simplex.A;
+	vec2 simplexAC = simplex.C - simplex.A;
+	vec3 normal_surface = cross(vec3(simplexAB.x, simplexAB.y, 0), vec3(simplexAC.x, simplexAC.y, 0));
+	if (dot(normal_surface, vec3(1,0,0)) > 0)
+	{
+		vec2 t = simplex.A;
+		simplex.A = simplex.C;
+		simplex.C = t;
+		simplexAB = simplex.B - simplex.A;
+		simplexAC = simplex.C - simplex.A;
+		normal_surface = cross(vec3(simplexAB.x, simplexAB.y, 0), vec3(simplexAC.x, simplexAC.y, 0));
+	}
+
 	PointList_2D pointList = CreatePointList();
 	AddPoint(&pointList, simplex.A);
 	AddPoint(&pointList, simplex.B);
 	AddPoint(&pointList, simplex.C);
-	
-	vec2 simplexAB = simplex.B - simplex.A;
-	vec2 simplexAC = simplex.C - simplex.A;
-	vec3 normal_surface = cross(vec3(simplexAB.x, simplexAB.y, 0), vec3(simplexAC.x, simplexAC.y, 0));
 
 	for (U32 i = 0; i < MAXEPAITERATIONS_2D; ++i)
 	{
