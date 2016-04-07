@@ -3,3 +3,4 @@ OracleOfAgesGame.vcxproj.filters
 OracleOfAgesGame.vcxproj.user
 Debug/**
 Assets/**
+x64/**

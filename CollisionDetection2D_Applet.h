@@ -199,7 +199,7 @@ inline void DrawGrid(vec4 color, Camera_CD2D* camera)
 	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality);
 }
 
-inline void DrawPoint(vec2 p, U32 pointSize, vec4 color, Camera_CD2D* camera)
+inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
 {
 	mat3 P_projection = camera->GetProjectionMatrix();
 	mat3 C_camera = TranslationMatrix(camera->position);
@@ -399,11 +399,11 @@ PointCloud CreateMinkowskiDifferencePointCloud(Collidable_CD2D* shape1, Collidab
 	PointCloud shape1PointCloud = CreateCollidablePointCloud(shape1);
 	PointCloud shape2PointCloud = CreateCollidablePointCloud(shape2);
 
-	for (U64 i = 0; i < shape1PointCloud.size(); ++i)
+	for (size_t i = 0; i < shape1PointCloud.size(); ++i)
 	{
 		vec2 shape1Point = shape1PointCloud[i];
 
-		for (U64 j = 0; j < shape2PointCloud.size(); ++j)
+		for (size_t j = 0; j < shape2PointCloud.size(); ++j)
 		{
 			vec2 shape2Point = shape2PointCloud[j];
 			result.push_back(shape1Point - shape2Point);
@@ -691,7 +691,7 @@ inline void DrawGJKVisualization()
 
 	// Draw Minkowski Difference
 	PointCloud minkowskiDifference = CreateMinkowskiDifferencePointCloud(&shape1_CD2D, &shape2_CD2D);
-	for (U64 i = 0; i < minkowskiDifference.size(); ++i)
+	for (size_t i = 0; i < minkowskiDifference.size(); ++i)
 	{
 		DrawPoint(minkowskiDifference[i], minkowskiPointSize_px, minkowskiPointColor, &camera_CD2D);
 	}

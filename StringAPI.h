@@ -23,13 +23,13 @@ inline F32 StringToF32(char* string)
 	return result;
 }
 
-inline char** SplitStringOnCharacter(char* string, U64 stringLength, char splitCharacter, U64* out_numberOfSplits, U64** out_lineLengths)
+inline char** SplitStringOnCharacter(char* string, size_t stringLength, char splitCharacter, U64* out_numberOfSplits, U64** out_lineLengths)
 {
 	char** stringComponents = (char**)malloc(sizeof(char*) * stringLength);
 	U64* stringComponentLengths = (U64*)malloc(sizeof(U64) * stringLength);
 
 	char* stringFront = string;
-	U64 numberOfSplits = 0;
+	size_t numberOfSplits = 0;
 	for (U64 i = 0; i < stringLength; ++i)
 	{
 		if (string[i] == splitCharacter)

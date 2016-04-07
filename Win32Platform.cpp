@@ -672,7 +672,7 @@ vec2 GetGamepadRightStick()
 
 
 // Input API utility functions
-KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
+static KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 {
 	KeyCode code;
 	switch (vkCode)
@@ -889,7 +889,7 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode)
 	return code;
 }
 
-void QueryController()
+static void QueryController()
 {
 	if (GetGamepadButtonDown(GamepadCode_A))
 	{
@@ -1089,6 +1089,8 @@ GetFileSizeReturnType GetFileSize(char* filename)
 	return result;
 }
 
+// NOTE: casting down U64 to U32 
+//		if huge files need to be supported this actually needs to be dealt with.
 ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition)
 {
 	ReadFileReturnType result = {0};
@@ -1114,7 +1116,7 @@ ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesT
 		OVERLAPPED ol = {0};
 		ol.OffsetHigh = *(offsetList + 1);
 		ol.Offset = *(offsetList + 0);
-		ReadFile(fileHandle, fileBuffer, numberOfBytesToRead, &numBytesRead, &ol);
+		ReadFile(fileHandle, fileBuffer, (DWORD)numberOfBytesToRead, &numBytesRead, &ol);
 		result.numberOfBytesRead = (U64)numBytesRead;
 		result.errorEncountered = false;
 	}
@@ -1123,6 +1125,8 @@ ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesT
 	return result;
 }
 
+// NOTE: casting down U64 to U32 
+//		if huge files need to be supported this actually needs to be dealt with.
 WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition)
 {
 	WriteFileReturnType result = {0};
@@ -1148,7 +1152,7 @@ WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfByte
 		OVERLAPPED ol = { 0 };
 		ol.OffsetHigh = *(offsetList + 1);
 		ol.Offset = *(offsetList + 0);
-		WriteFile(fileHandle, fileBuffer, numberOfBytesToWrite, &numBytesWritten, &ol);
+		WriteFile(fileHandle, fileBuffer, (DWORD)numberOfBytesToWrite, &numBytesWritten, &ol);
 		result.numberOfBytesWritten = (U64)numBytesWritten;
 		result.errorEncountered = false;
 	}
