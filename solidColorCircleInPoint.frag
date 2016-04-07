@@ -1,6 +1,6 @@
 #version 430 core
 
-uniform vec4 circleColor;
+uniform vec4 Color;
 
 out vec4 fColor;
 
@@ -14,5 +14,5 @@ void main()
 		discard;
 	}
 
-	fColor = circleColor;
+	fColor = Color;
 }

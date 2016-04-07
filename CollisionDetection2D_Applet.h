@@ -21,19 +21,14 @@
 
 #include "CollisionDetection2D.h"
 
-#include "glew/GL/glew.h"
-#include <gl/GL.h>
+#include "Renderer.h"
 
 #include <vector>
 
 // NOTE: NEXT IS GRAPHICS, HOLY CRAP
-extern GLuint solidColorQuadShaderProgram;
-extern GLuint solidColorQuadPCMLocation;
-extern GLuint solidColorQuadQuadColorLocation;
-
-extern GLuint solidColorCircleInPointShaderProgram;
-extern GLuint solidColorCircleInPointPCMLocation;
-extern GLuint solidColorCircleInPointCircleColorLocation;
+extern BasicShaderProgram solidColorQuadProgram;
+extern BasicShaderProgram solidColorCircleInPointProgram;
+extern BasicShaderProgram solidColorTriangleProgram;
 
 extern GLuint gridVAO;
 	   GLuint lineVAO;
@@ -192,10 +187,10 @@ inline void DrawGrid(vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1,0,0,0,1,0,0,0,1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	glUseProgram(solidColorQuadShaderProgram);
+	glUseProgram(solidColorQuadProgram.program);
 	glBindVertexArray(gridVAO);
-	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &color[0]);
+	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
 	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality);
 }
 
@@ -206,14 +201,14 @@ inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	glUseProgram(solidColorQuadShaderProgram);
+	glUseProgram(solidColorQuadProgram.program);
 	glBindVertexArray(pointVAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32) * 2, &p[0]);
 
-	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &color[0]);
+	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
 	glPointSize(pointSize);
 	glDrawArrays(GL_POINTS, 0, 1);
 }
@@ -225,43 +220,43 @@ inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	glUseProgram(solidColorQuadShaderProgram);
+	glUseProgram(solidColorQuadProgram.program);
 	glBindVertexArray(lineVAO);
 
 	vec4 points = vec4(a.x, a.y, b.x, b.y);
 	glBindBuffer(GL_ARRAY_BUFFER, lineVertexBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32)* 4, &points[0]);
 
-	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &color[0]);
+	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
+	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
 	glDrawArrays(GL_LINES, 0, 4);
 }
 
 inline void DrawRectangle(Rectangle_2D* rectangle, mat3* PCM, vec4 color)
 {
-	glUseProgram(solidColorQuadShaderProgram);
+	glUseProgram(solidColorQuadProgram.program);
 	glBindVertexArray(texturedQuadVAO);
-	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &(*PCM)[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &color[0]);
+	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
+	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 }
 
 inline void DrawCircle(Circle_2D* circle, F32 scale, mat3* PCM, vec4 color)
 {
-	glUseProgram(solidColorCircleInPointShaderProgram);
+	glUseProgram(solidColorCircleInPointProgram.program);
 	glBindVertexArray(circleVAO);
-	glUniformMatrix3fv(solidColorCircleInPointPCMLocation, 1, GL_FALSE, &(*PCM)[0][0]);
-	glUniform4fv(solidColorCircleInPointCircleColorLocation, 1, &color[0]);
+	glUniformMatrix3fv(solidColorCircleInPointProgram.location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
+	glUniform4fv(solidColorCircleInPointProgram.location_Color, 1, &color[0]);
 	glPointSize(scale * circle->radius * unitCircleSize_px);
 	glDrawArrays(GL_POINTS, 0, 1);
 }
 
 inline void DrawTriangle(Triangle_2D* triangle, mat3* PCM, vec4 color)
 {
-	glUseProgram(solidColorQuadShaderProgram);
+	glUseProgram(solidColorQuadProgram.program);
 	glBindVertexArray(equalateralTriangleVAO);
-	glUniformMatrix3fv(solidColorQuadPCMLocation, 1, GL_FALSE, &(*PCM)[0][0]);
-	glUniform4fv(solidColorQuadQuadColorLocation, 1, &color[0]);
+	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
+	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
 	glDrawArrays(GL_TRIANGLES, 0, numVerticesTriangle);
 }
 
