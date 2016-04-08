@@ -135,7 +135,7 @@ LSPResult LoadShaderProgram(char* vertexShaderFilename, char* fragmentShaderFile
 
 
 
-struct BasicShaderProgram
+struct BasicShaderProgram2D
 {
 	GLuint program;
 
@@ -145,7 +145,7 @@ struct BasicShaderProgram
 	GLuint location_Color;
 };
 
-inline void Initialize(BasicShaderProgram* bsp, char* vertexShaderFilename, char* fragmentShaderFilename)
+inline void Initialize(BasicShaderProgram2D* bsp, char* vertexShaderFilename, char* fragmentShaderFilename)
 {
 	LSPResult loadResult = LoadShaderProgram(vertexShaderFilename, fragmentShaderFilename);
 	bsp->program = loadResult.program;
@@ -171,14 +171,34 @@ inline void Initialize(BasicShaderProgram* bsp, char* vertexShaderFilename, char
 	}
 }
 
-inline void Destroy(BasicShaderProgram* bsp)
+inline void Destroy(BasicShaderProgram2D* bsp)
 {
 	glDeleteProgram(bsp->program);
 }
 
+inline void Activate(BasicShaderProgram2D* bsp)
+{
+	glUseProgram(bsp->program);
+}
+
+inline void Deactivate(BasicShaderProgram2D* bsp)
+{
+	glUseProgram(NULL);
+}
+
+inline void SetPCM(BasicShaderProgram2D* bsp, mat3* PCM)
+{
+	glUniformMatrix3fv(bsp->location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
+}
+
+inline void SetColor(BasicShaderProgram2D* bsp, vec4* color)
+{
+	glUniform4fv(bsp->location_Color, 1, &(*color)[0]);
+}
 
 
-struct SpriteShaderProgram
+
+struct SpriteShaderProgram2D
 {
 	GLuint program;
 
@@ -188,7 +208,7 @@ struct SpriteShaderProgram
 	GLuint location_SpriteSampler;
 };
 
-inline void Initialize(SpriteShaderProgram* ssp, char* vertexShaderFilename, char* fragmentShaderFilename)
+inline void Initialize(SpriteShaderProgram2D* ssp, char* vertexShaderFilename, char* fragmentShaderFilename)
 {
 	LSPResult loadResult = LoadShaderProgram(vertexShaderFilename, fragmentShaderFilename);
 	ssp->program = loadResult.program;
@@ -216,7 +236,7 @@ inline void Initialize(SpriteShaderProgram* ssp, char* vertexShaderFilename, cha
 	}
 }
 
-inline void Destroy(SpriteShaderProgram* ssp)
+inline void Destroy(SpriteShaderProgram2D* ssp)
 {
 	glDeleteProgram(ssp->program);
 

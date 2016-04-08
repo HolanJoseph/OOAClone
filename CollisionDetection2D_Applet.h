@@ -26,9 +26,9 @@
 #include <vector>
 
 // NOTE: NEXT IS GRAPHICS, HOLY CRAP
-extern BasicShaderProgram solidColorQuadProgram;
-extern BasicShaderProgram solidColorCircleInPointProgram;
-extern BasicShaderProgram solidColorTriangleProgram;
+extern BasicShaderProgram2D solidColorQuadProgram;
+extern BasicShaderProgram2D solidColorCircleInPointProgram;
+//extern BasicShaderProgram2D solidColorTriangleProgram;
 
 extern GLuint gridVAO;
 	   GLuint lineVAO;

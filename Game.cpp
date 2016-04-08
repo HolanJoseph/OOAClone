@@ -48,10 +48,10 @@ GLuint texturedQuadVAO;
 GLuint texture;
 GLuint textureSampler;
 
-extern SpriteShaderProgram texturedQuadProgram;
-extern BasicShaderProgram solidColorQuadProgram;
-extern BasicShaderProgram solidColorCircleInPointProgram;
-extern BasicShaderProgram solidColorTriangleProgram;
+SpriteShaderProgram2D texturedQuadProgram;
+BasicShaderProgram2D solidColorQuadProgram;
+BasicShaderProgram2D solidColorCircleInPointProgram;
+BasicShaderProgram2D solidColorTriangleProgram;
 
 
 
@@ -297,17 +297,14 @@ void InitScene()
 			entities[entityLocation].position = pos;
 			entities[entityLocation].scale = vec2(1.0f, 1.0f);
 
-			I32 textureWidth = 0;
-			I32 textureHeight = 0;
-			I32 textureImageComponents = 0;
-			I32 textureNumImageComponentsDesired = 4;
-			U8 * textureData = LoadTexture(filename, &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+			TextureData textureData = LoadTexture(filename); // Channel order?
 
 			glActiveTexture(GL_TEXTURE0);
 			glGenTextures(1, &(entities[entityLocation].texture));
 			glBindTexture(GL_TEXTURE_2D, entities[entityLocation].texture);
-			glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+			glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+			free(textureData.data);
 		}
 	}
 
@@ -315,18 +312,14 @@ void InitScene()
 	entities[linkEntityLocation].position = camera.position;
 	entities[linkEntityLocation].scale = vec2(0.75f, 1.0f);
 
-	I32 textureWidth = 0;
-	I32 textureHeight = 0;
-	I32 textureImageComponents = 0;
-	I32 textureNumImageComponentsDesired = 4;
-	U8 * textureData = LoadTexture("Assets/x60/link.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	TextureData textureData = LoadTexture("Assets/x60/link.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &(entities[linkEntityLocation].texture));
 	glBindTexture(GL_TEXTURE_2D, entities[linkEntityLocation].texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 }
 
 
@@ -375,18 +368,15 @@ bool GameInit()
 
 	// textures
 	// read in the texture
-	I32 textureWidth = 0;
-	I32 textureHeight = 0;
-	I32 textureImageComponents = 0;
-	I32 textureNumImageComponentsDesired = 4;
-	U8 * textureData = LoadTexture("Assets/tile1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	TextureData textureData = LoadTexture("Assets/tile1.bmp"); // Channel order?
 	
 	// send the texture data to OpenGL memory
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 	glGenSamplers(1, &textureSampler);
 	glBindSampler(0, textureSampler);

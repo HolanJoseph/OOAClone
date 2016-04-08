@@ -13,10 +13,10 @@
 #include "glew/GL/glew.h"
 #include <gl/GL.h>
 
-SpriteShaderProgram texturedQuadProgram;
-BasicShaderProgram solidColorQuadProgram;
-BasicShaderProgram solidColorCircleInPointProgram;
-BasicShaderProgram solidColorTriangleProgram;
+extern SpriteShaderProgram2D texturedQuadProgram;
+extern BasicShaderProgram2D solidColorQuadProgram;
+extern BasicShaderProgram2D solidColorCircleInPointProgram;
+extern BasicShaderProgram2D solidColorTriangleProgram;
 
 struct Camera
 {
@@ -64,16 +64,13 @@ mat4 GetPerspectiveProjection(ViewFrustum frustum)
 
 
 GLuint cubeVAO;
-U64 numberOfCubeVertices;
-U64 numberOfCubeIndices;
+ModelData cubeModel;
 
 GLuint capsuleVAO;
-U64 numberOfCapsuleWallVertices;
-U64 numberOfCapsuleWallIndices;
+ModelData capsuleModel;
 
 GLuint sphereVAO;
-U64 numberOfSphereVertices;
-U64 numberOfSphereIndices;
+ModelData sphereModel;
 
 vec3 camera3DPosition;
 vec3 camera3DRotations;
@@ -108,64 +105,59 @@ vec4 lightGreen = vec4(0.298f, 0.686f, 0.314f, 1.0f);
 
 inline void InitializeCollisionDetection3DApplet()
 {
-	F32* cubeVertices = NULL;
-	U32* cubeIndices = NULL;
-	Load3DModel("Assets/3D/Cube.obj", &cubeVertices, &numberOfCubeVertices, &cubeIndices, &numberOfCubeIndices);
+	cubeModel = Load3DModel("Assets/3D/Cube.obj");
 	glGenVertexArrays(1, &cubeVAO);
 	glBindVertexArray(cubeVAO);
 	GLuint cubeVertexBuffer;
 	glGenBuffers(1, &cubeVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, cubeVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices[0])*numberOfCubeVertices, NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(cubeVertices[0])*numberOfCubeVertices, cubeVertices);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeModel.vertices[0])*cubeModel.numberOfVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(cubeModel.vertices[0])*cubeModel.numberOfVertices, cubeModel.vertices);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 	GLuint cubeIndexBuffer;
 	glGenBuffers(1, &cubeIndexBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices[0])*numberOfCubeIndices, NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(cubeIndices[0])*numberOfCubeIndices, cubeIndices);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeModel.indices[0])*cubeModel.numberOfIndices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(cubeModel.indices[0])*cubeModel.numberOfIndices, cubeModel.indices);
 	glBindVertexArray(NULL);
 
 
 
-	F32* capsuleWallVertices = NULL;
-	U32* capsuleWallIndices = NULL;
-	Load3DModel("Assets/3D/CapsuleWall.obj", &capsuleWallVertices, &numberOfCapsuleWallVertices, &capsuleWallIndices, &numberOfCapsuleWallIndices);
+	capsuleModel = Load3DModel("Assets/3D/CapsuleWall.obj");
 	glGenVertexArrays(1, &capsuleVAO);
 	glBindVertexArray(capsuleVAO);
 	GLuint capsuleVertexBuffer;
 	glGenBuffers(1, &capsuleVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, capsuleVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(capsuleWallVertices[0])*numberOfCapsuleWallVertices, NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(capsuleWallVertices[0])*numberOfCapsuleWallVertices, capsuleWallVertices);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(capsuleModel.vertices[0])*capsuleModel.numberOfVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(capsuleModel.vertices[0])*capsuleModel.numberOfVertices, capsuleModel.vertices);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 	GLuint capsuleIndexBuffer;
 	glGenBuffers(1, &capsuleIndexBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, capsuleIndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(capsuleWallIndices[0])*numberOfCapsuleWallIndices, NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(capsuleWallIndices[0])*numberOfCapsuleWallIndices, capsuleWallIndices);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(capsuleModel.indices[0])*capsuleModel.numberOfIndices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(capsuleModel.indices[0])*capsuleModel.numberOfIndices, capsuleModel.indices);
 	glBindVertexArray(NULL);
 
 
-	F32* sphereVertices = NULL;
-	U32* sphereIndices = NULL;
-	Load3DModel("Assets/3D/sphere.obj", &sphereVertices, &numberOfSphereVertices, &sphereIndices, &numberOfSphereIndices);
+
+	sphereModel = Load3DModel("Assets/3D/sphere.obj");
 	glGenVertexArrays(1, &sphereVAO);
 	glBindVertexArray(sphereVAO);
 	GLuint sphereVertexBuffer;
 	glGenBuffers(1, &sphereVertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, sphereVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(sphereVertices[0])*numberOfSphereVertices, NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sphereVertices[0])*numberOfSphereVertices, sphereVertices);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(sphereModel.vertices[0])*sphereModel.numberOfVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sphereModel.vertices[0])*sphereModel.numberOfVertices, sphereModel.vertices);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 	GLuint sphereIndexBuffer;
 	glGenBuffers(1, &sphereIndexBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereIndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sphereIndices[0])*numberOfSphereIndices, NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(sphereIndices[0])*numberOfSphereIndices, sphereIndices);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sphereModel.indices[0])*sphereModel.numberOfIndices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(sphereModel.indices[0])*sphereModel.numberOfIndices, sphereModel.indices);
 	glBindVertexArray(NULL);
 
 	// ortho camera
@@ -179,132 +171,96 @@ inline void InitializeCollisionDetection3DApplet()
 
 
 
-	I32 textureWidth = 0;
-	I32 textureHeight = 0;
-	I32 textureImageComponents = 0;
-	I32 textureNumImageComponentsDesired = 4;
-	U8 * textureData = LoadTexture("Assets/3D/Front.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	TextureData textureData = LoadTexture("Assets/3D/Front.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &frontTexture);
 	glBindTexture(GL_TEXTURE_2D, frontTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Right.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Right.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &rightTexture);
 	glBindTexture(GL_TEXTURE_2D, rightTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Top.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Top.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &topTexture);
 	glBindTexture(GL_TEXTURE_2D, topTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Front1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Front1.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &front_1_Texture);
 	glBindTexture(GL_TEXTURE_2D, front_1_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Right1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Right1.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &right_1_Texture);
 	glBindTexture(GL_TEXTURE_2D, right_1_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Top1.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Top1.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &top_1_Texture);
 	glBindTexture(GL_TEXTURE_2D, top_1_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Front2.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Front2.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &front_2_Texture);
 	glBindTexture(GL_TEXTURE_2D, front_2_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Right2.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Right2.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &right_2_Texture);
 	glBindTexture(GL_TEXTURE_2D, right_2_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
-	textureWidth = 0;
-	textureHeight = 0;
-	textureImageComponents = 0;
-	textureNumImageComponentsDesired = 4;
-	textureData = LoadTexture("Assets/3D/Top2.bmp", &textureWidth, &textureHeight, &textureImageComponents, textureNumImageComponentsDesired); // Channel order?
+	textureData = LoadTexture("Assets/3D/Top2.bmp"); // Channel order?
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &top_2_Texture);
 	glBindTexture(GL_TEXTURE_2D, top_2_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureWidth, textureHeight);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, textureHeight, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-	free(textureData);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
 
 
 
@@ -385,6 +341,16 @@ CameraMode gjkTestCameraMode = Orthographic_Front;
 
 bool moved;
 
+
+/*
+ * 1 - change controlling shape
+ * wasdrf - translate shape
+ * ikjluo - rotate shape
+ * 3 - change shape
+ * up,down,left,right,-,= - 3D camera movement
+ * 2 - switch between camera modes
+ * 4 - gjk function
+ */
 inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 {
 	moved = false;
@@ -804,32 +770,32 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 	if (collisionShape1_Data.type == cs3D_OrientedBoundingBox)
 	{
 		glBindVertexArray(cubeVAO);
-		glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, cubeModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 	}
 	else if (collisionShape1_Data.type == cs3D_Sphere)
 	{
 		glBindVertexArray(sphereVAO);
-		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, sphereModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 	}
 	else if (collisionShape1_Data.type == cs3D_Capsule)
 	{
 		// Capsule Wall
 		glBindVertexArray(capsuleVAO);
-		glDrawElements(GL_TRIANGLES, numberOfCapsuleWallIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, capsuleModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 
 		// Capsule Sphere 1
 		glBindVertexArray(sphereVAO);
 		Bmodel_cs1 = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape1_Data.position.x, collisionShape1_Data.position.y, collisionShape1_Data.position.z, 1) * RotationMatrix_Z(collisionShape1_Data.rotation.z) * RotationMatrix_Y(collisionShape1_Data.rotation.y) * RotationMatrix_X(collisionShape1_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1);
 		PCM = Oprojection/*Pprojection*/ * inverse(Ccamera) * Bmodel_cs1;
 		glUniformMatrix4fv(solidColorTriangleProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, sphereModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 
 		// Capsule Sphere 2
 		glBindVertexArray(sphereVAO);
 		Bmodel_cs1 = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape1_Data.position.x, collisionShape1_Data.position.y, collisionShape1_Data.position.z, 1) * RotationMatrix_Z(collisionShape1_Data.rotation.z) * RotationMatrix_Y(collisionShape1_Data.rotation.y) * RotationMatrix_X(collisionShape1_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 1);
 		PCM = Oprojection/*Pprojection*/ * inverse(Ccamera) * Bmodel_cs1;
 		glUniformMatrix4fv(solidColorTriangleProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, sphereModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 	}
 	glBindVertexArray(NULL);
 
@@ -844,32 +810,32 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 	if (collisionShape2_Data.type == cs3D_OrientedBoundingBox)
 	{
 		glBindVertexArray(cubeVAO);
-		glDrawElements(GL_TRIANGLES, numberOfCubeIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, cubeModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 	}
 	else if (collisionShape2_Data.type == cs3D_Sphere)
 	{
 		glBindVertexArray(sphereVAO);
-		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, sphereModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 	}
 	else if (collisionShape2_Data.type == cs3D_Capsule)
 	{
 		// Capsule Wall
 		glBindVertexArray(capsuleVAO);
-		glDrawElements(GL_TRIANGLES, numberOfCapsuleWallIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, capsuleModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 
 		// Capsule Sphere 1
 		glBindVertexArray(sphereVAO);
 		Bmodel_cs1 = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape2_Data.position.x, collisionShape2_Data.position.y, collisionShape2_Data.position.z, 1) * RotationMatrix_Z(collisionShape2_Data.rotation.z) * RotationMatrix_Y(collisionShape2_Data.rotation.y) * RotationMatrix_X(collisionShape2_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1);
 		PCM = Oprojection/*Pprojection*/ * inverse(Ccamera) * Bmodel_cs2;
 		glUniformMatrix4fv(solidColorTriangleProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, sphereModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 
 		// Capsule Sphere 2
 		glBindVertexArray(sphereVAO);
 		Bmodel_cs1 = mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, collisionShape2_Data.position.x, collisionShape2_Data.position.y, collisionShape2_Data.position.z, 1) * RotationMatrix_Z(collisionShape2_Data.rotation.z) * RotationMatrix_Y(collisionShape2_Data.rotation.y) * RotationMatrix_X(collisionShape2_Data.rotation.x) * mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, -1, 0, 1);
 		PCM = Oprojection/*Pprojection*/ * inverse(Ccamera) * Bmodel_cs2;
 		glUniformMatrix4fv(solidColorTriangleProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-		glDrawElements(GL_TRIANGLES, numberOfSphereIndices, GL_UNSIGNED_INT, NULL);
+		glDrawElements(GL_TRIANGLES, sphereModel.numberOfIndices, GL_UNSIGNED_INT, NULL);
 	}
 	glBindVertexArray(NULL);
 

@@ -6,27 +6,48 @@
 #include "FileAPI.h"
 #include "StringAPI.h"
 
-U8* LoadTexture(char* filename, I32* textureWidth, I32* textureHeight, I32* textureImageComponents, I32 textureNumberOfImageComponentsDesired)
+struct TextureData
 {
+	U8* data;
+	I32 width;
+	I32 height;
+	I32 numberOfComponents;
+};
+TextureData LoadTexture(char* filename, I32 textureNumberOfImageComponentsDesired = 4)
+{
+	TextureData result;
+
 	stbi_set_flip_vertically_on_load(1);
-	return stbi_load(filename, textureWidth, textureHeight, textureImageComponents, textureNumberOfImageComponentsDesired);
+	result.data = stbi_load(filename, &result.width, &result.height, &result.numberOfComponents, textureNumberOfImageComponentsDesired);
+	return result;
 }
 
 //NOTE: Loads as vec3
 //NOTE: indices are stored as U32s if larger is needed change this
-//pointer to vertices
-//numVerts
-//pointer to indices
-//numIndices
-bool Load3DModel(char* filename, F32** out_vertices, U64* out_numberOfVertices, U32** out_indices, U64* out_numberOfIndices)
+struct ModelData
 {
+	F32* vertices;
+	size_t numberOfVertices;
+
+	U32* indices;
+	size_t numberOfIndices;
+};
+ModelData Load3DModel(char* filename)
+{
+	ModelData result;
+
 	GetFileSizeReturnType fs = GetFileSize(filename);
 	char* fileContents = (char*)malloc(sizeof(char)*fs.fileSize);
 	ReadFileReturnType fr = ReadFile(filename, fileContents, fs.fileSize, 0);
 
 	if (!fs.fileExists || fr.errorEncountered)
 	{
-		return false;
+		free(fileContents);
+		result.vertices = NULL;
+		result.numberOfVertices = 0;
+		result.indices = NULL;
+		result.numberOfIndices = 0;
+		return result;
 	}
 
 	U64 numberOfLines = 0;
@@ -90,14 +111,14 @@ bool Load3DModel(char* filename, F32** out_vertices, U64* out_numberOfVertices, 
 	vertices = (F32*)realloc(vertices, sizeof(F32)* numberOfVertices);
 	indices = (U32*)realloc(indices, sizeof(U32)* numberOfIndices);
 
-	*out_vertices = vertices;
-	*out_numberOfVertices = numberOfVertices;
-	*out_indices = indices;
-	*out_numberOfIndices = numberOfIndices;
+	result.vertices = vertices;
+	result.numberOfVertices = numberOfVertices;
+	result.indices = indices;
+	result.numberOfIndices = numberOfIndices;
 
 	free(fileLines);
 	free(fileLineLengths);
 
 	free(fileContents);
-	return true;
+	return result;
 }
