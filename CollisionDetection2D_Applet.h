@@ -187,11 +187,14 @@ inline void DrawGrid(vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1,0,0,0,1,0,0,0,1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	glUseProgram(solidColorQuadProgram.program);
+	Activate(&solidColorQuadProgram);
 	glBindVertexArray(gridVAO);
-	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
+
+	SetPCM(&solidColorQuadProgram, &PCM);
+	SetColor(&solidColorQuadProgram, &color);
+
 	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality);
+	Deactivate(&solidColorQuadProgram);
 }
 
 inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
@@ -201,16 +204,18 @@ inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	glUseProgram(solidColorQuadProgram.program);
+	Activate(&solidColorQuadProgram);
 	glBindVertexArray(pointVAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32) * 2, &p[0]);
 
-	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
+	SetPCM(&solidColorQuadProgram, &PCM);
+	SetColor(&solidColorQuadProgram, &color);
 	glPointSize(pointSize);
+
 	glDrawArrays(GL_POINTS, 0, 1);
+	Deactivate(&solidColorQuadProgram);
 }
 
 inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
@@ -220,44 +225,55 @@ inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	glUseProgram(solidColorQuadProgram.program);
+	Activate(&solidColorQuadProgram);
 	glBindVertexArray(lineVAO);
 
 	vec4 points = vec4(a.x, a.y, b.x, b.y);
 	glBindBuffer(GL_ARRAY_BUFFER, lineVertexBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32)* 4, &points[0]);
 
-	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
+	SetPCM(&solidColorQuadProgram, &PCM);
+	SetColor(&solidColorQuadProgram, &color);
+
 	glDrawArrays(GL_LINES, 0, 4);
+	Deactivate(&solidColorQuadProgram);
 }
 
 inline void DrawRectangle(Rectangle_2D* rectangle, mat3* PCM, vec4 color)
 {
-	glUseProgram(solidColorQuadProgram.program);
+	Activate(&solidColorQuadProgram);
 	glBindVertexArray(texturedQuadVAO);
-	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
-	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
+
+	SetPCM(&solidColorQuadProgram, PCM);
+	SetColor(&solidColorQuadProgram, &color);
+
 	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+	Deactivate(&solidColorQuadProgram);
 }
 
 inline void DrawCircle(Circle_2D* circle, F32 scale, mat3* PCM, vec4 color)
 {
-	glUseProgram(solidColorCircleInPointProgram.program);
+	Activate(&solidColorCircleInPointProgram);
 	glBindVertexArray(circleVAO);
-	glUniformMatrix3fv(solidColorCircleInPointProgram.location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
-	glUniform4fv(solidColorCircleInPointProgram.location_Color, 1, &color[0]);
+
+	SetPCM(&solidColorCircleInPointProgram, PCM);
+	SetColor(&solidColorCircleInPointProgram, &color);
 	glPointSize(scale * circle->radius * unitCircleSize_px);
+
 	glDrawArrays(GL_POINTS, 0, 1);
+	Deactivate(&solidColorCircleInPointProgram);
 }
 
 inline void DrawTriangle(Triangle_2D* triangle, mat3* PCM, vec4 color)
 {
-	glUseProgram(solidColorQuadProgram.program);
+	Activate(&solidColorQuadProgram);
 	glBindVertexArray(equalateralTriangleVAO);
-	glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
-	glUniform4fv(solidColorQuadProgram.location_Color, 1, &color[0]);
+	
+	SetPCM(&solidColorQuadProgram, PCM);
+	SetColor(&solidColorQuadProgram, &color);
+
 	glDrawArrays(GL_TRIANGLES, 0, numVerticesTriangle);
+	Deactivate(&solidColorQuadProgram);
 }
 
 inline void DrawCollidable(Collidable_CD2D* collidable, vec4 color, Camera_CD2D* camera)

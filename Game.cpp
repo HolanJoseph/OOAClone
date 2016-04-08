@@ -27,8 +27,8 @@
 #include "CollisionDetection3D_Applet.h"
 
 
-#define COLLISION3DAPPLET 1
-//#define COLLISION2DAPPLET 1
+//#define COLLISION3DAPPLET 1
+#define COLLISION2DAPPLET 1
 
 
 

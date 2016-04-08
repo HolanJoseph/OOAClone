@@ -12,6 +12,7 @@
 #include "glew/GL/glew.h"
 #include <gl/GL.h>
 
+// NOTE: For future implementations that require more complete foundations
 // Locations are denoted by a 
 //	type(mat4, mat3, vec4, etc...)
 //	name("PCM", "CircleColor", "QuadColor", "SpriteSampler", etc...)
@@ -242,4 +243,25 @@ inline void Destroy(SpriteShaderProgram2D* ssp)
 
 	ssp->program = 0;
 	ssp->status.compiled = false;
+}
+
+inline void Activate(SpriteShaderProgram2D* ssp)
+{
+	glUseProgram(ssp->program);
+}
+
+inline void Deactivate(SpriteShaderProgram2D* ssp)
+{
+	glUseProgram(NULL);
+}
+
+inline void SetPCM(SpriteShaderProgram2D* ssp, mat3* PCM)
+{
+	glUniformMatrix3fv(ssp->location_PCM, 1, GL_FALSE, &(*PCM)[0][0]);
+}
+
+inline void SetSprite(SpriteShaderProgram2D* ssp, GLuint spriteTexture)
+{
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, spriteTexture);
 }
