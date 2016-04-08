@@ -27,26 +27,26 @@
 #include "CollisionDetection3D_Applet.h"
 
 
-#define COLLISION3DAPPLET 1
-//#define COLLISION2DAPPLET 1
+//#define COLLISION3DAPPLET 1
+#define COLLISION2DAPPLET 1
 
 
 
 
 
 
+VertexData_Pos2D_UV texturedQuad;
+VertexData_Pos2D	equalateralTriangle;
+VertexData_Pos2D	circleInPoint;
+VertexData_Pos2D	theGrid;
 
-
-const GLuint numVertices = 4;
-const GLuint vertexDimensionality = 2;
-const GLuint textureSpaceDimensionality = 2;
-GLuint texturedQuadVAO;
+//const GLuint vertexDimensionality = 2;
+//const GLuint textureSpaceDimensionality = 2;
 
 
 // Textured Quad Shader Things
 
-Texture texture;
-//GLuint textureSampler;
+//Texture texture;
 
 SpriteShaderProgram2D texturedQuadProgram;
 BasicShaderProgram2D solidColorQuadProgram;
@@ -60,7 +60,7 @@ struct Entity
 	vec2 position;
 	vec2 scale;
 	F32 rotationAngle;
-	Texture texture;
+	Texture sprite;
 };
 
 struct GameCamera
@@ -69,90 +69,99 @@ struct GameCamera
 	vec2 viewArea;
 };
 
-GLuint gridVAO;
+//GLuint gridVAO;
 #define numGridLines 10
 #define gridLinePointDimensionality 2
 #define pointsPerLine 2
-
-GLuint equalateralTriangleVAO;
-#define numPointsInTriangle 3
-#define equalateralTrianglePointDimensionality 2
-
-GLuint circleVAO;
-#define numPointsInCircle 1
-#define circlePointDimensionality 2
 
 void Init2DCollisionTestScene()
 {
 
 	// Grid
-	glGenVertexArrays(1, &gridVAO);
-	glBindVertexArray(gridVAO);
-	GLfloat gridPositions[(numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality] = {
+	const size_t numGridLinePositions = (numGridLines + 1) * gridLinePointDimensionality * pointsPerLine;
+	vec2 gridLinePositions[numGridLinePositions] =
+	{
 		// varying y values
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f,
-		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f,
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f),
 
 		// varying x values
-		(-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f,
-		(-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f,
+		vec2((-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f),
 	};
-	GLuint gridVertexBuffer;
-	glGenBuffers(1, &gridVertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, gridVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(gridPositions), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(gridPositions), gridPositions);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
+	Initialize(&theGrid, gridLinePositions, numGridLinePositions);
+
+// 	glGenVertexArrays(1, &gridVAO);
+// 	glBindVertexArray(gridVAO);
+// 	GLfloat gridPositions[(numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality] = {
+// 		// varying y values
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f,
+// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f,
+// 
+// 		// varying x values
+// 		(-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f,
+// 		(-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f,
+// 	};
+// 	GLuint gridVertexBuffer;
+// 	glGenBuffers(1, &gridVertexBuffer);
+// 	glBindBuffer(GL_ARRAY_BUFFER, gridVertexBuffer);
+// 	glBufferData(GL_ARRAY_BUFFER, sizeof(gridPositions), NULL, GL_STATIC_DRAW);
+// 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(gridPositions), gridPositions);
+// 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+// 	glEnableVertexAttribArray(0);
 
 
 	// Equilateral triangle
-	glGenVertexArrays(1, &equalateralTriangleVAO);
-	glBindVertexArray(equalateralTriangleVAO);
-
-	GLfloat equalateralTrianglePoints[numPointsInTriangle * equalateralTrianglePointDimensionality] = {
-		-0.6f, -0.3f,
-		 0.6f, -0.3f,
-		 0.0f,  0.6f
+	vec2 equalateralTrianglePositions[3] = 
+	{
+		vec2(-0.6f, -0.3f),
+		vec2( 0.6f, -0.3f),
+		vec2( 0.0f,  0.6f)
 	};
-	GLuint equalateralTriangleVertexBuffer;
-	glGenBuffers(1, &equalateralTriangleVertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, equalateralTriangleVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(equalateralTrianglePoints), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(equalateralTrianglePoints), equalateralTrianglePoints);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
+	Initialize(&equalateralTriangle, equalateralTrianglePositions, 3);
 
 	// Circle
-	glGenVertexArrays(1, &circleVAO);
-	glBindVertexArray(circleVAO);
-
-	GLfloat circleOrigin[2] = {0.0f, 0.0f};
-	GLuint circleVertexBuffer;
-	glGenBuffers(1, &circleVertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, circleVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(circleOrigin), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(circleOrigin), circleOrigin);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
+	vec2 circlePositions[1] = 
+	{
+		vec2(0.0f, 0.0f)
+	};
+	Initialize(&circleInPoint, circlePositions, 1);
 }
 
 
@@ -297,14 +306,14 @@ void InitScene()
 			entities[entityLocation].position = pos;
 			entities[entityLocation].scale = vec2(1.0f, 1.0f);
 
-			Initialize(&entities[entityLocation].texture, filename);
+			Initialize(&entities[entityLocation].sprite, filename);
 		}
 	}
 
 	
 	entities[linkEntityLocation].position = camera.position;
 	entities[linkEntityLocation].scale = vec2(0.75f, 1.0f);
-	Initialize(&entities[linkEntityLocation].texture, "Assets/x60/link.bmp");
+	Initialize(&entities[linkEntityLocation].sprite, "Assets/x60/link.bmp");
 }
 
 
@@ -315,35 +324,23 @@ bool GameInit()
 
 	glClearColor(0.32f, 0.18f, 0.66f, 0.0f);
 
-	glGenVertexArrays(1, &texturedQuadVAO);
-	glBindVertexArray(texturedQuadVAO);
-	GLfloat vertices[numVertices * vertexDimensionality] =
+	const size_t tqNumVertices = 4;
+	vec2 tqPositions[tqNumVertices] =
 	{
- 		-1.0f, -1.0f,
- 		 1.0f, -1.0f,
- 		 1.0f,  1.0f,
- 		-1.0f,  1.0f
+		vec2(-1.0f, -1.0f),
+		vec2( 1.0f, -1.0f),
+		vec2( 1.0f,  1.0f),
+		vec2(-1.0f,  1.0f)
 	};
 
-	GLfloat textureCoordinates[numVertices * textureSpaceDimensionality] =
+	vec2 tqUVs[tqNumVertices] =
 	{
-		0.0f, 0.0f,
-		1.0f, 0.0f,
-		1.0f, 1.0f,
-		0.0f, 1.0f
+		vec2(0.0f, 0.0f),
+		vec2(1.0f, 0.0f),
+		vec2(1.0f, 1.0f),
+		vec2(0.0f, 1.0f)
 	};
-	GLuint Buffers[1];
-	glGenBuffers(1, Buffers);
-	glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices)+sizeof(textureCoordinates), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(textureCoordinates), textureCoordinates);
-
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)sizeof(vertices) /* NOTE: THIS IS A BYTE OFFSET*/);
-	glEnableVertexAttribArray(1);
+	Initialize(&texturedQuad, tqPositions, tqUVs, tqNumVertices);
 
 	Initialize(&texturedQuadProgram, "texturedQuad.vert", "texturedQuad.frag");
 	Initialize(&solidColorQuadProgram,"solidColorQuad.vert", "solidColorQuad.frag");
@@ -354,7 +351,6 @@ bool GameInit()
 	// textures
 	// read in the texture
 	// send the texture data to OpenGL memory
-	Initialize(&texture, "Assets/tile1.bmp");
 
 	//InitScene();
 #ifdef COLLISION3DAPPLET

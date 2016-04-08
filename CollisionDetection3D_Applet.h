@@ -63,6 +63,8 @@ mat4 GetPerspectiveProjection(ViewFrustum frustum)
 }
 
 
+extern VertexData_Pos2D_UV texturedQuad;
+
 GLuint cubeVAO;
 ModelData cubeModel;
 
@@ -764,10 +766,10 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, frontTexture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(texturedQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Right)
 	{
@@ -776,11 +778,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, rightTexture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Top)
 	{
@@ -789,11 +791,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, topTexture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Front_1)
 	{
@@ -802,11 +804,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, front_1_Texture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Right_1)
 	{
@@ -815,11 +817,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, right_1_Texture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Top_1)
 	{
@@ -828,11 +830,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, top_1_Texture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Front_2)
 	{
@@ -841,11 +843,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, front_2_Texture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Right_2)
 	{
@@ -854,11 +856,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, right_2_Texture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 	else if (gjkTestCameraMode == Orthographic_Top_2)
 	{
@@ -867,11 +869,11 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		glUseProgram(texturedQuadProgram.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, top_2_Texture.glTextureID);
-		glBindVertexArray(texturedQuadVAO);
+		glBindVertexArray(texturedQuad.vao);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
 		glUniform4fv(solidColorQuadProgram.location_Color, 1, &orientationColor[0]);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 	}
 }
 

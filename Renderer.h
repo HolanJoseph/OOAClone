@@ -50,6 +50,100 @@ inline void Destroy(Texture* texture)
 
 
 
+#define SHADER_POSITION_LOCATION 0
+#define SHADER_TEXTURECOORDINATES_LOCATION 1
+
+struct VertexData_Pos2D_UV
+{
+	static const size_t FloatsPerPosition = 2;
+	static const size_t PositionSizeInBytes = sizeof(F32) * FloatsPerPosition;
+
+	static const size_t FloatsPerUVPair = 2;
+	static const size_t UVSizeInBytes = sizeof(F32)* FloatsPerUVPair;
+
+	GLuint vao;
+	GLuint vbo;
+
+	size_t numberOfVertices;
+};
+
+inline void Initialize(VertexData_Pos2D_UV* vd, vec2* positions, vec2* textureCoordinates, size_t numberOfVertices)
+{
+	glGenVertexArrays(1, &vd->vao);
+	glBindVertexArray(vd->vao);
+
+	glGenBuffers(1, &vd->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vd->vbo);
+
+	vd->numberOfVertices = numberOfVertices;
+
+	glBufferData(GL_ARRAY_BUFFER, (VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices) + (VertexData_Pos2D_UV::UVSizeInBytes * numberOfVertices), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, positions);
+	glBufferSubData(GL_ARRAY_BUFFER, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, VertexData_Pos2D_UV::UVSizeInBytes * numberOfVertices, textureCoordinates);
+
+	glVertexAttribPointer(SHADER_POSITION_LOCATION, VertexData_Pos2D_UV::FloatsPerPosition, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(SHADER_POSITION_LOCATION);
+
+	glVertexAttribPointer(SHADER_TEXTURECOORDINATES_LOCATION, VertexData_Pos2D_UV::FloatsPerUVPair, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices) /* NOTE: THIS IS A BYTE OFFSET*/);
+	glEnableVertexAttribArray(SHADER_TEXTURECOORDINATES_LOCATION);
+
+	glBindVertexArray(0);
+}
+
+inline void Destroy(VertexData_Pos2D_UV* vd)
+{
+	glDeleteVertexArrays(1, &vd->vao);
+	glDeleteBuffers(1, &vd->vbo);
+
+	vd->vao = 0;
+	vd->vbo = 0;
+	vd->numberOfVertices = 0;
+}
+
+
+
+struct VertexData_Pos2D
+{
+	static const size_t FloatsPerPosition = 2;
+	static const size_t PositionSizeInBytes = sizeof(F32)* FloatsPerPosition;
+
+	GLuint vao;
+	GLuint vbo;
+
+	size_t numberOfVertices;
+};
+
+inline void Initialize(VertexData_Pos2D* vd, vec2* positions, size_t numberOfVertices)
+{
+	glGenVertexArrays(1, &vd->vao);
+	glBindVertexArray(vd->vao);
+
+	glGenBuffers(1, &vd->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vd->vbo);
+
+	vd->numberOfVertices = numberOfVertices;
+
+	glBufferData(GL_ARRAY_BUFFER, VertexData_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, positions);
+
+	glVertexAttribPointer(SHADER_POSITION_LOCATION, VertexData_Pos2D::FloatsPerPosition, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(SHADER_POSITION_LOCATION);
+
+	glBindVertexArray(0);
+}
+
+inline void Destroy(VertexData_Pos2D* vd)
+{
+	glDeleteVertexArrays(1, &vd->vao);
+	glDeleteBuffers(1, &vd->vbo);
+
+	vd->vao = 0;
+	vd->vbo = 0;
+	vd->numberOfVertices = 0;
+}
+
+
+
 
 // NOTE: For future implementations that require more complete foundations
 // Locations are denoted by a 

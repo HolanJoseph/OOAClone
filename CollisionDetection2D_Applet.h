@@ -29,21 +29,16 @@
 extern BasicShaderProgram2D solidColorQuadProgram;
 extern BasicShaderProgram2D solidColorCircleInPointProgram; // NOTE: This doesn't actually work as there is apparently a maximum point size.
 
-extern GLuint gridVAO;
-	   GLuint lineVAO;
-	   GLuint lineVertexBuffer;
-	   GLuint pointVAO;
-	   GLuint pointVertexBuffer;
-extern GLuint texturedQuadVAO;
-extern GLuint circleVAO;
-extern GLuint equalateralTriangleVAO;
-
-extern const GLuint numVertices; // Number of vertices in the textured quad
-#define numVerticesTriangle 6
+extern VertexData_Pos2D_UV texturedQuad;
+extern VertexData_Pos2D	   theGrid;
+extern VertexData_Pos2D	   equalateralTriangle;
+extern VertexData_Pos2D	   circleInPoint;
 #define unitCircleSize_px 160.0f
-#define numGridLines 10
-#define pointsPerLine 2
-#define gridLinePointDimensionality 2
+
+GLuint lineVAO;
+GLuint lineVertexBuffer;
+GLuint pointVAO;
+GLuint pointVertexBuffer;
 
 struct Camera_CD2D
 {
@@ -111,8 +106,6 @@ Collidable_CD2D shape2_CD2D;
 vec4			color_CD2D;
 bool			controllingShape1_CD2D;
 
-#define NUMBER_OF_TRIANGLE_POINTS 3
-#define NUMBER_OF_RECTANGLE_POINTS 4
 #define NUMBER_OF_CIRCLE_POINTS 20
 
 #define minkowskiPointSize_px 9
@@ -187,12 +180,12 @@ inline void DrawGrid(vec4 color, Camera_CD2D* camera)
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
 	Activate(&solidColorQuadProgram);
-	glBindVertexArray(gridVAO);
-
 	SetPCM(&solidColorQuadProgram, &PCM);
 	SetColor(&solidColorQuadProgram, &color);
-
-	glDrawArrays(GL_LINES, 0, (numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality);
+	
+	glBindVertexArray(theGrid.vao);
+	glDrawArrays(GL_LINES, 0, theGrid.numberOfVertices);
+	
 	Deactivate(&solidColorQuadProgram);
 }
 
@@ -204,16 +197,16 @@ inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
 	Activate(&solidColorQuadProgram);
-	glBindVertexArray(pointVAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32) * 2, &p[0]);
-
 	SetPCM(&solidColorQuadProgram, &PCM);
 	SetColor(&solidColorQuadProgram, &color);
+	
 	glPointSize(pointSize);
 
+	glBindVertexArray(pointVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32) * 2, &p[0]);
 	glDrawArrays(GL_POINTS, 0, 1);
+
 	Deactivate(&solidColorQuadProgram);
 }
 
@@ -225,53 +218,53 @@ inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
 	Activate(&solidColorQuadProgram);
-	glBindVertexArray(lineVAO);
-
-	vec4 points = vec4(a.x, a.y, b.x, b.y);
-	glBindBuffer(GL_ARRAY_BUFFER, lineVertexBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32)* 4, &points[0]);
-
 	SetPCM(&solidColorQuadProgram, &PCM);
 	SetColor(&solidColorQuadProgram, &color);
 
+	glBindVertexArray(lineVAO);
+	vec4 points = vec4(a.x, a.y, b.x, b.y);
+	glBindBuffer(GL_ARRAY_BUFFER, lineVertexBuffer);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32)* 4, &points[0]);
 	glDrawArrays(GL_LINES, 0, 4);
+
 	Deactivate(&solidColorQuadProgram);
 }
 
 inline void DrawRectangle(Rectangle_2D* rectangle, mat3* PCM, vec4 color)
 {
 	Activate(&solidColorQuadProgram);
-	glBindVertexArray(texturedQuadVAO);
-
 	SetPCM(&solidColorQuadProgram, PCM);
 	SetColor(&solidColorQuadProgram, &color);
+	
+	glBindVertexArray(texturedQuad.vao);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
 
-	glDrawArrays(GL_TRIANGLE_FAN, 0, numVertices);
 	Deactivate(&solidColorQuadProgram);
 }
 
 inline void DrawCircle(Circle_2D* circle, F32 scale, mat3* PCM, vec4 color)
 {
 	Activate(&solidColorCircleInPointProgram);
-	glBindVertexArray(circleVAO);
-
 	SetPCM(&solidColorCircleInPointProgram, PCM);
 	SetColor(&solidColorCircleInPointProgram, &color);
+	
 	glPointSize(scale * circle->radius * unitCircleSize_px);
-
+	
+	glBindVertexArray(circleInPoint.vao);
 	glDrawArrays(GL_POINTS, 0, 1);
+
 	Deactivate(&solidColorCircleInPointProgram);
 }
 
 inline void DrawTriangle(Triangle_2D* triangle, mat3* PCM, vec4 color)
 {
 	Activate(&solidColorQuadProgram);
-	glBindVertexArray(equalateralTriangleVAO);
-	
 	SetPCM(&solidColorQuadProgram, PCM);
 	SetColor(&solidColorQuadProgram, &color);
+	
+	glBindVertexArray(equalateralTriangle.vao);
+	glDrawArrays(GL_TRIANGLES, 0, equalateralTriangle.numberOfVertices);
 
-	glDrawArrays(GL_TRIANGLES, 0, numVerticesTriangle);
 	Deactivate(&solidColorQuadProgram);
 }
 
