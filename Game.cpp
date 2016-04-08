@@ -27,8 +27,8 @@
 #include "CollisionDetection3D_Applet.h"
 
 
-//#define COLLISION3DAPPLET 1
-#define COLLISION2DAPPLET 1
+#define COLLISION3DAPPLET 1
+//#define COLLISION2DAPPLET 1
 
 
 
@@ -45,8 +45,8 @@ GLuint texturedQuadVAO;
 
 // Textured Quad Shader Things
 
-GLuint texture;
-GLuint textureSampler;
+Texture texture;
+//GLuint textureSampler;
 
 SpriteShaderProgram2D texturedQuadProgram;
 BasicShaderProgram2D solidColorQuadProgram;
@@ -60,7 +60,7 @@ struct Entity
 	vec2 position;
 	vec2 scale;
 	F32 rotationAngle;
-	GLuint texture;
+	Texture texture;
 };
 
 struct GameCamera
@@ -297,29 +297,14 @@ void InitScene()
 			entities[entityLocation].position = pos;
 			entities[entityLocation].scale = vec2(1.0f, 1.0f);
 
-			TextureData textureData = LoadTexture(filename); // Channel order?
-
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &(entities[entityLocation].texture));
-			glBindTexture(GL_TEXTURE_2D, entities[entityLocation].texture);
-			glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-			free(textureData.data);
+			Initialize(&entities[entityLocation].texture, filename);
 		}
 	}
 
 	
 	entities[linkEntityLocation].position = camera.position;
 	entities[linkEntityLocation].scale = vec2(0.75f, 1.0f);
-
-	TextureData textureData = LoadTexture("Assets/x60/link.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &(entities[linkEntityLocation].texture));
-	glBindTexture(GL_TEXTURE_2D, entities[linkEntityLocation].texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
+	Initialize(&entities[linkEntityLocation].texture, "Assets/x60/link.bmp");
 }
 
 
@@ -368,22 +353,8 @@ bool GameInit()
 
 	// textures
 	// read in the texture
-	TextureData textureData = LoadTexture("Assets/tile1.bmp"); // Channel order?
-	
 	// send the texture data to OpenGL memory
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-	glGenSamplers(1, &textureSampler);
-	glBindSampler(0, textureSampler);
-	glSamplerParameteri(textureSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(textureSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(textureSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glSamplerParameteri(textureSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	Initialize(&texture, "Assets/tile1.bmp");
 
 	//InitScene();
 #ifdef COLLISION3DAPPLET

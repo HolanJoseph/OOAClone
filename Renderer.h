@@ -12,6 +12,45 @@
 #include "glew/GL/glew.h"
 #include <gl/GL.h>
 
+
+struct Texture
+{
+	GLuint glTextureID;
+
+	size_t width;  // Px
+	size_t height; // Px
+};
+
+inline void Initialize(Texture* texture, char* filename)
+{
+	TextureData textureData = LoadTexture(filename);
+
+	texture->width = textureData.width;
+	texture->height = textureData.height;
+
+	// send the texture data to OpenGL memory
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &texture->glTextureID);
+	glBindTexture(GL_TEXTURE_2D, texture->glTextureID);
+	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, texture->width, texture->height);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture->width, texture->height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
+	free(textureData.data);
+}
+
+inline void Destroy(Texture* texture)
+{
+	glDeleteTextures(1, &texture->glTextureID);
+
+	texture->glTextureID = 0; // NOTE: This is probably redundant
+	texture->width = 0;
+	texture->height = 0;
+}
+
+
+
+
+
+
 // NOTE: For future implementations that require more complete foundations
 // Locations are denoted by a 
 //	type(mat4, mat3, vec4, etc...)
@@ -207,6 +246,8 @@ struct SpriteShaderProgram2D
 
 	GLuint location_PCM;
 	GLuint location_SpriteSampler;
+
+	GLuint textureSampler_SpriteSampler;
 };
 
 inline void Initialize(SpriteShaderProgram2D* ssp, char* vertexShaderFilename, char* fragmentShaderFilename)
@@ -228,6 +269,15 @@ inline void Initialize(SpriteShaderProgram2D* ssp, char* vertexShaderFilename, c
 		ssp->location_SpriteSampler = glGetUniformLocation(ssp->program, "spriteSampler");
 		// Set the spriteSampler sampler variable in the shader to fetch data from the 0th texture location
 		glUniform1i(ssp->location_SpriteSampler, 0);
+
+		// Set up spriteSampler state
+		glGenSamplers(1, &ssp->textureSampler_SpriteSampler);
+		glBindSampler(0, ssp->textureSampler_SpriteSampler);
+		glSamplerParameteri(ssp->textureSampler_SpriteSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(ssp->textureSampler_SpriteSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(ssp->textureSampler_SpriteSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glSamplerParameteri(ssp->textureSampler_SpriteSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 		if (ssp->location_SpriteSampler == -1)
 		{
 			ssp->status.compiled = false;
@@ -240,6 +290,9 @@ inline void Initialize(SpriteShaderProgram2D* ssp, char* vertexShaderFilename, c
 inline void Destroy(SpriteShaderProgram2D* ssp)
 {
 	glDeleteProgram(ssp->program);
+
+	glDeleteSamplers(1, &ssp->textureSampler_SpriteSampler);
+	ssp->textureSampler_SpriteSampler = 0;
 
 	ssp->program = 0;
 	ssp->status.compiled = false;

@@ -85,17 +85,17 @@ OrientedBoundingBox collisionShape2_obb;
 Sphere				collisionShape2_sphere;
 Capsule				collisionShape2_capsule;
 
-GLuint frontTexture;
-GLuint rightTexture;
-GLuint topTexture;
+Texture frontTexture;
+Texture rightTexture;
+Texture topTexture;
 
-GLuint front_1_Texture;
-GLuint right_1_Texture;
-GLuint top_1_Texture;
+Texture front_1_Texture;
+Texture right_1_Texture;
+Texture top_1_Texture;
 
-GLuint front_2_Texture;
-GLuint right_2_Texture;
-GLuint top_2_Texture;
+Texture front_2_Texture;
+Texture right_2_Texture;
+Texture top_2_Texture;
 
 vec4 darkRed = vec4(0.898f, 0.224f, 0.208f, 1.0f);
 vec4 lightRed = vec4(0.957f, 0.263f, 0.212f, 1.0f);
@@ -170,97 +170,15 @@ inline void InitializeCollisionDetection3DApplet()
 	camera3DViewFrustum = CreateViewFrustum(2 * 24.866f, 2 * 24.866f, 1.0f / 3.0f, 100.0f);
 
 
-
-	TextureData textureData = LoadTexture("Assets/3D/Front.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &frontTexture);
-	glBindTexture(GL_TEXTURE_2D, frontTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-	textureData = LoadTexture("Assets/3D/Right.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &rightTexture);
-	glBindTexture(GL_TEXTURE_2D, rightTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-	textureData = LoadTexture("Assets/3D/Top.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &topTexture);
-	glBindTexture(GL_TEXTURE_2D, topTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-
-	textureData = LoadTexture("Assets/3D/Front1.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &front_1_Texture);
-	glBindTexture(GL_TEXTURE_2D, front_1_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-	textureData = LoadTexture("Assets/3D/Right1.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &right_1_Texture);
-	glBindTexture(GL_TEXTURE_2D, right_1_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-	textureData = LoadTexture("Assets/3D/Top1.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &top_1_Texture);
-	glBindTexture(GL_TEXTURE_2D, top_1_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-
-	textureData = LoadTexture("Assets/3D/Front2.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &front_2_Texture);
-	glBindTexture(GL_TEXTURE_2D, front_2_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-	textureData = LoadTexture("Assets/3D/Right2.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &right_2_Texture);
-	glBindTexture(GL_TEXTURE_2D, right_2_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
-
-
-	textureData = LoadTexture("Assets/3D/Top2.bmp"); // Channel order?
-
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &top_2_Texture);
-	glBindTexture(GL_TEXTURE_2D, top_2_Texture);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, textureData.width, textureData.height);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureData.width, textureData.height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
-	free(textureData.data);
+	Initialize(&frontTexture, "Assets/3D/Front.bmp");
+	Initialize(&rightTexture, "Assets/3D/Right.bmp");
+	Initialize(&topTexture, "Assets/3D/Top.bmp");
+	Initialize(&front_1_Texture, "Assets/3D/Front1.bmp");
+	Initialize(&right_1_Texture, "Assets/3D/Right1.bmp");
+	Initialize(&top_1_Texture, "Assets/3D/Top1.bmp");
+	Initialize(&front_2_Texture, "Assets/3D/Front2.bmp");
+	Initialize(&right_2_Texture, "Assets/3D/Right2.bmp");
+	Initialize(&top_2_Texture, "Assets/3D/Top2.bmp");
 
 
 
@@ -844,7 +762,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, frontTexture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, frontTexture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(texturedQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -855,7 +774,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, rightTexture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, rightTexture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -867,7 +787,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, topTexture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, topTexture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -879,7 +800,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, front_1_Texture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, front_1_Texture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -891,7 +813,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, right_1_Texture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, right_1_Texture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -903,7 +826,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, top_1_Texture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, top_1_Texture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -915,7 +839,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, front_2_Texture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, front_2_Texture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -927,7 +852,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, right_2_Texture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, right_2_Texture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);
@@ -939,7 +865,8 @@ inline void UpdateCollisionDetection3DApplet(F32 deltaTime)
 		mat3 PCM;
 		vec4 orientationColor = vec4(0, 1, 0, 1);
 		glUseProgram(texturedQuadProgram.program);
-		glBindTexture(GL_TEXTURE_2D, top_2_Texture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, top_2_Texture.glTextureID);
 		glBindVertexArray(texturedQuadVAO);
 		PCM = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)) * mat3(vec3(.2, 0, 0), vec3(0, .2, 0), vec3(-.9, -.9, 1));
 		glUniformMatrix3fv(solidColorQuadProgram.location_PCM, 1, GL_FALSE, &PCM[0][0]);

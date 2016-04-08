@@ -27,8 +27,7 @@
 
 // NOTE: NEXT IS GRAPHICS, HOLY CRAP
 extern BasicShaderProgram2D solidColorQuadProgram;
-extern BasicShaderProgram2D solidColorCircleInPointProgram;
-//extern BasicShaderProgram2D solidColorTriangleProgram;
+extern BasicShaderProgram2D solidColorCircleInPointProgram; // NOTE: This doesn't actually work as there is apparently a maximum point size.
 
 extern GLuint gridVAO;
 	   GLuint lineVAO;
