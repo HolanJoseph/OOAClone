@@ -179,14 +179,15 @@ inline void DrawGrid(vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1,0,0,0,1,0,0,0,1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	Activate(&solidColorQuadProgram);
+	SetShaderProgram(&solidColorQuadProgram);
 	SetPCM(&solidColorQuadProgram, &PCM);
 	SetColor(&solidColorQuadProgram, &color);
-	
-	glBindVertexArray(theGrid.vao);
+
+	SetVertexData(&theGrid);
 	glDrawArrays(GL_LINES, 0, theGrid.numberOfVertices);
-	
-	Deactivate(&solidColorQuadProgram);
+	ClearVertexData();
+
+	ClearShaderProgram();
 }
 
 inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
@@ -196,7 +197,7 @@ inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	Activate(&solidColorQuadProgram);
+	SetShaderProgram(&solidColorQuadProgram);
 	SetPCM(&solidColorQuadProgram, &PCM);
 	SetColor(&solidColorQuadProgram, &color);
 	
@@ -206,8 +207,9 @@ inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
 	glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32) * 2, &p[0]);
 	glDrawArrays(GL_POINTS, 0, 1);
+	ClearVertexData();
 
-	Deactivate(&solidColorQuadProgram);
+	ClearShaderProgram();
 }
 
 inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
@@ -217,7 +219,7 @@ inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
 	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	Activate(&solidColorQuadProgram);
+	SetShaderProgram(&solidColorQuadProgram);
 	SetPCM(&solidColorQuadProgram, &PCM);
 	SetColor(&solidColorQuadProgram, &color);
 
@@ -226,46 +228,50 @@ inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
 	glBindBuffer(GL_ARRAY_BUFFER, lineVertexBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32)* 4, &points[0]);
 	glDrawArrays(GL_LINES, 0, 4);
+	ClearVertexData();
 
-	Deactivate(&solidColorQuadProgram);
+	ClearShaderProgram();
 }
 
 inline void DrawRectangle(Rectangle_2D* rectangle, mat3* PCM, vec4 color)
 {
-	Activate(&solidColorQuadProgram);
+	SetShaderProgram(&solidColorQuadProgram);
 	SetPCM(&solidColorQuadProgram, PCM);
 	SetColor(&solidColorQuadProgram, &color);
 	
-	glBindVertexArray(texturedQuad.vao);
+	SetVertexData(&texturedQuad);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
+	ClearVertexData();
 
-	Deactivate(&solidColorQuadProgram);
+	ClearShaderProgram();
 }
 
 inline void DrawCircle(Circle_2D* circle, F32 scale, mat3* PCM, vec4 color)
 {
-	Activate(&solidColorCircleInPointProgram);
+	SetShaderProgram(&solidColorCircleInPointProgram);
 	SetPCM(&solidColorCircleInPointProgram, PCM);
 	SetColor(&solidColorCircleInPointProgram, &color);
 	
 	glPointSize(scale * circle->radius * unitCircleSize_px);
 	
-	glBindVertexArray(circleInPoint.vao);
+	SetVertexData(&circleInPoint);
 	glDrawArrays(GL_POINTS, 0, 1);
+	ClearVertexData();
 
-	Deactivate(&solidColorCircleInPointProgram);
+	ClearShaderProgram();
 }
 
 inline void DrawTriangle(Triangle_2D* triangle, mat3* PCM, vec4 color)
 {
-	Activate(&solidColorQuadProgram);
+	SetShaderProgram(&solidColorQuadProgram);
 	SetPCM(&solidColorQuadProgram, PCM);
 	SetColor(&solidColorQuadProgram, &color);
 	
-	glBindVertexArray(equalateralTriangle.vao);
+	SetVertexData(&equalateralTriangle);
 	glDrawArrays(GL_TRIANGLES, 0, equalateralTriangle.numberOfVertices);
+	ClearVertexData();
 
-	Deactivate(&solidColorQuadProgram);
+	ClearShaderProgram();
 }
 
 inline void DrawCollidable(Collidable_CD2D* collidable, vec4 color, Camera_CD2D* camera)

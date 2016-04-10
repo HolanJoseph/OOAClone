@@ -13,6 +13,38 @@
 #include <gl/GL.h>
 
 
+
+struct Camera
+{
+	vec2 halfDim;
+
+	vec2 position;
+	F32  rotationAngle;
+	F32  scale;
+
+	Camera()
+	{
+		halfDim = vec2(0, 0);
+
+		position = vec2(0, 0);
+		rotationAngle = 0;
+		scale = 1;
+	}
+
+	void ResizeViewArea(vec2 halfDim)
+	{
+		this->halfDim = halfDim;
+	}
+
+	mat3 GetProjectionMatrix()
+	{
+		mat3 result = ScaleMatrix(1.0f / halfDim);
+		return result;
+	}
+};
+
+
+
 struct Texture
 {
 	GLuint glTextureID;
@@ -52,6 +84,11 @@ inline void Destroy(Texture* texture)
 
 #define SHADER_POSITION_LOCATION 0
 #define SHADER_TEXTURECOORDINATES_LOCATION 1
+
+inline void ClearVertexData()
+{
+	glBindVertexArray(0);
+}
 
 struct VertexData_Pos2D_UV
 {
@@ -100,6 +137,11 @@ inline void Destroy(VertexData_Pos2D_UV* vd)
 	vd->numberOfVertices = 0;
 }
 
+inline void SetVertexData(VertexData_Pos2D_UV* vd)
+{
+	glBindVertexArray(vd->vao);
+}
+
 
 
 struct VertexData_Pos2D
@@ -142,6 +184,26 @@ inline void Destroy(VertexData_Pos2D* vd)
 	vd->numberOfVertices = 0;
 }
 
+inline void SetVertexData(VertexData_Pos2D* vd)
+{
+	glBindVertexArray(vd->vao);
+}
+
+inline void RebufferVertexData(VertexData_Pos2D* vd, vec2* positions, size_t numberOfVertices)
+{
+	glBindVertexArray(vd->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vd->vbo);
+
+	// NOTE: Untested, should work?
+	if (numberOfVertices > vd->numberOfVertices)
+	{
+		glBufferData(GL_ARRAY_BUFFER, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, NULL, GL_STATIC_DRAW);
+	}
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D::PositionSizeInBytes * numberOfVertices, positions);
+
+	vd->numberOfVertices = numberOfVertices;
+}
 
 
 
@@ -265,6 +327,11 @@ LSPResult LoadShaderProgram(char* vertexShaderFilename, char* fragmentShaderFile
 }
 
 
+inline void ClearShaderProgram()
+{
+	glUseProgram(NULL);
+}
+
 
 
 
@@ -310,14 +377,9 @@ inline void Destroy(BasicShaderProgram2D* bsp)
 	glDeleteProgram(bsp->program);
 }
 
-inline void Activate(BasicShaderProgram2D* bsp)
+inline void SetShaderProgram(BasicShaderProgram2D* bsp)
 {
 	glUseProgram(bsp->program);
-}
-
-inline void Deactivate(BasicShaderProgram2D* bsp)
-{
-	glUseProgram(NULL);
 }
 
 inline void SetPCM(BasicShaderProgram2D* bsp, mat3* PCM)
@@ -392,14 +454,9 @@ inline void Destroy(SpriteShaderProgram2D* ssp)
 	ssp->status.compiled = false;
 }
 
-inline void Activate(SpriteShaderProgram2D* ssp)
+inline void SetShaderProgram(SpriteShaderProgram2D* ssp)
 {
 	glUseProgram(ssp->program);
-}
-
-inline void Deactivate(SpriteShaderProgram2D* ssp)
-{
-	glUseProgram(NULL);
 }
 
 inline void SetPCM(SpriteShaderProgram2D* ssp, mat3* PCM)

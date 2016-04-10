@@ -24,7 +24,7 @@
 #include "CollisionDetection_Visualization.h"
 
 #include "CollisionDetection2D_Applet.h"
-#include "CollisionDetection3D_Applet.h"
+//#include "CollisionDetection3D_Applet.h"
 
 
 //#define COLLISION3DAPPLET 1
@@ -57,9 +57,7 @@ BasicShaderProgram2D solidColorTriangleProgram;
 
 struct Entity
 {
-	vec2 position;
-	vec2 scale;
-	F32 rotationAngle;
+	Transform transform;
 	Texture sprite;
 };
 
@@ -303,16 +301,16 @@ void InitScene()
 			vec2 pos(30.5f + i, -8.5f - j);
 			char* filename = tileFilenames[entityLocation];
 
-			entities[entityLocation].position = pos;
-			entities[entityLocation].scale = vec2(1.0f, 1.0f);
+			entities[entityLocation].transform.position = pos;
+			entities[entityLocation].transform.scale = 1.0f;
 
 			Initialize(&entities[entityLocation].sprite, filename);
 		}
 	}
 
 	
-	entities[linkEntityLocation].position = camera.position;
-	entities[linkEntityLocation].scale = vec2(0.75f, 1.0f);
+	entities[linkEntityLocation].transform.position = camera.position;
+	entities[linkEntityLocation].transform.scale = .75f;
 	Initialize(&entities[linkEntityLocation].sprite, "Assets/x60/link.bmp");
 }
 
@@ -342,10 +340,10 @@ bool GameInit()
 	};
 	Initialize(&texturedQuad, tqPositions, tqUVs, tqNumVertices);
 
-	Initialize(&texturedQuadProgram, "texturedQuad.vert", "texturedQuad.frag");
-	Initialize(&solidColorQuadProgram,"solidColorQuad.vert", "solidColorQuad.frag");
+	Initialize(&texturedQuadProgram, "uvMapped2D.vert", "uvMapped2D.frag");
+	Initialize(&solidColorQuadProgram,"singleColor2D.vert", "singleColor2D.frag");
 	Initialize(&solidColorCircleInPointProgram, "solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
-	Initialize(&solidColorTriangleProgram, "solidColorTriangle.vert", "solidColorTriangle.frag");
+	Initialize(&solidColorTriangleProgram, "singleColor3D.vert", "singleColor3D.frag");
 
 
 	// textures
