@@ -26,9 +26,6 @@
 #include <vector>
 
 
-extern VertexData_Pos2D	   theGrid;
-VertexData_Pos2D	   equalateralTriangle;
-
 
 struct Collidable_CD2D
 {
@@ -62,6 +59,9 @@ vec4 yAxisColor;
 vec4 minkowskiPointColor;
 vec4 gjkPointColor;
 vec4 seperatorColor;
+
+VertexData_Pos2D theGrid;
+VertexData_Pos2D equalateralTriangle;
 
 Camera     camera_CD2D;
 Collidable_CD2D shape1_CD2D;
@@ -106,6 +106,41 @@ inline void InitializeCollisionDetection2DApplet()
  		vec2(0.0f, 0.6f)
  	};
  	Initialize(&equalateralTriangle, equalateralTrianglePositions, 3);
+
+	// Grid
+	const I32 numGridLines = 10;
+	const I32 gridLinePointDimensionality = 2;
+	const I32 pointsPerLine = 2;
+	const size_t numGridLinePositions = (numGridLines + 1) * gridLinePointDimensionality * pointsPerLine;
+	vec2 gridLinePositions[numGridLinePositions] =
+	{
+		// varying y values
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f),
+
+		// varying x values
+		vec2((-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f),
+	};
+	Initialize(&theGrid, gridLinePositions, numGridLinePositions);
 
 	glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
 }

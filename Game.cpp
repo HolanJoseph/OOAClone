@@ -1,6 +1,3 @@
-#include "glew/GL/glew.h"
-#include <gl/GL.h>
-
 #include "Types.h"
 #include "Math.h"
 #include "BitManip.h"
@@ -32,49 +29,23 @@
 
 
 
-VertexData_Pos2D theGrid;
-//VertexData_Pos2D_UV texturedQuad;
-// VertexData_Pos2D	equalateralTriangle;
-// VertexData_Pos2D	circleInPoint;
-// VertexData_Pos2D	debugPoint;
-// VertexData_Pos2D	debugLine;
-// VertexData_Indexed_Pos2D_UV texturedQuad;
-
-
-// SpriteShaderProgram2D texturedQuadProgram;
-// BasicShaderProgram2D solidColorQuadProgram;
-// BasicShaderProgram2D solidColorCircleInPointProgram;
-// BasicShaderProgram2D solidColorTriangleProgram;
-
-
-
 struct Entity
 {
 	Transform transform;
 	Texture sprite;
 };
 
-struct GameCamera
-{
-	vec2 position;
-	vec2 viewArea;
-};
-
-#define numGridLines 10
-#define gridLinePointDimensionality 2
-#define pointsPerLine 2
 
 
 U32 numEntities = (10 * 9) + 1;
 Entity* entities;
-GameCamera  camera;
+Camera  camera;
 U32 linkEntityLocation = numEntities - 1;
 
 void InitScene()
 {
 	camera.position = vec2(35, -12.5f);
-	camera.viewArea.x = 10;
-	camera.viewArea.y = 9;
+	camera.halfDim = vec2(5, 4.5);
 
 	entities = (Entity*)malloc(sizeof(Entity) * numEntities);
 
@@ -220,111 +191,6 @@ bool GameInit()
 
 	glClearColor(0.32f, 0.18f, 0.66f, 0.0f);
 
-	//const size_t tqNumVertices = 4;
-// 	vec2 tqPositions[tqNumVertices] =
-// 	{
-// 		vec2(-1.0f, -1.0f),
-// 		vec2( 1.0f, -1.0f),
-// 		vec2( 1.0f,  1.0f),
-// 		vec2(-1.0f,  1.0f)
-// 	};
-// 
-// 	vec2 tqUVs[tqNumVertices] =
-// 	{
-// 		vec2(0.0f, 0.0f),
-// 		vec2(1.0f, 0.0f),
-// 		vec2(1.0f, 1.0f),
-// 		vec2(0.0f, 1.0f)
-// 	};
-// 	Initialize(&texturedQuad, tqPositions, tqUVs, tqNumVertices);
-
-// 	vec2 tqiPositions[tqNumVertices] =
-// 	{
-// 		vec2(-1.0f, -1.0f),
-// 		vec2( 1.0f, -1.0f),
-// 		vec2( 1.0f,  1.0f),
-// 		vec2(-1.0f,  1.0f)
-// 	};
-// 
-// 	vec2 tqiUVs[tqNumVertices] =
-// 	{
-// 		vec2(0.0f, 0.0f),
-// 		vec2(1.0f, 0.0f),
-// 		vec2(1.0f, 1.0f),
-// 		vec2(0.0f, 1.0f)
-// 	};
-// 
-// 	const size_t tqiNumIndices = 6;
-// 	U32 tqiIndices[tqiNumIndices] = {0,1,2,   0,2,3};
-// 	Initialize(&texturedQuad, tqiPositions, tqiUVs, tqNumVertices, tqiIndices, tqiNumIndices);
-
-	// Grid
-	const size_t numGridLinePositions = (numGridLines + 1) * gridLinePointDimensionality * pointsPerLine;
-	vec2 gridLinePositions[numGridLinePositions] =
-	{
-		// varying y values
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f),
-
-		// varying x values
-		vec2((-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f),
-	};
-	Initialize(&theGrid, gridLinePositions, numGridLinePositions);
-
-	/*// Equilateral triangle
-	vec2 equalateralTrianglePositions[3] =
-	{
-		vec2(-0.6f, -0.3f),
-		vec2(0.6f, -0.3f),
-		vec2(0.0f, 0.6f)
-	};
-	Initialize(&equalateralTriangle, equalateralTrianglePositions, 3);
-
-	// Circle
-	vec2 circlePositions[1] =
-	{
-		vec2(0.0f, 0.0f)
-	};
-	Initialize(&circleInPoint, circlePositions, 1);
-
-	vec2 debugPointPositions[1] = 
-	{
-		vec2(0.0f, 0.0f)
-	};
-	Initialize(&debugPoint, debugPointPositions, 1);
-
-	vec2 debugLinePositions[2] = 
-	{
-		vec2(0.0f, 0.0f),
-		vec2(1.0f, 1.0f)
-	};
-	Initialize(&debugLine, debugLinePositions, 2);*/
-
-// 	Initialize(&texturedQuadProgram, "uvMapped2D.vert", "uvMapped2D.frag");
-// 	Initialize(&solidColorQuadProgram,"singleColor2D.vert", "singleColor2D.frag");
-// 	Initialize(&solidColorCircleInPointProgram, "solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
-// 	Initialize(&solidColorTriangleProgram, "singleColor3D.vert", "singleColor3D.frag");
-
-
 	//InitScene();
 #ifdef COLLISION3DAPPLET
 	InitializeCollisionDetection3DApplet();
@@ -334,8 +200,6 @@ bool GameInit()
 
 	return true;
 }
-
-
 
 
 
@@ -354,10 +218,6 @@ void GameUpdate(F32 deltaTime)
 bool GameShutdown()
 {
 	ShutdownRenderer();
-// 	Destroy(&texturedQuadProgram);
-// 	Destroy(&solidColorQuadProgram);
-// 	Destroy(&solidColorCircleInPointProgram);
-// 	Destroy(&solidColorTriangleProgram);
 
 	return true;
 }
