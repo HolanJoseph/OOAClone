@@ -32,26 +32,19 @@
 
 
 
+VertexData_Pos2D theGrid;
+//VertexData_Pos2D_UV texturedQuad;
+// VertexData_Pos2D	equalateralTriangle;
+// VertexData_Pos2D	circleInPoint;
+// VertexData_Pos2D	debugPoint;
+// VertexData_Pos2D	debugLine;
+// VertexData_Indexed_Pos2D_UV texturedQuad;
 
 
-
-VertexData_Pos2D_UV texturedQuad;
-VertexData_Pos2D	equalateralTriangle;
-VertexData_Pos2D	circleInPoint;
-VertexData_Pos2D	theGrid;
-
-//const GLuint vertexDimensionality = 2;
-//const GLuint textureSpaceDimensionality = 2;
-
-
-// Textured Quad Shader Things
-
-//Texture texture;
-
-SpriteShaderProgram2D texturedQuadProgram;
-BasicShaderProgram2D solidColorQuadProgram;
-BasicShaderProgram2D solidColorCircleInPointProgram;
-BasicShaderProgram2D solidColorTriangleProgram;
+// SpriteShaderProgram2D texturedQuadProgram;
+// BasicShaderProgram2D solidColorQuadProgram;
+// BasicShaderProgram2D solidColorCircleInPointProgram;
+// BasicShaderProgram2D solidColorTriangleProgram;
 
 
 
@@ -67,106 +60,9 @@ struct GameCamera
 	vec2 viewArea;
 };
 
-//GLuint gridVAO;
 #define numGridLines 10
 #define gridLinePointDimensionality 2
 #define pointsPerLine 2
-
-void Init2DCollisionTestScene()
-{
-
-	// Grid
-	const size_t numGridLinePositions = (numGridLines + 1) * gridLinePointDimensionality * pointsPerLine;
-	vec2 gridLinePositions[numGridLinePositions] =
-	{
-		// varying y values
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f),
-		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f),
-
-		// varying x values
-		vec2((-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f),
-		vec2((-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f),
-	};
-	Initialize(&theGrid, gridLinePositions, numGridLinePositions);
-
-// 	glGenVertexArrays(1, &gridVAO);
-// 	glBindVertexArray(gridVAO);
-// 	GLfloat gridPositions[(numGridLines + numGridLines + 2) * pointsPerLine * gridLinePointDimensionality] = {
-// 		// varying y values
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f,
-// 		-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f,
-// 
-// 		// varying x values
-// 		(-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f,
-// 		(-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f,
-// 	};
-// 	GLuint gridVertexBuffer;
-// 	glGenBuffers(1, &gridVertexBuffer);
-// 	glBindBuffer(GL_ARRAY_BUFFER, gridVertexBuffer);
-// 	glBufferData(GL_ARRAY_BUFFER, sizeof(gridPositions), NULL, GL_STATIC_DRAW);
-// 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(gridPositions), gridPositions);
-// 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-// 	glEnableVertexAttribArray(0);
-
-
-	// Equilateral triangle
-	vec2 equalateralTrianglePositions[3] = 
-	{
-		vec2(-0.6f, -0.3f),
-		vec2( 0.6f, -0.3f),
-		vec2( 0.0f,  0.6f)
-	};
-	Initialize(&equalateralTriangle, equalateralTrianglePositions, 3);
-
-	// Circle
-	vec2 circlePositions[1] = 
-	{
-		vec2(0.0f, 0.0f)
-	};
-	Initialize(&circleInPoint, circlePositions, 1);
-}
-
-
-
-
-
-
 
 
 U32 numEntities = (10 * 9) + 1;
@@ -320,41 +216,119 @@ bool GameInit()
 	// NOTE: Handle turning on and off unit tests
 	//CollisionTestsRectRect2();
 
+	InitializeRenderer();
+
 	glClearColor(0.32f, 0.18f, 0.66f, 0.0f);
 
-	const size_t tqNumVertices = 4;
-	vec2 tqPositions[tqNumVertices] =
-	{
-		vec2(-1.0f, -1.0f),
-		vec2( 1.0f, -1.0f),
-		vec2( 1.0f,  1.0f),
-		vec2(-1.0f,  1.0f)
-	};
+	//const size_t tqNumVertices = 4;
+// 	vec2 tqPositions[tqNumVertices] =
+// 	{
+// 		vec2(-1.0f, -1.0f),
+// 		vec2( 1.0f, -1.0f),
+// 		vec2( 1.0f,  1.0f),
+// 		vec2(-1.0f,  1.0f)
+// 	};
+// 
+// 	vec2 tqUVs[tqNumVertices] =
+// 	{
+// 		vec2(0.0f, 0.0f),
+// 		vec2(1.0f, 0.0f),
+// 		vec2(1.0f, 1.0f),
+// 		vec2(0.0f, 1.0f)
+// 	};
+// 	Initialize(&texturedQuad, tqPositions, tqUVs, tqNumVertices);
 
-	vec2 tqUVs[tqNumVertices] =
+// 	vec2 tqiPositions[tqNumVertices] =
+// 	{
+// 		vec2(-1.0f, -1.0f),
+// 		vec2( 1.0f, -1.0f),
+// 		vec2( 1.0f,  1.0f),
+// 		vec2(-1.0f,  1.0f)
+// 	};
+// 
+// 	vec2 tqiUVs[tqNumVertices] =
+// 	{
+// 		vec2(0.0f, 0.0f),
+// 		vec2(1.0f, 0.0f),
+// 		vec2(1.0f, 1.0f),
+// 		vec2(0.0f, 1.0f)
+// 	};
+// 
+// 	const size_t tqiNumIndices = 6;
+// 	U32 tqiIndices[tqiNumIndices] = {0,1,2,   0,2,3};
+// 	Initialize(&texturedQuad, tqiPositions, tqiUVs, tqNumVertices, tqiIndices, tqiNumIndices);
+
+	// Grid
+	const size_t numGridLinePositions = (numGridLines + 1) * gridLinePointDimensionality * pointsPerLine;
+	vec2 gridLinePositions[numGridLinePositions] =
+	{
+		// varying y values
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 0.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 1.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 2.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 3.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 4.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 5.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 6.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 7.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 8.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 9.0f),
+		vec2(-numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f), vec2(numGridLines / 2.0f, (-numGridLines / 2.0f) + 10.0f),
+
+		// varying x values
+		vec2((-numGridLines / 2.0f) + 0.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 0.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 1.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 1.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 2.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 2.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 3.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 3.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 4.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 4.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 5.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 5.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 6.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 6.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 7.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 7.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 8.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 8.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 9.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 9.0f, numGridLines / 2.0f),
+		vec2((-numGridLines / 2.0f) + 10.0f, -numGridLines / 2.0f), vec2((-numGridLines / 2.0f) + 10.0f, numGridLines / 2.0f),
+	};
+	Initialize(&theGrid, gridLinePositions, numGridLinePositions);
+
+	/*// Equilateral triangle
+	vec2 equalateralTrianglePositions[3] =
+	{
+		vec2(-0.6f, -0.3f),
+		vec2(0.6f, -0.3f),
+		vec2(0.0f, 0.6f)
+	};
+	Initialize(&equalateralTriangle, equalateralTrianglePositions, 3);
+
+	// Circle
+	vec2 circlePositions[1] =
+	{
+		vec2(0.0f, 0.0f)
+	};
+	Initialize(&circleInPoint, circlePositions, 1);
+
+	vec2 debugPointPositions[1] = 
+	{
+		vec2(0.0f, 0.0f)
+	};
+	Initialize(&debugPoint, debugPointPositions, 1);
+
+	vec2 debugLinePositions[2] = 
 	{
 		vec2(0.0f, 0.0f),
-		vec2(1.0f, 0.0f),
-		vec2(1.0f, 1.0f),
-		vec2(0.0f, 1.0f)
+		vec2(1.0f, 1.0f)
 	};
-	Initialize(&texturedQuad, tqPositions, tqUVs, tqNumVertices);
+	Initialize(&debugLine, debugLinePositions, 2);*/
 
-	Initialize(&texturedQuadProgram, "uvMapped2D.vert", "uvMapped2D.frag");
-	Initialize(&solidColorQuadProgram,"singleColor2D.vert", "singleColor2D.frag");
-	Initialize(&solidColorCircleInPointProgram, "solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
-	Initialize(&solidColorTriangleProgram, "singleColor3D.vert", "singleColor3D.frag");
+// 	Initialize(&texturedQuadProgram, "uvMapped2D.vert", "uvMapped2D.frag");
+// 	Initialize(&solidColorQuadProgram,"singleColor2D.vert", "singleColor2D.frag");
+// 	Initialize(&solidColorCircleInPointProgram, "solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
+// 	Initialize(&solidColorTriangleProgram, "singleColor3D.vert", "singleColor3D.frag");
 
-
-	// textures
-	// read in the texture
-	// send the texture data to OpenGL memory
 
 	//InitScene();
 #ifdef COLLISION3DAPPLET
 	InitializeCollisionDetection3DApplet();
 #elif COLLISION2DAPPLET
-	Init2DCollisionTestScene();
 	InitializeCollisionDetection2DApplet();
 #endif
 
@@ -379,10 +353,11 @@ void GameUpdate(F32 deltaTime)
 
 bool GameShutdown()
 {
-	Destroy(&texturedQuadProgram);
-	Destroy(&solidColorQuadProgram);
-	Destroy(&solidColorCircleInPointProgram);
-	Destroy(&solidColorTriangleProgram);
+	ShutdownRenderer();
+// 	Destroy(&texturedQuadProgram);
+// 	Destroy(&solidColorQuadProgram);
+// 	Destroy(&solidColorCircleInPointProgram);
+// 	Destroy(&solidColorTriangleProgram);
 
 	return true;
 }

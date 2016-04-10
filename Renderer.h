@@ -45,6 +45,9 @@ struct Camera
 
 
 
+
+
+
 struct Texture
 {
 	GLuint glTextureID;
@@ -82,6 +85,7 @@ inline void Destroy(Texture* texture)
 
 
 
+
 #define SHADER_POSITION_LOCATION 0
 #define SHADER_TEXTURECOORDINATES_LOCATION 1
 
@@ -89,60 +93,6 @@ inline void ClearVertexData()
 {
 	glBindVertexArray(0);
 }
-
-struct VertexData_Pos2D_UV
-{
-	static const size_t FloatsPerPosition = 2;
-	static const size_t PositionSizeInBytes = sizeof(F32) * FloatsPerPosition;
-
-	static const size_t FloatsPerUVPair = 2;
-	static const size_t UVSizeInBytes = sizeof(F32)* FloatsPerUVPair;
-
-	GLuint vao;
-	GLuint vbo;
-
-	size_t numberOfVertices;
-};
-
-inline void Initialize(VertexData_Pos2D_UV* vd, vec2* positions, vec2* textureCoordinates, size_t numberOfVertices)
-{
-	glGenVertexArrays(1, &vd->vao);
-	glBindVertexArray(vd->vao);
-
-	glGenBuffers(1, &vd->vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vd->vbo);
-
-	vd->numberOfVertices = numberOfVertices;
-
-	glBufferData(GL_ARRAY_BUFFER, (VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices) + (VertexData_Pos2D_UV::UVSizeInBytes * numberOfVertices), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, positions);
-	glBufferSubData(GL_ARRAY_BUFFER, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, VertexData_Pos2D_UV::UVSizeInBytes * numberOfVertices, textureCoordinates);
-
-	glVertexAttribPointer(SHADER_POSITION_LOCATION, VertexData_Pos2D_UV::FloatsPerPosition, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(SHADER_POSITION_LOCATION);
-
-	glVertexAttribPointer(SHADER_TEXTURECOORDINATES_LOCATION, VertexData_Pos2D_UV::FloatsPerUVPair, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices) /* NOTE: THIS IS A BYTE OFFSET*/);
-	glEnableVertexAttribArray(SHADER_TEXTURECOORDINATES_LOCATION);
-
-	glBindVertexArray(0);
-}
-
-inline void Destroy(VertexData_Pos2D_UV* vd)
-{
-	glDeleteVertexArrays(1, &vd->vao);
-	glDeleteBuffers(1, &vd->vbo);
-
-	vd->vao = 0;
-	vd->vbo = 0;
-	vd->numberOfVertices = 0;
-}
-
-inline void SetVertexData(VertexData_Pos2D_UV* vd)
-{
-	glBindVertexArray(vd->vao);
-}
-
-
 
 struct VertexData_Pos2D
 {
@@ -165,8 +115,8 @@ inline void Initialize(VertexData_Pos2D* vd, vec2* positions, size_t numberOfVer
 
 	vd->numberOfVertices = numberOfVertices;
 
-	glBufferData(GL_ARRAY_BUFFER, VertexData_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices, NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, positions);
+	glBufferData(GL_ARRAY_BUFFER, VertexData_Pos2D::PositionSizeInBytes * vd->numberOfVertices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D::PositionSizeInBytes * vd->numberOfVertices, positions);
 
 	glVertexAttribPointer(SHADER_POSITION_LOCATION, VertexData_Pos2D::FloatsPerPosition, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(SHADER_POSITION_LOCATION);
@@ -197,13 +147,147 @@ inline void RebufferVertexData(VertexData_Pos2D* vd, vec2* positions, size_t num
 	// NOTE: Untested, should work?
 	if (numberOfVertices > vd->numberOfVertices)
 	{
-		glBufferData(GL_ARRAY_BUFFER, VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices, NULL, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, VertexData_Pos2D::PositionSizeInBytes * numberOfVertices, NULL, GL_STATIC_DRAW);
 	}
 
 	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D::PositionSizeInBytes * numberOfVertices, positions);
 
 	vd->numberOfVertices = numberOfVertices;
+
+	glBindVertexArray(0);
 }
+
+
+
+struct VertexData_Pos2D_UV
+{
+	static const size_t FloatsPerPosition = 2;
+	static const size_t PositionSizeInBytes = sizeof(F32)* FloatsPerPosition;
+
+	static const size_t FloatsPerUVPair = 2;
+	static const size_t UVSizeInBytes = sizeof(F32)* FloatsPerUVPair;
+
+	GLuint vao;
+	GLuint vbo;
+
+	size_t numberOfVertices;
+};
+
+inline void Initialize(VertexData_Pos2D_UV* vd, vec2* positions, vec2* textureCoordinates, size_t numberOfVertices)
+{
+	glGenVertexArrays(1, &vd->vao);
+	glBindVertexArray(vd->vao);
+
+	glGenBuffers(1, &vd->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vd->vbo);
+
+	vd->numberOfVertices = numberOfVertices;
+
+	glBufferData(GL_ARRAY_BUFFER, (VertexData_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices) + (VertexData_Pos2D_UV::UVSizeInBytes * vd->numberOfVertices), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices, positions);
+	glBufferSubData(GL_ARRAY_BUFFER, VertexData_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices, VertexData_Pos2D_UV::UVSizeInBytes * vd->numberOfVertices, textureCoordinates);
+
+	glVertexAttribPointer(SHADER_POSITION_LOCATION, VertexData_Pos2D_UV::FloatsPerPosition, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(SHADER_POSITION_LOCATION);
+
+	glVertexAttribPointer(SHADER_TEXTURECOORDINATES_LOCATION, VertexData_Pos2D_UV::FloatsPerUVPair, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(VertexData_Pos2D_UV::PositionSizeInBytes * numberOfVertices) /* NOTE: THIS IS A BYTE OFFSET*/);
+	glEnableVertexAttribArray(SHADER_TEXTURECOORDINATES_LOCATION);
+
+	glBindVertexArray(0);
+}
+
+inline void Destroy(VertexData_Pos2D_UV* vd)
+{
+	glDeleteVertexArrays(1, &vd->vao);
+	glDeleteBuffers(1, &vd->vbo);
+
+	vd->vao = 0;
+	vd->vbo = 0;
+	vd->numberOfVertices = 0;
+}
+
+inline void SetVertexData(VertexData_Pos2D_UV* vd)
+{
+	glBindVertexArray(vd->vao);
+}
+
+
+
+struct VertexData_Indexed_Pos2D_UV
+{
+	static const size_t FloatsPerPosition = 2;
+	static const size_t PositionSizeInBytes = sizeof(F32)* FloatsPerPosition;
+
+	static const size_t FloatsPerUVPair = 2;
+	static const size_t UVSizeInBytes = sizeof(F32)* FloatsPerUVPair;
+
+	static const size_t IndexSizeInBytes = sizeof(U32);
+
+	GLuint vao;
+	GLuint vbo;
+	GLuint ibo; // Index Buffer Object
+
+	size_t numberOfVertices;
+	size_t numberOfIndices;
+};
+
+inline void Initialize(VertexData_Indexed_Pos2D_UV* vd, vec2* positions, vec2* textureCoordinates, size_t numberOfVertices, U32* indices, size_t numberOfIndices)
+{
+	glGenVertexArrays(1, &vd->vao);
+	glBindVertexArray(vd->vao);
+
+
+
+	vd->numberOfVertices = numberOfVertices;
+
+	glGenBuffers(1, &vd->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vd->vbo);
+
+	glBufferData(GL_ARRAY_BUFFER, (VertexData_Indexed_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices) + (VertexData_Indexed_Pos2D_UV::UVSizeInBytes * vd->numberOfVertices), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexData_Indexed_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices, positions);
+	glBufferSubData(GL_ARRAY_BUFFER, VertexData_Indexed_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices, VertexData_Indexed_Pos2D_UV::UVSizeInBytes * vd->numberOfVertices, textureCoordinates);
+
+	glVertexAttribPointer(SHADER_POSITION_LOCATION, VertexData_Indexed_Pos2D_UV::FloatsPerPosition, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(SHADER_POSITION_LOCATION);
+
+	glVertexAttribPointer(SHADER_TEXTURECOORDINATES_LOCATION, VertexData_Indexed_Pos2D_UV::FloatsPerUVPair, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(VertexData_Indexed_Pos2D_UV::PositionSizeInBytes * vd->numberOfVertices) /* NOTE: THIS IS A BYTE OFFSET*/);
+	glEnableVertexAttribArray(SHADER_TEXTURECOORDINATES_LOCATION);
+
+
+
+	vd->numberOfIndices = numberOfIndices;
+
+	glGenBuffers(1, &vd->ibo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vd->ibo);
+
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, VertexData_Indexed_Pos2D_UV::IndexSizeInBytes*vd->numberOfIndices, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, VertexData_Indexed_Pos2D_UV::IndexSizeInBytes*vd->numberOfIndices, indices);
+
+
+
+	glBindVertexArray(0);
+}
+
+inline void Destroy(VertexData_Indexed_Pos2D_UV* vd)
+{
+	glDeleteVertexArrays(1, &vd->vao);
+	glDeleteBuffers(1, &vd->vbo);
+	glDeleteBuffers(1, &vd->ibo);
+
+	vd->vao = 0;
+	vd->vbo = 0;
+	vd->numberOfVertices = 0;
+	vd->ibo = 0;
+	vd->numberOfIndices = 0;
+}
+
+inline void SetVertexData(VertexData_Indexed_Pos2D_UV* vd)
+{
+	glBindVertexArray(vd->vao);
+}
+
+
+
 
 
 
@@ -211,8 +295,6 @@ inline void RebufferVertexData(VertexData_Pos2D* vd, vec2* positions, size_t num
 // Locations are denoted by a 
 //	type(mat4, mat3, vec4, etc...)
 //	name("PCM", "CircleColor", "QuadColor", "SpriteSampler", etc...)
-
-
 struct GLCompileStatus
 {
 	bool compiled;
@@ -468,4 +550,200 @@ inline void SetSprite(SpriteShaderProgram2D* ssp, GLuint spriteTexture)
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, spriteTexture);
+}
+
+
+
+
+
+
+inline void DrawAsPoints(size_t numberOfVertices)
+{
+	glDrawArrays(GL_POINTS, 0, numberOfVertices);
+}
+
+inline void DrawAsLines(size_t numberOfVertices)
+{
+	glDrawArrays(GL_LINES, 0, numberOfVertices);
+}
+
+inline void DrawAsTriangles(size_t numberOfVertices)
+{
+	glDrawArrays(GL_TRIANGLES, 0, numberOfVertices);
+}
+
+
+
+inline void DrawAsPointsIndexed(size_t numberOfIndices)
+{
+	glDrawElements(GL_POINTS, numberOfIndices, GL_UNSIGNED_INT, NULL);
+}
+
+inline void DrawAsLinesIndexed(size_t numberOfIndices)
+{
+	glDrawElements(GL_LINES, numberOfIndices, GL_UNSIGNED_INT, NULL);
+}
+
+inline void DrawAsTrianglesIndexed(size_t numberOfIndices)
+{
+	glDrawElements(GL_TRIANGLES, numberOfIndices, GL_UNSIGNED_INT, NULL);
+}
+
+
+
+
+
+VertexData_Pos2D	debugPoint;
+VertexData_Pos2D	debugLine;
+VertexData_Pos2D	circleInPoint;
+VertexData_Indexed_Pos2D_UV texturedQuad;
+
+SpriteShaderProgram2D uvMapped2DProgram;
+BasicShaderProgram2D singleColor2DProgram;
+BasicShaderProgram2D solidColorCircleInPointProgram; // NOTE: More accurate name?
+BasicShaderProgram2D singleColor3DProgram;
+
+#define unitCircleSize_px 160.0f
+
+inline void InitializeRenderer()
+{
+	Initialize(&uvMapped2DProgram, "uvMapped2D.vert", "uvMapped2D.frag");
+	Initialize(&singleColor2DProgram, "singleColor2D.vert", "singleColor2D.frag");
+	Initialize(&solidColorCircleInPointProgram, "solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
+	Initialize(&singleColor3DProgram, "singleColor3D.vert", "singleColor3D.frag");
+
+
+
+	// Circle
+	vec2 circlePositions[1] =
+	{
+		vec2(0.0f, 0.0f)
+	};
+	Initialize(&circleInPoint, circlePositions, 1);
+
+	vec2 debugPointPositions[1] =
+	{
+		vec2(0.0f, 0.0f)
+	};
+	Initialize(&debugPoint, debugPointPositions, 1);
+
+	vec2 debugLinePositions[2] =
+	{
+		vec2(0.0f, 0.0f),
+		vec2(1.0f, 1.0f)
+	};
+	Initialize(&debugLine, debugLinePositions, 2);
+
+	const size_t tqNumVertices = 4;
+	vec2 tqiPositions[tqNumVertices] =
+	{
+		vec2(-1.0f, -1.0f),
+		vec2(1.0f, -1.0f),
+		vec2(1.0f, 1.0f),
+		vec2(-1.0f, 1.0f)
+	};
+
+	vec2 tqiUVs[tqNumVertices] =
+	{
+		vec2(0.0f, 0.0f),
+		vec2(1.0f, 0.0f),
+		vec2(1.0f, 1.0f),
+		vec2(0.0f, 1.0f)
+	};
+
+	const size_t tqiNumIndices = 6;
+	U32 tqiIndices[tqiNumIndices] = { 0, 1, 2, 0, 2, 3 };
+	Initialize(&texturedQuad, tqiPositions, tqiUVs, tqNumVertices, tqiIndices, tqiNumIndices);
+}
+
+inline void ShutdownRenderer()
+{
+	Destroy(&uvMapped2DProgram);
+	Destroy(&singleColor2DProgram);
+	Destroy(&solidColorCircleInPointProgram);
+	Destroy(&singleColor3DProgram);
+}
+
+inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera* camera)
+{
+	mat3 P_projection = camera->GetProjectionMatrix();
+	mat3 C_camera = TranslationMatrix(camera->position);
+	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	mat3 PCM = P_projection * inverse(C_camera) * M_model;
+
+	SetShaderProgram(&singleColor2DProgram);
+	SetPCM(&singleColor2DProgram, &PCM);
+	SetColor(&singleColor2DProgram, &color);
+
+	glPointSize(pointSize);
+
+	RebufferVertexData(&debugPoint, &p, 1);
+	SetVertexData(&debugPoint);
+	DrawAsPoints(debugPoint.numberOfVertices);
+	ClearVertexData();
+
+	ClearShaderProgram();
+}
+
+inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera* camera)
+{
+	mat3 P_projection = camera->GetProjectionMatrix();
+	mat3 C_camera = TranslationMatrix(camera->position);
+	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	mat3 PCM = P_projection * inverse(C_camera) * M_model;
+
+	SetShaderProgram(&singleColor2DProgram);
+	SetPCM(&singleColor2DProgram, &PCM);
+	SetColor(&singleColor2DProgram, &color);
+
+	vec2 linePositions[2] = { a, b };
+	RebufferVertexData(&debugLine, linePositions, 2);
+	SetVertexData(&debugLine);
+	DrawAsLines(debugLine.numberOfVertices);
+	ClearVertexData();
+
+	ClearShaderProgram();
+}
+
+inline void DrawRectangle(vec2 halfDim, Transform transform, vec4 color, Camera* camera)
+{
+	mat3 P_projection = camera->GetProjectionMatrix();
+	mat3 C_camera = TranslationMatrix(camera->position);
+	mat3 M_model = transform.LocalToWorldTransform() * ScaleMatrix(halfDim);
+	mat3 PCM = P_projection * inverse(C_camera) * M_model;
+
+	SetShaderProgram(&singleColor2DProgram);
+	SetPCM(&singleColor2DProgram, &PCM);
+	SetColor(&singleColor2DProgram, &color);
+
+	SetVertexData(&texturedQuad);
+	DrawAsTrianglesIndexed(texturedQuad.numberOfIndices);
+	ClearVertexData();
+
+	ClearShaderProgram();
+}
+
+inline void DrawCircle(F32 radius, Transform transform, vec4 color, Camera* camera)
+{
+	mat3 P_projection = camera->GetProjectionMatrix();
+	mat3 C_camera = TranslationMatrix(camera->position);
+	mat3 M_model = transform.LocalToWorldTransform();
+	mat3 PCM = P_projection * inverse(C_camera) * M_model;
+
+	SetShaderProgram(&solidColorCircleInPointProgram);
+	SetPCM(&solidColorCircleInPointProgram, &PCM);
+	SetColor(&solidColorCircleInPointProgram, &color);
+
+	glPointSize(transform.scale * radius * unitCircleSize_px);
+
+	SetVertexData(&circleInPoint);
+	DrawAsPoints(1);
+	ClearVertexData();
+
+	ClearShaderProgram();
+}
+
+inline void DrawText()
+{
+
 }

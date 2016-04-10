@@ -25,47 +25,10 @@
 
 #include <vector>
 
-// NOTE: NEXT IS GRAPHICS, HOLY CRAP
-extern BasicShaderProgram2D solidColorQuadProgram;
-extern BasicShaderProgram2D solidColorCircleInPointProgram; // NOTE: This doesn't actually work as there is apparently a maximum point size.
 
-extern VertexData_Pos2D_UV texturedQuad;
 extern VertexData_Pos2D	   theGrid;
-extern VertexData_Pos2D	   equalateralTriangle;
-extern VertexData_Pos2D	   circleInPoint;
-#define unitCircleSize_px 160.0f
+VertexData_Pos2D	   equalateralTriangle;
 
-GLuint lineVAO;
-GLuint lineVertexBuffer;
-GLuint pointVAO;
-GLuint pointVertexBuffer;
-
-struct Camera_CD2D
-{
-	Rectangle_2D rectangle;
-
-	vec2 position;
-	F32  rotationAngle;
-	F32  scale;
-
-	Camera_CD2D()
-	{
-		position = vec2(0, 0);
-		rotationAngle = 0;
-		scale = 1;
-	}
-
-	void ResizeViewArea(vec2 halfDim)
-	{
-		rectangle.halfDim = halfDim;
-	}
-
-	mat3 GetProjectionMatrix()
-	{
-		mat3 result = ScaleMatrix(1.0f / rectangle.halfDim);
-		return result;
-	}
-};
 
 struct Collidable_CD2D
 {
@@ -100,7 +63,7 @@ vec4 minkowskiPointColor;
 vec4 gjkPointColor;
 vec4 seperatorColor;
 
-Camera_CD2D     camera_CD2D;
+Camera     camera_CD2D;
 Collidable_CD2D shape1_CD2D;
 Collidable_CD2D shape2_CD2D;
 vec4			color_CD2D;
@@ -111,35 +74,7 @@ bool			controllingShape1_CD2D;
 #define minkowskiPointSize_px 9
 #define gjkPointSize_px 5
 
-inline void InitializeLineVAO()
-{
-	glGenVertexArrays(1, &lineVAO);
-	glBindVertexArray(lineVAO);
-	//GLuint lineVertexBuffer;
-	glGenBuffers(1, &lineVertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, lineVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(F32)* 4, NULL, GL_DYNAMIC_DRAW);
 
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glBindVertexArray(0);
-}
-
-inline void InitializePointVAO()
-{
-	glGenVertexArrays(1, &pointVAO);
-	glBindVertexArray(pointVAO);
-	//GLuint pointVertexBuffer;
-	glGenBuffers(1, &pointVertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(F32) * 2, NULL, GL_DYNAMIC_DRAW);
-
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glBindVertexArray(0);
-}
 
 inline void InitializeCollisionDetection2DApplet()
 {
@@ -154,6 +89,7 @@ inline void InitializeCollisionDetection2DApplet()
 	shape1_CD2D.transform.position = vec2(-0.650137424, 0.198641479);
 	shape1_CD2D.transform.rotationAngle = 28.6177559f;
 	shape1_CD2D.transform.scale = 1.77565324f;
+
 	shape2_CD2D.transform.position = vec2(-0.866670012, 0.266644627);
 	shape2_CD2D.transform.rotationAngle = 0;
 	shape2_CD2D.transform.scale = 1.67522526f;
@@ -161,101 +97,34 @@ inline void InitializeCollisionDetection2DApplet()
 	camera_CD2D.ResizeViewArea(vec2(5,5));
 
 	color_CD2D = vec4(.933, .933, .933, 1);
-
 	controllingShape1_CD2D = true;
 
+	vec2 equalateralTrianglePositions[3] =
+ 	{
+ 		vec2(-0.6f, -0.3f),
+ 		vec2(0.6f, -0.3f),
+ 		vec2(0.0f, 0.6f)
+ 	};
+ 	Initialize(&equalateralTriangle, equalateralTrianglePositions, 3);
 
-	InitializeLineVAO();
-	InitializePointVAO();
 	glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
 }
 
 
 
-inline void DrawGrid(vec4 color, Camera_CD2D* camera)
+inline void DrawGrid(vec4 color, Camera* camera)
 {
 	mat3 P_projection = camera->GetProjectionMatrix();
 	mat3 C_camera = TranslationMatrix(camera->position);
 	mat3 M_model = mat3(1,0,0,0,1,0,0,0,1);
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
-	SetShaderProgram(&solidColorQuadProgram);
-	SetPCM(&solidColorQuadProgram, &PCM);
-	SetColor(&solidColorQuadProgram, &color);
+	SetShaderProgram(&singleColor2DProgram);
+	SetPCM(&singleColor2DProgram, &PCM);
+	SetColor(&singleColor2DProgram, &color);
 
 	SetVertexData(&theGrid);
-	glDrawArrays(GL_LINES, 0, theGrid.numberOfVertices);
-	ClearVertexData();
-
-	ClearShaderProgram();
-}
-
-inline void DrawPoint(vec2 p, F32 pointSize, vec4 color, Camera_CD2D* camera)
-{
-	mat3 P_projection = camera->GetProjectionMatrix();
-	mat3 C_camera = TranslationMatrix(camera->position);
-	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
-	mat3 PCM = P_projection * inverse(C_camera) * M_model;
-
-	SetShaderProgram(&solidColorQuadProgram);
-	SetPCM(&solidColorQuadProgram, &PCM);
-	SetColor(&solidColorQuadProgram, &color);
-	
-	glPointSize(pointSize);
-
-	glBindVertexArray(pointVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, pointVertexBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32) * 2, &p[0]);
-	glDrawArrays(GL_POINTS, 0, 1);
-	ClearVertexData();
-
-	ClearShaderProgram();
-}
-
-inline void DrawLine(vec2 a, vec2 b, vec4 color, Camera_CD2D* camera)
-{
-	mat3 P_projection = camera->GetProjectionMatrix();
-	mat3 C_camera = TranslationMatrix(camera->position);
-	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
-	mat3 PCM = P_projection * inverse(C_camera) * M_model;
-
-	SetShaderProgram(&solidColorQuadProgram);
-	SetPCM(&solidColorQuadProgram, &PCM);
-	SetColor(&solidColorQuadProgram, &color);
-
-	glBindVertexArray(lineVAO);
-	vec4 points = vec4(a.x, a.y, b.x, b.y);
-	glBindBuffer(GL_ARRAY_BUFFER, lineVertexBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(F32)* 4, &points[0]);
-	glDrawArrays(GL_LINES, 0, 4);
-	ClearVertexData();
-
-	ClearShaderProgram();
-}
-
-inline void DrawRectangle(Rectangle_2D* rectangle, mat3* PCM, vec4 color)
-{
-	SetShaderProgram(&solidColorQuadProgram);
-	SetPCM(&solidColorQuadProgram, PCM);
-	SetColor(&solidColorQuadProgram, &color);
-	
-	SetVertexData(&texturedQuad);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, texturedQuad.numberOfVertices);
-	ClearVertexData();
-
-	ClearShaderProgram();
-}
-
-inline void DrawCircle(Circle_2D* circle, F32 scale, mat3* PCM, vec4 color)
-{
-	SetShaderProgram(&solidColorCircleInPointProgram);
-	SetPCM(&solidColorCircleInPointProgram, PCM);
-	SetColor(&solidColorCircleInPointProgram, &color);
-	
-	glPointSize(scale * circle->radius * unitCircleSize_px);
-	
-	SetVertexData(&circleInPoint);
-	glDrawArrays(GL_POINTS, 0, 1);
+	DrawAsLines(theGrid.numberOfVertices);
 	ClearVertexData();
 
 	ClearShaderProgram();
@@ -263,36 +132,37 @@ inline void DrawCircle(Circle_2D* circle, F32 scale, mat3* PCM, vec4 color)
 
 inline void DrawTriangle(Triangle_2D* triangle, mat3* PCM, vec4 color)
 {
-	SetShaderProgram(&solidColorQuadProgram);
-	SetPCM(&solidColorQuadProgram, PCM);
-	SetColor(&solidColorQuadProgram, &color);
+	SetShaderProgram(&singleColor2DProgram);
+	SetPCM(&singleColor2DProgram, PCM);
+	SetColor(&singleColor2DProgram, &color);
 	
 	SetVertexData(&equalateralTriangle);
-	glDrawArrays(GL_TRIANGLES, 0, equalateralTriangle.numberOfVertices);
+	DrawAsTriangles(equalateralTriangle.numberOfVertices);
 	ClearVertexData();
 
 	ClearShaderProgram();
 }
 
-inline void DrawCollidable(Collidable_CD2D* collidable, vec4 color, Camera_CD2D* camera)
+inline void DrawCollidable(Collidable_CD2D* collidable, vec4 color, Camera* camera)
 {
-	mat3 P_projection = camera->GetProjectionMatrix();
-	mat3 C_camera = TranslationMatrix(camera->position);
-	mat3 M_model = collidable->transform.LocalToWorldTransform();
-	mat3 PCM = P_projection * inverse(C_camera) * M_model;
-
 	switch (collidable->mode)
 	{
 	case Collidable_CD2D::Mode_Rectangle:
-	DrawRectangle(&collidable->rectangle, &PCM, color);
+	DrawRectangle(collidable->rectangle.halfDim, collidable->transform, color, camera);
 	break;
 
 	case Collidable_CD2D::Mode_Circle:
-	DrawCircle(&collidable->circle, collidable->transform.scale, &PCM, color);
+	DrawCircle(collidable->circle.radius, collidable->transform, color, camera);
 	break;
 
 	case Collidable_CD2D::Mode_Triangle:
-	DrawTriangle(&collidable->triangle, &PCM, color);
+	{
+										   mat3 P_projection = camera->GetProjectionMatrix();
+										   mat3 C_camera = TranslationMatrix(camera->position);
+										   mat3 M_model = collidable->transform.LocalToWorldTransform();
+										   mat3 PCM = P_projection * inverse(C_camera) * M_model;
+										   DrawTriangle(&collidable->triangle, &PCM, color);
+	}
 	break;
 
 	default:
@@ -357,7 +227,6 @@ void UpdateCollidable(Collidable_CD2D* collidable, F32 dt)
 }
 
 
-typedef std::vector<vec2> PointCloud;
 
 PointCloud CreateCollidablePointCloud(Collidable_CD2D* shape)
 {
@@ -752,13 +621,11 @@ inline void UpdateCollisionDetection2DApplet(F32 dt)
 	glViewport(800, 0, 800, 800);
 	DrawGJKVisualization();
 
-	glViewport(0, 0, 1600, 1600);
-	Rectangle_2D sep;
-	mat3 sepPCM = mat3(.005,0,0, 0,1,0, 0,0,1);
-	DrawRectangle(&sep, &sepPCM, seperatorColor);
-	DrawLine(vec2(0, -10), vec2(0, 10), seperatorColor, &camera_CD2D);
+	glViewport(0, 0, 1600, 800);
+	DrawRectangle(vec2(.05, 5), Transform(), seperatorColor, &camera_CD2D);
 }
 
 inline void ShutdownCollisionDetection2DApplet()
 {
+	Destroy(&equalateralTriangle);
 }
