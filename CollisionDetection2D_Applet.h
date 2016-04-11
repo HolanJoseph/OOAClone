@@ -92,11 +92,11 @@ inline void InitializeCollisionDetection2DApplet()
 
 	shape1_CD2D.transform.position = vec2(-0.650137424, 0.198641479);
 	shape1_CD2D.transform.rotationAngle = 28.6177559f;
-	shape1_CD2D.transform.scale = 1.77565324f;
+	shape1_CD2D.transform.scale = vec2(1.77565324f, 1.77565324f);
 
 	shape2_CD2D.transform.position = vec2(-0.866670012, 0.266644627);
 	shape2_CD2D.transform.rotationAngle = 0;
-	shape2_CD2D.transform.scale = 1.67522526f;
+	shape2_CD2D.transform.scale = vec2(1.67522526f, 1.67522526f);
 
 	camera_CD2D.ResizeViewArea(vec2(5,5));
 

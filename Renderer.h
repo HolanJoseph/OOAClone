@@ -5,6 +5,8 @@
 
 #include "DebugAPI.h"
 
+#include "WindowAPI.h"
+
 #include "AssetLoading.h"
 
 #include "Transform.h"
@@ -40,6 +42,11 @@ inline vec4 GetClearColor()
 inline void SetClearColor(vec4 newClearColor)
 {
 	glClearColor(newClearColor.r, newClearColor.g, newClearColor.b, newClearColor.a);
+}
+
+inline void Clear()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
 struct ViewportRectangle
@@ -122,7 +129,7 @@ inline void Initialize(Texture* texture, char* filename)
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &texture->glTextureID);
 	glBindTexture(GL_TEXTURE_2D, texture->glTextureID);
-	glTexStorage2D(GL_TEXTURE_2D, 4, GL_RGBA8, texture->width, texture->height);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, texture->width, texture->height); // 4 is 1????
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture->width, texture->height, GL_RGBA, GL_UNSIGNED_BYTE, textureData.data);
 	free(textureData.data);
 }
@@ -789,7 +796,7 @@ inline void DrawCircle(F32 radius, Transform transform, vec4 color, Camera* came
 	SetPCM(&solidColorCircleInPointProgram, &PCM);
 	SetColor(&solidColorCircleInPointProgram, &color);
 
-	glPointSize(transform.scale * radius * unitCircleSize_px);
+	glPointSize(transform.scale.x * radius * unitCircleSize_px);
 
 	SetVertexData(&circleInPoint);
 	DrawAsPoints(1);
@@ -800,7 +807,7 @@ inline void DrawCircle(F32 radius, Transform transform, vec4 color, Camera* came
 
 
 
-inline void DrawUVRectangle(Texture* texture, Transform transform, vec4 color, Camera* camera)
+inline void DrawUVRectangle(Texture* texture, Transform transform, Camera* camera)
 {
 	mat3 P_projection = camera->GetProjectionMatrix();
 	mat3 C_camera = TranslationMatrix(camera->position);
@@ -819,7 +826,18 @@ inline void DrawUVRectangle(Texture* texture, Transform transform, vec4 color, C
 }
 
 // NOTE: starts from upper left corner
-inline void DrawUVRectangleScreenSpace(Texture* bitmap, vec2 dimensions, vec2 position)
+inline void DrawUVRectangleScreenSpace(Texture* bitmap, vec2 position, vec2 dimensions)
 {
+	vec2 winDim = GetWindowDimensions();
 
+	// Flip y so y increases down(0 at to, height at bottom)
+	position.y = winDim.y - position.y - dimensions.y;
+
+	SetViewport({ position, dimensions });
+	Camera ssCamera;
+	ssCamera.halfDim = vec2(1, 1);
+	ssCamera.position = vec2(0, 0);
+	ssCamera.rotationAngle = 0.0f;
+	ssCamera.scale = 1.0f;
+	DrawUVRectangle(bitmap, Transform(), &ssCamera);
 }

@@ -21,30 +21,51 @@
 #include "CollisionDetection_Visualization.h"
 
 #include "CollisionDetection2D_Applet.h"
-//#include "CollisionDetection3D_Applet.h"
 
+//#define RUN_UNIT_TESTS 1
 
-//#define COLLISION3DAPPLET 1
-#define COLLISION2DAPPLET 1
+//#define COLLISION2DAPPLET 1
+#define GAME 1
 
+Camera camera;
 
+Transform weedTransform;
+Texture weed;
 
-struct Entity
-{
-	Transform transform;
-	Texture sprite;
-};
+Texture sysbar;
+Camera guiCamera;
+Transform guispot;
 
-
-
-U32 numEntities = (10 * 9) + 1;
-Entity* entities;
-Camera  camera;
-U32 linkEntityLocation = numEntities - 1;
+Texture nico;
 
 void InitScene()
 {
-	camera.position = vec2(35, -12.5f);
+	SetWindowTitle("Oracle of Ages Clone");
+	SetWindowDimensions(vec2(600, 540));
+	SetViewport({ vec2(0, 0), vec2(600, 540) });
+	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
+
+	Initialize(&weed, "Assets/x60/weed.bmp");
+	weedTransform = Transform();
+	weedTransform.scale = vec2(.5, .5);
+
+	camera.halfDim = vec2(5, 4);
+	camera.position = vec2(0, 0);
+	camera.rotationAngle = 0.0f;
+	camera.scale = 1.0f;
+
+	Initialize(&sysbar, "Assets/x60/sysBar.bmp");
+	guispot = Transform();
+	guispot.scale = vec2(.5, .5);
+
+	guiCamera.halfDim = vec2(5, .5);
+	guiCamera.position = vec2(0, 0);
+	guiCamera.rotationAngle = 0.0f;
+	guiCamera.scale = 1.0f;
+
+	Initialize(&nico, "Assets/nico.bmp");
+
+	/*camera.position = vec2(35, -12.5f);
 	camera.halfDim = vec2(5, 4.5);
 
 	entities = (Entity*)malloc(sizeof(Entity) * numEntities);
@@ -178,25 +199,27 @@ void InitScene()
 	
 	entities[linkEntityLocation].transform.position = camera.position;
 	entities[linkEntityLocation].transform.scale = .75f;
-	Initialize(&entities[linkEntityLocation].sprite, "Assets/x60/link.bmp");
+	Initialize(&entities[linkEntityLocation].sprite, "Assets/x60/link.bmp");*/
 }
 
 
 bool GameInit()
 {
-	// NOTE: Handle turning on and off unit tests
-	//CollisionTestsRectRect2();
-
+	// Initialize game sub systems.
 	InitializeRenderer();
 
-	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
 
 
-	//InitScene();
-#ifdef COLLISION3DAPPLET
-	InitializeCollisionDetection3DApplet();
-#elif COLLISION2DAPPLET
+#ifdef RUN_UNIT_TESTS
+	CollisionTestsRectRect2();
+#endif
+	
+
+	// Dispatch applet type.
+#ifdef COLLISION2DAPPLET
 	InitializeCollisionDetection2DApplet();
+#elif GAME
+	InitScene();
 #endif
 
 	return true;
@@ -205,20 +228,50 @@ bool GameInit()
 
 
 
+void UpdateGamestate_PrePhysics(F32 dt)
+{
+}
 
+void UpdateGamestate_PostPhysics(F32 dt)
+{
+	SetViewport({ vec2(0, 0), vec2(600, 480) });
+	for (F32 i = -camera.halfDim.x + .5; i < camera.halfDim.x; ++i)
+	{
+		for (F32 j = -camera.halfDim.y + .5; j < camera.halfDim.y; ++j)
+		{
+			weedTransform.position = vec2(i, j);
+			DrawUVRectangle(&weed, weedTransform, &camera);
+		}
+	}
+
+	SetViewport({ vec2(0, 480), vec2(600, 60) });
+	for (F32 i = -guiCamera.halfDim.x + .5; i < guiCamera.halfDim.x; ++i)
+	{
+		guispot.position = vec2(i, 0);
+		DrawUVRectangle(&weed, guispot, &guiCamera);
+	}
+
+	DrawUVRectangleScreenSpace(&nico, vec2(13, 42), vec2(60, 230));
+}
 
 void GameUpdate(F32 deltaTime)
 {
-#ifdef COLLISION3DAPPLET
-	UpdateCollisionDetection3DApplet(deltaTime);
-#elif COLLISION2DAPPLET
+#ifdef COLLISION2DAPPLET
 	UpdateCollisionDetection2DApplet(deltaTime);
+#elif GAME
+	Clear();
+	UpdateGamestate_PrePhysics(deltaTime);
+	// something something physics and collision detection
+	UpdateGamestate_PostPhysics(deltaTime);
 #endif
 }
 
 bool GameShutdown()
 {
-	ShutdownRenderer();
+#ifdef COLLISION2DAPPLET
+	ShutdownCollisionDetection2DApplet();
+#endif
 
+	ShutdownRenderer();
 	return true;
 }

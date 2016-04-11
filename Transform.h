@@ -7,18 +7,18 @@ struct Transform
 {
 	vec2 position;
 	F32  rotationAngle;
-	F32  scale;
+	vec2  scale;
 
 	Transform()
 	{
 		position = vec2(0, 0);
 		rotationAngle = 0;
-		scale = 1;
+		scale = vec2(1,1);
 	}
 
 	mat3 LocalToWorldTransform()
 	{
-		mat3 result = TranslationMatrix(position) * RotationMatrix_2D(rotationAngle) * ScaleMatrix(vec2(scale, scale));
+		mat3 result = TranslationMatrix(position) * RotationMatrix_2D(rotationAngle) * ScaleMatrix(scale);
 		return result;
 	}
 
