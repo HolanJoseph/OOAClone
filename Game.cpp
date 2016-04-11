@@ -32,11 +32,9 @@ Camera camera;
 Transform weedTransform;
 Texture weed;
 
+Texture xthing;
 Texture sysbar;
-Camera guiCamera;
-Transform guispot;
 
-Texture nico;
 
 void InitScene()
 {
@@ -55,15 +53,8 @@ void InitScene()
 	camera.scale = 1.0f;
 
 	Initialize(&sysbar, "Assets/x60/sysBar.bmp");
-	guispot = Transform();
-	guispot.scale = vec2(.5, .5);
 
-	guiCamera.halfDim = vec2(5, .5);
-	guiCamera.position = vec2(0, 0);
-	guiCamera.rotationAngle = 0.0f;
-	guiCamera.scale = 1.0f;
-
-	Initialize(&nico, "Assets/nico.bmp");
+	Initialize(&xthing, "Assets/xthing.bmp");
 
 	/*camera.position = vec2(35, -12.5f);
 	camera.halfDim = vec2(5, 4.5);
@@ -244,14 +235,13 @@ void UpdateGamestate_PostPhysics(F32 dt)
 		}
 	}
 
-	SetViewport({ vec2(0, 480), vec2(600, 60) });
-	for (F32 i = -guiCamera.halfDim.x + .5; i < guiCamera.halfDim.x; ++i)
+	vec2 winDim = GetWindowDimensions();
+	for (size_t i = 0; i < winDim.x; i += sysbar.width)
 	{
-		guispot.position = vec2(i, 0);
-		DrawUVRectangle(&weed, guispot, &guiCamera);
+		DrawUVRectangleScreenSpace(&sysbar, vec2(i, 0), vec2(sysbar.width, sysbar.height));
 	}
-
-	DrawUVRectangleScreenSpace(&nico, vec2(13, 42), vec2(60, 230));
+	
+	DrawUVRectangleScreenSpace(&xthing, vec2(100, 100), vec2(xthing.width, xthing.height));
 }
 
 void GameUpdate(F32 deltaTime)

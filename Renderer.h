@@ -716,6 +716,9 @@ inline void InitializeRenderer()
 	const size_t tqiNumIndices = 6;
 	U32 tqiIndices[tqiNumIndices] = { 0, 1, 2, 0, 2, 3 };
 	Initialize(&texturedQuad, tqiPositions, tqiUVs, tqNumVertices, tqiIndices, tqiNumIndices);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 inline void ShutdownRenderer()
