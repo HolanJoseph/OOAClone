@@ -14,6 +14,61 @@
 
 
 
+inline F32 GetPointSize()
+{
+	F32 result;
+
+	glGetFloatv(GL_POINT_SIZE, &result);
+
+	return result;
+}
+
+inline void SetPointSize(F32 newPointSize)
+{
+	glPointSize(newPointSize);
+}
+
+inline vec4 GetClearColor()
+{
+	F32 clearColor[4];
+	glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
+
+	vec4 result = vec4(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+	return result;
+}
+
+inline void SetClearColor(vec4 newClearColor)
+{
+	glClearColor(newClearColor.r, newClearColor.g, newClearColor.b, newClearColor.a);
+}
+
+struct ViewportRectangle
+{
+	vec2 offset;
+	vec2 dimensions;
+};
+inline ViewportRectangle GetViewport()
+{
+	I32 vp[4];
+	glGetIntegerv(GL_VIEWPORT, vp);
+
+	ViewportRectangle result;
+
+	result.offset = vec2(vp[0], vp[1]);
+	result.dimensions = vec2(vp[2], vp[3]);
+
+	return result;
+}
+
+inline void SetViewport(ViewportRectangle newViewport)
+{
+	glViewport(newViewport.offset.x, newViewport.offset.y, newViewport.dimensions.x, newViewport.dimensions.y);
+}
+
+
+
+
+
 struct Camera
 {
 	vec2 halfDim;
@@ -743,7 +798,28 @@ inline void DrawCircle(F32 radius, Transform transform, vec4 color, Camera* came
 	ClearShaderProgram();
 }
 
-inline void DrawText()
+
+
+inline void DrawUVRectangle(Texture* texture, Transform transform, vec4 color, Camera* camera)
+{
+	mat3 P_projection = camera->GetProjectionMatrix();
+	mat3 C_camera = TranslationMatrix(camera->position);
+	mat3 M_model = transform.LocalToWorldTransform(); /** ScaleMatrix(vec2(texture->width / 1600.0f, texture->height/ 800.0f));*/ // NOTE: This is screen dimensions
+	mat3 PCM = P_projection * inverse(C_camera) * M_model;
+
+	SetShaderProgram(&uvMapped2DProgram);
+	SetPCM(&uvMapped2DProgram, &PCM);
+	SetSprite(&uvMapped2DProgram, texture->glTextureID);
+
+	SetVertexData(&texturedQuad);
+	DrawAsTrianglesIndexed(texturedQuad.numberOfIndices);
+	ClearVertexData();
+
+	ClearShaderProgram();
+}
+
+// NOTE: starts from upper left corner
+inline void DrawUVRectangleScreenSpace(Texture* bitmap, vec2 dimensions, vec2 position)
 {
 
 }

@@ -16,6 +16,7 @@
 #include "Types.h"
 #include "Math.h"
 
+#include "WindowAPI.h"
 #include "DebugAPI.h"
 #include "InputAPI.h"
 
@@ -78,6 +79,9 @@ bool			controllingShape1_CD2D;
 
 inline void InitializeCollisionDetection2DApplet()
 {
+	SetWindowTitle("2D Collision Detection Applet");
+	SetWindowDimensions(vec2(1600, 800));
+
 	gridColor = vec4(0.29f, 0.29f, 0.29f, 1.0f);
 	backgroundColor = vec4(0.22f, 0.22f, 0.22f, 1.0f);
 	xAxisColor = vec4(1, 0, 0, 1);
@@ -649,14 +653,14 @@ inline void UpdateCollisionDetection2DApplet(F32 dt)
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	//         x  y  x    y
-	glViewport(0, 0, 800, 800);
+
+	SetViewport({ vec2(0, 0), vec2(800, 800) });
 	DrawCollidablesVisualization();
 
-	glViewport(800, 0, 800, 800);
+	SetViewport({vec2(800, 0), vec2(800, 800)});
 	DrawGJKVisualization();
 
-	glViewport(0, 0, 1600, 800);
+	SetViewport({vec2(0, 0), vec2(1600, 800)});
 	DrawRectangle(vec2(.05, 5), Transform(), seperatorColor, &camera_CD2D);
 }
 

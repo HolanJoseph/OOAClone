@@ -189,7 +189,8 @@ bool GameInit()
 
 	InitializeRenderer();
 
-	glClearColor(0.32f, 0.18f, 0.66f, 0.0f);
+	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
+
 
 	//InitScene();
 #ifdef COLLISION3DAPPLET

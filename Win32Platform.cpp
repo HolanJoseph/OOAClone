@@ -20,6 +20,7 @@
 
 
 // NOTE: Functions from these files must be implemented in this file
+#include "WindowAPI.h"
 #include "InputAPI.h"
 #include "FileAPI.h"
 #include "DebugAPI.h"
@@ -536,6 +537,72 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	ReleaseDC(windowHandle, windowDC);
 
 	return 0;
+}
+
+
+
+
+
+
+/*
+	WINDOW API IMPLEMENTATION
+ */
+vec2 GetWindowDimensions()
+{
+	vec2 result;
+
+	RECT windowRectangle;
+	GetClientRect( windowHandle,&windowRectangle);
+
+	result.x = (F32)(windowRectangle.right - windowRectangle.left);
+	result.y = (F32)(windowRectangle.bottom - windowRectangle.top);
+
+	return result;
+}
+
+// NOTE: FIND AND END WHOEVER CAME UP WITH AND DOCUMENTED THIS TRASHCAN API
+void SetWindowDimensions(vec2 dimensions)
+{
+	WINDOWINFO windowInfo;
+	GetWindowInfo(windowHandle, &windowInfo);
+
+	RECT curPos;
+	GetWindowRect(windowHandle, &curPos);
+
+	RECT newDimensions = {0};
+	newDimensions.right = dimensions.x;
+	newDimensions.bottom = dimensions.y;
+	AdjustWindowRect(&newDimensions, windowInfo.dwStyle, false);
+	
+	vec2 d;
+	d.x = newDimensions.right - newDimensions.left;
+	d.y = newDimensions.bottom - newDimensions.top;
+
+	SetWindowPos(
+		windowHandle,
+		NULL,
+		curPos.left,
+		curPos.top,
+		d.x,
+		d.y,
+		NULL
+		);
+
+}
+
+char* GetWindowTitle()
+{
+#define TitleMaxLength 256
+	char* result = (char*)malloc(sizeof(char) * TitleMaxLength);
+
+	GetWindowText( windowHandle, result, TitleMaxLength);
+
+	return result;
+}
+
+void SetWindowTitle(char* newTitle)
+{
+	SetWindowText( windowHandle, newTitle);
 }
 
 
