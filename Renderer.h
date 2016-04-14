@@ -667,6 +667,24 @@ BasicShaderProgram2D singleColor3DProgram;
 
 #define unitCircleSize_px 160.0f
 
+inline vec2 WorldPointToScreenSpace(vec2 p, Camera* camera)
+{
+	vec2 result;
+
+	mat3 P_projection = camera->GetProjectionMatrix();
+	mat3 C_camera = TranslationMatrix(camera->position);
+	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1); // NOTE: again this can totally be dropped
+	mat3 PCM = P_projection * inverse(C_camera) * M_model;
+	vec3 p3 = vec3(p.x, p.y, 1.0f);
+	vec2 pCamera = vec2(PCM * p3);
+
+	vec2 window = GetWindowDimensions();
+
+	result.x = (pCamera.x + 1) * (window.x / 2.0f);
+	result.y = -((pCamera.y + 1) * (window.y / 2.0f));
+	return result;
+}
+
 inline void InitializeRenderer()
 {
 	Initialize(&uvMapped2DProgram, "uvMapped2D.vert", "uvMapped2D.frag");
@@ -810,11 +828,31 @@ inline void DrawCircle(F32 radius, Transform transform, vec4 color, Camera* came
 
 
 
+// World Space
+// - offset == outset
+// + offset == inset
+inline void DrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, Camera* camera, F32 offset = 0.0f)
+{
+	upperLeft.x += offset;
+	upperLeft.y -= offset;
+	
+	dimensions.x -= offset * 2;
+	dimensions.y -= offset * 2;
+
+	vec2 x = vec2(dimensions.x, 0);
+	vec2 y = vec2(0, -dimensions.y);
+	vec2 xy = vec2(dimensions.x, -dimensions.y);
+	DrawLine(upperLeft, upperLeft + x, color, camera);
+	DrawLine(upperLeft, upperLeft + y, color, camera);
+	DrawLine(upperLeft + y, upperLeft + xy, color, camera);
+	DrawLine(upperLeft + x, upperLeft + xy, color, camera);
+}
+
 inline void DrawUVRectangle(Texture* texture, Transform transform, Camera* camera)
 {
 	mat3 P_projection = camera->GetProjectionMatrix();
 	mat3 C_camera = TranslationMatrix(camera->position);
-	mat3 M_model = transform.LocalToWorldTransform(); /** ScaleMatrix(vec2(texture->width / 1600.0f, texture->height/ 800.0f));*/ // NOTE: This is screen dimensions
+	mat3 M_model = transform.LocalToWorldTransform(); 
 	mat3 PCM = P_projection * inverse(C_camera) * M_model;
 
 	SetShaderProgram(&uvMapped2DProgram);
@@ -828,9 +866,18 @@ inline void DrawUVRectangle(Texture* texture, Transform transform, Camera* camer
 	ClearShaderProgram();
 }
 
+inline void DrawSprite(Texture* texture, vec2 spriteOffset, Transform transform, Camera* camera)
+{
+	transform.position += spriteOffset;
+	transform.scale /= 2.0f;
+	DrawUVRectangle(texture, transform, camera);
+}
+
 // NOTE: starts from upper left corner
 inline void DrawUVRectangleScreenSpace(Texture* bitmap, vec2 position, vec2 dimensions)
 {
+	ViewportRectangle prevViewport = GetViewport();
+
 	vec2 winDim = GetWindowDimensions();
 
 	// Flip y so y increases down(0 at to, height at bottom)
@@ -843,4 +890,6 @@ inline void DrawUVRectangleScreenSpace(Texture* bitmap, vec2 position, vec2 dime
 	ssCamera.rotationAngle = 0.0f;
 	ssCamera.scale = 1.0f;
 	DrawUVRectangle(bitmap, Transform(), &ssCamera);
+
+	SetViewport(prevViewport);
 }
