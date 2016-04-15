@@ -34,11 +34,82 @@ struct Entity
 	Transform transform;
 
 	// Renderable
-	Texture sprite;
 	vec2 spriteOffset;
+
+	Texture sprite;
+	Texture* sprites;
+
+	bool spriteIsAnimated;
+	U32 numberOfFrames = 4;
+	F32 animationTime = 2.0;
+	F32 elapsedTime = 0;
 };
 typedef std::vector<Entity> Entities;
 Entities entities;
+
+inline void InitializeAnimatedSprite(Texture** sprites, U32 numberOfSprites, char* spritesFolder)
+{
+	*sprites = (Texture*)malloc(sizeof(Texture) * numberOfSprites);
+
+	size_t pathLength = 0;
+	char* path = spritesFolder;
+	while (*path)
+	{
+		++pathLength;
+		path = path + 1;
+	}
+
+	size_t filenameLength = 7;
+	size_t newLength = pathLength + filenameLength;
+	
+	char* newPath = (char*)malloc(sizeof(char) * newLength);
+	for (size_t i = 0; i < pathLength; ++i)
+	{
+		newPath[i] = spritesFolder[i];
+	}
+
+	char** files;
+	char fileType[] = ".bmp";
+	size_t fileTypeLength = 5;
+	files = (char**)malloc(sizeof(char*) * numberOfSprites);
+	for (size_t i = 0; i < numberOfSprites; ++i)
+	{
+		files[i] = (char*)malloc(sizeof(char)* filenameLength);
+
+		char* iAsString = I32ToString(i);
+		size_t c = 0;
+		while (iAsString[c])
+		{
+			files[i][c] = iAsString[c];
+			++c;
+		}
+		free(iAsString);
+		
+		for (size_t j = 0; j < fileTypeLength; ++j)
+		{
+			files[i][c + j] = fileType[j];
+		}
+	}
+
+	for (size_t x = 0; x < numberOfSprites; ++x)
+	{
+		size_t i = 0;
+		for (; i < newLength && files[x][i]; ++i)
+		{
+			newPath[pathLength + i] = files[x][i];
+		}
+		newPath[pathLength + i] = '\0';
+
+		Initialize((*sprites) + x, newPath);
+	}
+
+	for (size_t i = 0; i < numberOfSprites; ++i)
+	{
+		free(files[i]);
+	}
+	free(files);
+	free(newPath);
+}
 
 struct Chunk
 {
@@ -1002,6 +1073,12 @@ inline void InitChunks()
 
 }
 
+const U32 numberOfFrames = 4;
+F32 animationTime = 2.0;
+F32 elapsedTime = 0;
+Texture* animatedWater;
+Entity te;
+
 void InitScene()
 {
 	SetWindowTitle("Oracle of Ages Clone");
@@ -1048,441 +1125,12 @@ void InitScene()
 		}
 	}
 
-
-	
-
-	/*Texture tex;
-	Transform trans;
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/MermaidFountain.bmp");
-	trans.position = vec2(0, 4);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(1.5, .5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(1.5, -.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(3.5, .5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(3.5, -.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-.5, 1.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(.5, 1.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(1.5, 1.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-1.5, -.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-1.5, .5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-1.5, 1.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(5, 0);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(7, 0);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(6, -1);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(4, -2);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(4, -4);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(4, -6);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(4, -8);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(5, -9);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(6, -3);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(6, -5);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(6, -7);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(7, -8);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WeedPres.bmp");
-	trans.position = vec2(6.5, -9.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(11.5, .5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(11.5, -.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(8.5, .5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PillarPres.bmp");
-	trans.position = vec2(8.5, -.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(13, 0);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(14, -1);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(14, -3);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(14, -5);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(14, -7);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(14, -9);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(14, -11);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(14, -13);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(13, -8);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/PresTree.bmp");
-	trans.position = vec2(15, -14);
-	trans.scale = vec2(1, 1);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WeedPres.bmp");
-	trans.position = vec2(12.5, -9.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WeedPres.bmp");
-	trans.position = vec2(12.5, -10.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WeedPres.bmp");
-	trans.position = vec2(12.5, -11.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WeedPres.bmp");
-	trans.position = vec2(12.5, -12.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/BoulderPres.bmp");
-	trans.position = vec2(11.5, -14.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(.5, -14.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(1.5, -14.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(1.5, -15.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(1.5, -16.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-1.5, -14.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-2.5, -14.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-2.5, -15.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-2.5, -16.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-2.5, -17.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-1.5, -17.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-1.5, -18.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-1.5, -19.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(-.5, -19.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(.5, -19.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	Initialize(&tex, "Assets/x60/Objects/WaterPylon.bmp");
-	trans.position = vec2(.5, -20.5);
-	trans.scale = vec2(.5);
-	entities.push_back({ trans, tex });
-
-	/*camera.position = vec2(35, -12.5f);
-	camera.halfDim = vec2(5, 4.5);
-
-	entities = (Entity*)malloc(sizeof(Entity) * numEntities);
-
-	char* tileFilenames[] = {
-		// System Bar
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-		"Assets/x60/sysBar.bmp",
-
-		// row 1
-		"Assets/x60/treeLowRight.bmp",
-		"Assets/x60/treeLowLeft.bmp",
-		"Assets/x60/treeLowRight.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/greenFringeBL.bmp",
-		"Assets/x60/green.bmp",
-		"Assets/x60/greenFringeR.bmp",
-		"Assets/x60/treeLowLeft.bmp",
-		"Assets/x60/treeLowRight.bmp",
-
-		// row 2
-		"Assets/x60/treeHighRight.bmp",
-		"Assets/x60/greenFringeUL.bmp",
-		"Assets/x60/greenFringeU.bmp",
-		"Assets/x60/greenFringeUR.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/greenFringeL.bmp",
-		"Assets/x60/greenFringeR.bmp",
-		"Assets/x60/treeHighLeft.bmp",
-		"Assets/x60/treeHighRight.bmp",
-
-		// row 3
-		"Assets/x60/treeLowRight.bmp",
-		"Assets/x60/greenFringeL.bmp",
-		"Assets/x60/greenFlowers.bmp",
-		"Assets/x60/greenFringeR.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/greenFringeUL.bmp",
-		"Assets/x60/greenWeeds.bmp",
-		"Assets/x60/greenFringeBR.bmp",
-		"Assets/x60/treeLowLeft.bmp",
-		"Assets/x60/treeLowRight.bmp",
-		
-		// row 4
-		"Assets/x60/treeHighRight.bmp",
-		"Assets/x60/greenFringeBL.bmp",
-		"Assets/x60/greenFringeB.bmp",
-		"Assets/x60/greenWeeds.bmp",
-		"Assets/x60/greenFringeU.bmp",
-		"Assets/x60/green.bmp",
-		"Assets/x60/greenFringeBR.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/treeHighLeft.bmp",
-		"Assets/x60/treeHighRight.bmp",
-		
-		// row 5
-		"Assets/x60/treeLowRight.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/greenFringeL.bmp",
-		"Assets/x60/green.bmp",
-		"Assets/x60/greenFringeR.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/treeLowLeft.bmp",
-		"Assets/x60/treeLowRight.bmp",
-
-		// row 6
-		"Assets/x60/treeHighRight.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/greenFringeUL.bmp",
-		"Assets/x60/green.bmp",
-		"Assets/x60/greenFlowers.bmp",
-		"Assets/x60/greenFringeR.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/treeHighLeft.bmp",
-		"Assets/x60/treeHighRight.bmp",
-
-		// row 7
-		"Assets/x60/treeLowRight.bmp",
-		"Assets/x60/yellow.bmp",
-		"Assets/x60/greenFringeBL.bmp",
-		"Assets/x60/greenFringeB.bmp",
-		"Assets/x60/greenFringeB.bmp",
-		"Assets/x60/greenFringeBR.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/weed.bmp",
-		"Assets/x60/treeLowLeft.bmp",
-		"Assets/x60/treeLowRight.bmp",
-
-		// row 8
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-		"Assets/x60/rails.bmp",
-	};
-
-	for (U32 j = 0; j < 9; ++j)
-	{
-		for (U32 i = 0; i < 10; ++i)
-		{
-			U32 entityLocation = 10 * j + i;
-
-			vec2 pos(30.5f + i, -8.5f - j);
-			char* filename = tileFilenames[entityLocation];
-
-			entities[entityLocation].transform.position = pos;
-			entities[entityLocation].transform.scale = 1.0f;
-
-			Initialize(&entities[entityLocation].sprite, filename);
-		}
-	}
-
-	
-	entities[linkEntityLocation].transform.position = camera.position;
-	entities[linkEntityLocation].transform.scale = .75f;
-	Initialize(&entities[linkEntityLocation].sprite, "Assets/x60/link.bmp");*/
+	InitializeAnimatedSprite(&animatedWater, numberOfFrames, "Assets/x60/Objects/water_Deep/");
+	te.transform.position = entities.back().transform.position;
+	te.spriteIsAnimated = true;
+	te.numberOfFrames = 4;
+	te.animationTime = 2.0f;
+	InitializeAnimatedSprite(&te.sprites, te.numberOfFrames, "Assets/x60/Objects/water_Deep/");
 }
 
 
@@ -1582,6 +1230,14 @@ void UpdateGamestate_PostPhysics(F32 dt)
 	{
 		DrawLine(vec2(posX, yPos), vec2(negX, yPos), gridLineColor, &camera);
 	}
+
+	te.elapsedTime += dt;
+	if (te.elapsedTime >= te.animationTime)
+	{
+		te.elapsedTime -= te.animationTime;
+	}
+	U32 animationFrame = (U32)(te.elapsedTime / (te.animationTime / (F32)te.numberOfFrames));
+	DrawSprite(&te.sprites[animationFrame], te.spriteOffset, te.transform, &camera);
 
 	DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));
 }

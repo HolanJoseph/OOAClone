@@ -23,6 +23,15 @@ inline F32 StringToF32(char* string)
 	return result;
 }
 
+inline char* I32ToString(I32 number)
+{
+	char* result;
+	result = (char*)malloc(sizeof(char) * 64);
+
+	result = itoa(number, result, 10);
+	return result;
+}
+
 inline char** SplitStringOnCharacter(char* string, size_t stringLength, char splitCharacter, U64* out_numberOfSplits, U64** out_lineLengths)
 {
 	char** stringComponents = (char**)malloc(sizeof(char*) * stringLength);
