@@ -58,15 +58,18 @@ inline void InitializeAnimatedSprite(Texture** sprites, U32 numberOfSprites, cha
 		++pathLength;
 		path = path + 1;
 	}
-
+	
 	size_t filenameLength = 7;
-	size_t newLength = pathLength + filenameLength;
+	size_t newLength = pathLength + 1 + filenameLength;
 	
 	char* newPath = (char*)malloc(sizeof(char) * newLength);
 	for (size_t i = 0; i < pathLength; ++i)
 	{
 		newPath[i] = spritesFolder[i];
 	}
+
+	newPath[pathLength] = '/';
+	++pathLength;
 
 	char** files;
 	char fileType[] = ".bmp";
@@ -1073,10 +1076,6 @@ inline void InitChunks()
 
 }
 
-const U32 numberOfFrames = 4;
-F32 animationTime = 2.0;
-F32 elapsedTime = 0;
-Texture* animatedWater;
 Entity te;
 
 void InitScene()
@@ -1125,12 +1124,11 @@ void InitScene()
 		}
 	}
 
-	InitializeAnimatedSprite(&animatedWater, numberOfFrames, "Assets/x60/Objects/water_Deep/");
 	te.transform.position = entities.back().transform.position;
 	te.spriteIsAnimated = true;
 	te.numberOfFrames = 4;
 	te.animationTime = 2.0f;
-	InitializeAnimatedSprite(&te.sprites, te.numberOfFrames, "Assets/x60/Objects/water_Deep/");
+	InitializeAnimatedSprite(&te.sprites, te.numberOfFrames, "Assets/x60/Objects/water_Deep");
 }
 
 
