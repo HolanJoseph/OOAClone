@@ -17,6 +17,7 @@
 #include "CollisionDetection2D.h"
 
 #include "CollisionDetection_Tests.h"
+#include "StringAPI_Tests.h"
 
 #include "CollisionDetection_Visualization.h"
 
@@ -118,6 +119,20 @@ struct Chunk
 {
 	vec2 position;
 
+	/*
+	enum CameraStyle
+	{
+		CS_Static,
+		CS_Scolling
+	};
+
+	enum CameraView
+	{
+		VA_TopDown,
+		VA_Side
+	};
+	*/
+
 	Entities entities;
 };
 const size_t numberOfHorizontalChunks = 14;
@@ -129,8 +144,187 @@ Chunks chunks;
 
 Camera camera;
 
-Texture weed;
 Texture guiPanel;
+Entity te;
+
+
+struct SpriteFileTableLink
+{
+	char* k;
+	char* v;
+
+	SpriteFileTableLink* next;
+};
+
+struct SpriteFileTable
+{
+	U32 numberOfIndices;
+	SpriteFileTableLink* table;
+};
+
+inline void Initialize(SpriteFileTable* sft, U32 numberOfIndices)
+{
+	sft->numberOfIndices = numberOfIndices;
+	sft->table = (SpriteFileTableLink*)malloc(sizeof(SpriteFileTableLink)* numberOfIndices);
+
+	for (size_t i = 0; i < numberOfIndices; ++i)
+	{
+		sft->table[i] = { 0 };
+	}
+}
+
+inline U32 SpriteFileTable_HashFunction(char* key, U32 numberOfIndices)
+{
+	U32 hash = 0;
+
+	char* keyI = key;
+	while (*keyI)
+	{
+		++keyI;
+		// NOTE: How is this better ????
+		//result += (U32)*keyI % numberOfIndices;
+		hash = (31 * hash + (*keyI)) % numberOfIndices;
+	}
+
+	return hash;
+}
+
+inline char* GetValue(SpriteFileTable* sft, char* key)
+{
+	char* result = NULL;
+
+	// NOTE: How is this better?
+	U32 i = (SpriteFileTable_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
+	SpriteFileTableLink* l = &sft->table[i];
+
+	if (l->k == NULL)
+	{
+		return result;
+	}
+
+	while (l)
+	{
+		// if key and l->key match up to key length
+		char* k = key;
+		char* lk = l->k;
+		bool match = true;
+		while (*k && *lk)
+		{
+			if (*k != *lk)
+			{
+				match = false;
+				break;
+			}
+
+			++k;
+			++lk;
+		}
+
+		// Make sure lk is not longer than k
+		if (match && (*k != NULL || *lk != NULL))
+		{
+			match = false;
+		}
+
+		if (match)
+		{
+			result = l->v;
+			break;
+		}
+
+		l = l->next;
+	}
+
+	return result;
+}
+
+inline void AddKVPair(SpriteFileTable* sft, char* key, char* value)
+{
+	size_t keyLength = 0;
+	char* keyI = key;
+	while (*keyI)
+	{
+		++keyI;
+		++keyLength;
+	}
+	char* keyCopy = (char*)malloc(sizeof(char) * (keyLength + 1));
+	for (size_t i = 0; i < keyLength; ++i)
+	{
+		keyCopy[i] = key[i];
+	}
+	keyCopy[keyLength] = '\0';
+
+	size_t valueLength = 0;
+	char* valueI = value;
+	while (*valueI)
+	{
+		++valueI;
+		++valueLength;
+	}
+	char* valueCopy = (char*)malloc(sizeof(char) * (valueLength + 1));
+	for (size_t i = 0; i < valueLength; ++i)
+	{
+		valueCopy[i] = value[i];
+	}
+	valueCopy[valueLength] = '\0';
+
+	if (GetValue(sft, key) == NULL)
+	{
+
+		U32 i = (SpriteFileTable_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
+		if (sft->table[i].k == NULL)
+		{
+			sft->table[i].k = keyCopy;
+			sft->table[i].v = valueCopy;
+			sft->table[i].next = NULL; // NOTE: For the consistency.
+		}
+		else
+		{
+			SpriteFileTableLink* l = &sft->table[i];
+			while (l->next)
+			{
+				l = l->next;
+			}
+			l->next = (SpriteFileTableLink*)malloc(sizeof(SpriteFileTableLink));
+			l->next->k = keyCopy;
+			l->next->v = valueCopy;
+			l->next->next = NULL;
+		}
+
+	}
+}
+
+inline void Destroy(SpriteFileTable* sft)
+{
+	for (size_t i = 0; i < sft->numberOfIndices; ++i)
+	{
+		SpriteFileTableLink* lPrev = NULL;
+		SpriteFileTableLink* l = sft->table[i].next;
+		while (l != NULL)
+		{
+			if (l->k)
+			{
+				free(l->k);
+			}
+			if (l->v)
+			{
+				free(l->v);
+			}
+			lPrev = l;
+			l = l->next;
+
+			free(lPrev);
+		}
+
+		free(sft->table[i].k);
+		free(sft->table[i].v);
+	}
+	free(sft->table);
+
+	sft->table = NULL;
+	sft->numberOfIndices = 0;
+}
+SpriteFileTable spriteFiles;
 
 
 inline void InitChunk_0_0()
@@ -1076,7 +1270,7 @@ inline void InitChunks()
 
 }
 
-Entity te;
+
 
 void InitScene()
 {
@@ -1086,7 +1280,21 @@ void InitScene()
 	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
 
 	Initialize(&guiPanel, "Assets/x60/Objects/guiPanel.bmp");
-	Initialize(&weed, "Assets/x60/weed.bmp");
+
+	
+
+	Initialize(&spriteFiles, 10);
+
+	AddKVPair(&spriteFiles, "weed", "Assets/x60/Objects/weed.bmp");
+	AddKVPair(&spriteFiles, "treePlot", "Assets/x60/Objects/treePlot.bmp");
+	AddKVPair(&spriteFiles, "tree_Generic", "Assets/x60/Objects/tree_generic.bmp");
+	AddKVPair(&spriteFiles, "tree_Palm", "Assets/x60/Objects/tree_Palm.bmp");
+	AddKVPair(&spriteFiles, "tree_Spooky", "Assets/x60/Objects/tree_Spooky.bmp");
+
+	char* w = GetValue(&spriteFiles, "weed");
+	char* tp = GetValue(&spriteFiles, "tree_Palm");
+
+
 
 	camera.halfDim = vec2(5, 4); // *2.0f;
 	camera.position = vec2(0, -10);
@@ -1190,8 +1398,6 @@ void UpdateGamestate_PrePhysics(F32 dt)
 void UpdateGamestate_PostPhysics(F32 dt)
 {
 	SetViewport({ vec2(0, 0), vec2(600, 480) });
-	
-	DrawUVRectangle(&weed, Transform(), &camera);
 
 	for (size_t i = 0; i < entities.size(); ++i)
 	{
@@ -1257,6 +1463,8 @@ bool GameShutdown()
 #ifdef COLLISION2DAPPLET
 	ShutdownCollisionDetection2DApplet();
 #endif
+
+	Destroy(&spriteFiles);
 
 	ShutdownRenderer();
 	return true;
