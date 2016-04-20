@@ -241,6 +241,164 @@ inline bool operator!=(const TextureHandle& lhs, const TextureHandle& rhs)
 	return result;
 }
 
+struct ProcessedTexturesHashLink
+{
+	char* k;
+	TextureHandle v;
+
+	ProcessedTexturesHashLink* next;
+};
+
+struct ProcessedTexturesHash
+{
+	U32 numberOfIndices;
+	ProcessedTexturesHashLink** table;
+
+	size_t length;
+};
+
+inline void Initialize(ProcessedTexturesHash* pth, U32 numberOfIndices)
+{
+	pth->numberOfIndices = numberOfIndices;
+	pth->table = (ProcessedTexturesHashLink**)malloc(sizeof(ProcessedTexturesHashLink*)* numberOfIndices);
+
+	for (size_t i = 0; i < numberOfIndices; ++i)
+	{
+		pth->table[i] = NULL;
+	}
+
+	pth->length = 0;
+}
+
+extern U32 String_HashFunction(char*, U32);
+inline U32 GetKeyIndex(ProcessedTexturesHash* pth, char* key)
+{
+	U32 i = (String_HashFunction(key, pth->numberOfIndices) & 0x7fffffff) % pth->numberOfIndices;
+	return i;
+}
+
+inline TextureHandle GetValue(ProcessedTexturesHash* pth, char* key)
+{
+	TextureHandle result = TextureHandle();
+
+	U32 keyIndex = GetKeyIndex(pth, key);
+	ProcessedTexturesHashLink* curr = pth->table[keyIndex];
+	while (curr != NULL)
+	{
+		bool match = Compare(key, curr->k);
+		if (match)
+		{
+			result = curr->v;
+			break;
+		}
+
+		curr = curr->next;
+	}
+
+	return result;
+}
+
+inline void AddKVPair(ProcessedTexturesHash* pth, char* key, TextureHandle val)
+{
+	char* keyCopy = Copy(key);
+
+	// If the KV pair is not already in the hash table
+	TextureHandle th = GetValue(pth, key);
+	if (th == TextureHandle())
+	{
+		U32 i = (String_HashFunction(key, pth->numberOfIndices) & 0x7fffffff) % pth->numberOfIndices;
+
+		ProcessedTexturesHashLink* newPair = (ProcessedTexturesHashLink*)malloc(sizeof(ProcessedTexturesHashLink));
+		newPair->k = keyCopy;
+		newPair->v = val;
+		newPair->next = NULL;
+
+		ProcessedTexturesHashLink* curr = pth->table[i];
+		if (curr == NULL)
+		{
+			pth->table[i] = newPair;
+		}
+		else
+		{
+			while (curr->next != NULL)
+			{
+				curr = curr->next;
+			}
+			curr->next = newPair;
+		}
+
+
+		++pth->length;
+	}
+}
+
+inline void RemoveKVPair(ProcessedTexturesHash* pth, char* key)
+{
+	U32 i = GetKeyIndex(pth, key);
+	ProcessedTexturesHashLink* prev = NULL;
+	ProcessedTexturesHashLink* curr = pth->table[i];
+	while (curr != NULL)
+	{
+		bool match = Compare(key, curr->k);
+		if (match)
+		{
+			--pth->length;
+			free(curr->k);
+			
+			if (curr == pth->table[i])
+			{
+				// NOTE: Again what to do about TextureHandles
+				pth->table[i] = curr->next;
+			}
+			else
+			{
+				prev->next = curr->next;
+			}
+
+			break;
+		}
+
+		prev = curr;
+		curr = curr->next;
+	}
+}
+
+inline size_t Length(ProcessedTexturesHash* pth)
+{
+	size_t result;
+
+	result = pth->length;
+
+	return result;
+}
+
+inline void Destroy(ProcessedTexturesHash* pth)
+{
+	for (size_t i = 0; i < pth->numberOfIndices; ++i)
+	{
+
+
+		ProcessedTexturesHashLink* curr = pth->table[i];
+		ProcessedTexturesHashLink* next = curr;
+		while (curr != NULL)
+		{
+			free(curr->k);
+			// NOTE: What about the texturehandle?
+				// Don't free it but how do we handle the texture in the pool?
+
+			next = curr->next;
+			free(curr);
+			curr = next;
+		}
+	}
+	free(pth->table);
+
+	pth->table = NULL;
+	pth->numberOfIndices = 0;
+	pth->length = 0;
+}
+
+
 struct PooledTexture
 {
 	bool initialized;
@@ -262,6 +420,7 @@ U32 texturePoolSize;
 U32 numberOfTexturesAllocated;
 PooledTexture* firstFreePooledTexture;
 PooledTexture* texturePool;
+ProcessedTexturesHash processedTextures;
 
 inline void StartUpTexturePool(U32 maxNumberOfTextures)
 {
@@ -277,10 +436,15 @@ inline void StartUpTexturePool(U32 maxNumberOfTextures)
 	}
 	texturePool[texturePoolSize - 1].initialized = false;
 	texturePool[texturePoolSize - 1].nextInFreeList = NULL;
+
+	Initialize(&processedTextures, maxNumberOfTextures / 2);
+
 };
 
 inline void ShutDownTexturePool()
 {
+	Destroy(&processedTextures);
+
 	// NOTE: Instead of raw destroy here should probably call RemoveFromTexturePool
 	for (U32 i = 0; i < texturePoolSize; ++i)
 	{
@@ -322,35 +486,40 @@ inline TextureHandle AddToTexturePool(char* filepath)
 {
 	TextureHandle result;
 
-
-	// If the first free is pointing to NULL all of our texture have been allocated
-	if (firstFreePooledTexture == NULL)
+	TextureHandle th = GetValue(&processedTextures, filepath);
+	if (th != TextureHandle())
 	{
-		// NOTE: FOR NOW just return that we cannot allocate anymore textures
-		//			EVENTUALLY we want to remove the least recently used(or something)
-		//			 texture and allocate the texture.
-		result = TextureHandle(); 
+		result = th;
 	}
 	else
 	{
-		PooledTexture* pt = firstFreePooledTexture;
-		firstFreePooledTexture = pt->nextInFreeList;
+		// If the first free is pointing to NULL all of our texture have been allocated
+		if (firstFreePooledTexture == NULL)
+		{
+			// NOTE: FOR NOW just return that we cannot allocate anymore textures
+			//			EVENTUALLY we want to remove the least recently used(or something)
+			//			 texture and allocate the texture.
+			result = TextureHandle();
+		}
+		else
+		{
+			PooledTexture* pt = firstFreePooledTexture;
+			firstFreePooledTexture = pt->nextInFreeList;
 
-		pt->initialized = true;
-		pt->loadNumber = GenerateLoadNumberTexturePool();
-		pt->poolIndex = pt - texturePool;
-		Initialize(&pt->data, filepath);
-		result = {pt->loadNumber, pt->poolIndex};
+			pt->initialized = true;
+			pt->loadNumber = GenerateLoadNumberTexturePool();
+			pt->poolIndex = pt - texturePool;
+			Initialize(&pt->data, filepath);
+
+			result = { pt->loadNumber, pt->poolIndex };
+			AddKVPair(&processedTextures, filepath, result);
+		}
 	}
-
-
-	// if it is return that texture handle
-	// otherwise add it to the texture pool if it is possible 
-	// otherwise return a null texture handle to the user.
 
 	return result;
 };
 
+// NOTE: Does not remove from processedTextures hash
 inline void RemoveFromTexturePool(TextureHandle th)
 {
 	bool isValid = IsValidTextureHandle(th);
@@ -964,12 +1133,15 @@ inline void InitializeRenderer()
 
 	StartUpTexturePool(10);
 
+
 	AddToTexturePool("Assets/x60/Objects/boulder.bmp");
 	TextureHandle th1 = AddToTexturePool("Assets/x60/Objects/boulder_Dark.bmp");
 	AddToTexturePool("Assets/x60/Objects/boulder_Graveyard.bmp");
 	AddToTexturePool("Assets/x60/Objects/coconut.bmp");
 	AddToTexturePool("Assets/x60/Objects/dirt.bmp");
 	AddToTexturePool("Assets/x60/Objects/dirt_Dark.bmp");
+
+	TextureHandle th4 = AddToTexturePool("Assets/x60/Objects/boulder.bmp");
 
 	RemoveFromTexturePool(th1);
 
@@ -980,12 +1152,12 @@ inline void InitializeRenderer()
 
 	TextureHandle th2 = AddToTexturePool("Assets/x60/Objects/jelly.bmp");
 	TextureHandle th3 = AddToTexturePool("Assets/x60/Objects/pillar.bmp");
-
-	ShutDownTexturePool();
 }
 
 inline void ShutdownRenderer()
 {
+	ShutDownTexturePool();
+
 	Destroy(&uvMapped2DProgram);
 	Destroy(&singleColor2DProgram);
 	Destroy(&solidColorCircleInPointProgram);
