@@ -112,14 +112,14 @@ inline void StringTestsAll()
 
 
 
-	char* f1 = ToString(123.456, 3);
-	char* f2 = ToString(123.456, 2);
-	char* f3 = ToString(123.456, 1);
-	char* f4 = ToString(123.456, 10);
-	char* f5 = ToString(233.007, 4);
-	char* f6 = ToString(233.007, 6);
-	char* f7 = ToString(233.007, 7);
-	char* f8 = ToString(233.007, 10);
+	char* f1 = ToString(123.456f, 3);
+	char* f2 = ToString(123.456f, 2);
+	char* f3 = ToString(123.456f, 1);
+	char* f4 = ToString(123.456f, 10);
+	char* f5 = ToString(233.007f, 4);
+	char* f6 = ToString(233.007f, 6);
+	char* f7 = ToString(233.007f, 7);
+	char* f8 = ToString(233.007f, 10);
 
 	free(f1);
 	free(f2);

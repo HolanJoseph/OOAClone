@@ -134,6 +134,73 @@ inline void Initialize(Texture* texture, char* filename)
 	free(textureData.data);
 }
 
+inline void Initialize(Texture** sprites, char* spritesFolder, U32 numberOfSprites)
+{
+	*sprites = (Texture*)malloc(sizeof(Texture)* numberOfSprites);
+
+	size_t pathLength = 0;
+	char* path = spritesFolder;
+	while (*path)
+	{
+		++pathLength;
+		path = path + 1;
+	}
+
+	size_t filenameLength = 7;
+	size_t newLength = pathLength + 1 + filenameLength;
+
+	char* newPath = (char*)malloc(sizeof(char)* newLength);
+	for (size_t i = 0; i < pathLength; ++i)
+	{
+		newPath[i] = spritesFolder[i];
+	}
+
+	newPath[pathLength] = '/';
+	++pathLength;
+
+	char** files;
+	char fileType[] = ".bmp";
+	size_t fileTypeLength = 5;
+	files = (char**)malloc(sizeof(char*)* numberOfSprites);
+	for (size_t i = 0; i < numberOfSprites; ++i)
+	{
+		files[i] = (char*)malloc(sizeof(char)* filenameLength);
+
+		char* iAsString = I32ToString(i);
+		size_t c = 0;
+		while (iAsString[c])
+		{
+			files[i][c] = iAsString[c];
+			++c;
+		}
+		free(iAsString);
+
+		for (size_t j = 0; j < fileTypeLength; ++j)
+		{
+			files[i][c + j] = fileType[j];
+		}
+	}
+
+	for (size_t x = 0; x < numberOfSprites; ++x)
+	{
+		size_t i = 0;
+		for (; i < newLength && files[x][i]; ++i)
+		{
+			newPath[pathLength + i] = files[x][i];
+		}
+		newPath[pathLength + i] = '\0';
+
+		Initialize((*sprites) + x, newPath);
+	}
+
+	for (size_t i = 0; i < numberOfSprites; ++i)
+	{
+		free(files[i]);
+	}
+	free(files);
+	free(newPath);
+}
+
 inline void Destroy(Texture* texture)
 {
 	glDeleteTextures(1, &texture->glTextureID);
@@ -142,6 +209,163 @@ inline void Destroy(Texture* texture)
 	texture->width = 0;
 	texture->height = 0;
 }
+
+struct TextureHandle
+{
+	U32 loadNumber;
+	U32 poolIndex;
+};
+
+inline bool operator==(const TextureHandle& lhs, const TextureHandle& rhs)
+{
+	bool result = true;
+
+	if (lhs.loadNumber != rhs.loadNumber)
+	{
+		result = false;
+	}
+	if (rhs.poolIndex != rhs.poolIndex)
+	{
+		result = false;
+	}
+
+	return result;
+}
+
+inline bool operator!=(const TextureHandle& lhs, const TextureHandle& rhs)
+{
+	bool result;
+
+	result = !(lhs == rhs);
+
+	return result;
+}
+
+struct PooledTexture
+{
+	bool initialized;
+	union 
+	{
+		struct  
+		{
+			U32 loadNumber;
+			U32 poolIndex;
+
+			Texture data;
+		};
+
+		PooledTexture* nextInFreeList;
+	};
+};
+
+U32 texturePoolSize;
+U32 numberOfTexturesAllocated;
+PooledTexture* firstFreePooledTexture;
+PooledTexture* texturePool;
+
+inline void StartUpTexturePool(U32 maxNumberOfTextures)
+{
+	numberOfTexturesAllocated = 1; // NOTE: 0 will be used as a null state.
+	texturePoolSize = maxNumberOfTextures;
+	texturePool = (PooledTexture*)malloc(sizeof(PooledTexture) * texturePoolSize);
+	firstFreePooledTexture = texturePool;
+
+	for (U32 i = 0; i < texturePoolSize - 1; ++i)
+	{
+		texturePool[i].initialized = false;
+		texturePool[i].nextInFreeList = &texturePool[i + 1];
+	}
+	texturePool[texturePoolSize - 1].initialized = false;
+	texturePool[texturePoolSize - 1].nextInFreeList = NULL;
+};
+
+inline void ShutDownTexturePool()
+{
+	// NOTE: Instead of raw destroy here should probably call RemoveFromTexturePool
+	for (U32 i = 0; i < texturePoolSize; ++i)
+	{
+		Destroy(&texturePool[i].data);
+	}
+	free(texturePool);
+
+	texturePool = NULL;
+	firstFreePooledTexture = NULL;
+	numberOfTexturesAllocated = 0;
+	texturePoolSize = 0;
+};
+
+inline U32 GenerateLoadNumberTexturePool()
+{
+	U32 result;
+
+	result = numberOfTexturesAllocated++;
+
+	return result;
+}
+
+inline bool IsValidTextureHandle(TextureHandle th)
+{
+	Assert(th.loadNumber < numberOfTexturesAllocated);
+	Assert(th.poolIndex < texturePoolSize);
+
+	bool result = false;
+
+	if (texturePool[th.poolIndex].loadNumber == th.loadNumber)
+	{
+		result = true;
+	}
+
+	return result;
+}
+
+inline TextureHandle AddToTexturePool(char* filepath)
+{
+	TextureHandle result;
+
+
+	// If the first free is pointing to NULL all of our texture have been allocated
+	if (firstFreePooledTexture == NULL)
+	{
+		// NOTE: FOR NOW just return that we cannot allocate anymore textures
+		//			EVENTUALLY we want to remove the least recently used(or something)
+		//			 texture and allocate the texture.
+		result = TextureHandle(); 
+	}
+	else
+	{
+		PooledTexture* pt = firstFreePooledTexture;
+		firstFreePooledTexture = pt->nextInFreeList;
+
+		pt->initialized = true;
+		pt->loadNumber = GenerateLoadNumberTexturePool();
+		pt->poolIndex = pt - texturePool;
+		Initialize(&pt->data, filepath);
+		result = {pt->loadNumber, pt->poolIndex};
+	}
+
+
+	// if it is return that texture handle
+	// otherwise add it to the texture pool if it is possible 
+	// otherwise return a null texture handle to the user.
+
+	return result;
+};
+
+inline void RemoveFromTexturePool(TextureHandle th)
+{
+	bool isValid = IsValidTextureHandle(th);
+	if (isValid)
+	{
+		texturePool[th.poolIndex].loadNumber = 0;
+		texturePool[th.poolIndex].poolIndex = 0;
+		Destroy(&texturePool[th.poolIndex].data);
+
+		texturePool[th.poolIndex].initialized = false;
+		texturePool[th.poolIndex].nextInFreeList = firstFreePooledTexture;
+		firstFreePooledTexture = &texturePool[th.poolIndex];
+	}
+};
+
 
 
 
@@ -737,6 +961,27 @@ inline void InitializeRenderer()
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	StartUpTexturePool(10);
+
+	AddToTexturePool("Assets/x60/Objects/boulder.bmp");
+	TextureHandle th1 = AddToTexturePool("Assets/x60/Objects/boulder_Dark.bmp");
+	AddToTexturePool("Assets/x60/Objects/boulder_Graveyard.bmp");
+	AddToTexturePool("Assets/x60/Objects/coconut.bmp");
+	AddToTexturePool("Assets/x60/Objects/dirt.bmp");
+	AddToTexturePool("Assets/x60/Objects/dirt_Dark.bmp");
+
+	RemoveFromTexturePool(th1);
+
+	AddToTexturePool("Assets/x60/Objects/flower_Blue.bmp");
+	AddToTexturePool("Assets/x60/Objects/flower_Red.bmp");
+	AddToTexturePool("Assets/x60/Objects/fountain.bmp");
+	AddToTexturePool("Assets/x60/Objects/gravestone.bmp");
+
+	TextureHandle th2 = AddToTexturePool("Assets/x60/Objects/jelly.bmp");
+	TextureHandle th3 = AddToTexturePool("Assets/x60/Objects/pillar.bmp");
+
+	ShutDownTexturePool();
 }
 
 inline void ShutdownRenderer()

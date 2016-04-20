@@ -30,123 +30,21 @@
 //#define COLLISION2DAPPLET 1
 #define GAME 1
 
-struct Entity
+inline U32 String_HashFunction(char* key, U32 numberOfIndices)
 {
-	Transform transform;
+	U32 hash = 0;
 
-	// Renderable
-	vec2 spriteOffset;
-
-	Texture sprite;
-	Texture* sprites;
-
-	bool spriteIsAnimated;
-	U32 numberOfFrames = 4;
-	F32 animationTime = 2.0;
-	F32 elapsedTime = 0;
-};
-typedef std::vector<Entity> Entities;
-Entities entities;
-
-inline void InitializeAnimatedSprite(Texture** sprites, U32 numberOfSprites, char* spritesFolder)
-{
-	*sprites = (Texture*)malloc(sizeof(Texture) * numberOfSprites);
-
-	size_t pathLength = 0;
-	char* path = spritesFolder;
-	while (*path)
+	char* keyI = key;
+	while (*keyI)
 	{
-		++pathLength;
-		path = path + 1;
-	}
-	
-	size_t filenameLength = 7;
-	size_t newLength = pathLength + 1 + filenameLength;
-	
-	char* newPath = (char*)malloc(sizeof(char) * newLength);
-	for (size_t i = 0; i < pathLength; ++i)
-	{
-		newPath[i] = spritesFolder[i];
+		++keyI;
+		// NOTE: How is this better ????
+		//result += (U32)*keyI % numberOfIndices;
+		hash = (31 * hash + (*keyI)) % numberOfIndices;
 	}
 
-	newPath[pathLength] = '/';
-	++pathLength;
-
-	char** files;
-	char fileType[] = ".bmp";
-	size_t fileTypeLength = 5;
-	files = (char**)malloc(sizeof(char*) * numberOfSprites);
-	for (size_t i = 0; i < numberOfSprites; ++i)
-	{
-		files[i] = (char*)malloc(sizeof(char)* filenameLength);
-
-		char* iAsString = I32ToString(i);
-		size_t c = 0;
-		while (iAsString[c])
-		{
-			files[i][c] = iAsString[c];
-			++c;
-		}
-		free(iAsString);
-		
-		for (size_t j = 0; j < fileTypeLength; ++j)
-		{
-			files[i][c + j] = fileType[j];
-		}
-	}
-
-	for (size_t x = 0; x < numberOfSprites; ++x)
-	{
-		size_t i = 0;
-		for (; i < newLength && files[x][i]; ++i)
-		{
-			newPath[pathLength + i] = files[x][i];
-		}
-		newPath[pathLength + i] = '\0';
-
-		Initialize((*sprites) + x, newPath);
-	}
-
-	for (size_t i = 0; i < numberOfSprites; ++i)
-	{
-		free(files[i]);
-	}
-	free(files);
-	free(newPath);
+	return hash;
 }
-
-struct Chunk
-{
-	vec2 position;
-
-	/*
-	enum CameraStyle
-	{
-		CS_Static,
-		CS_Scolling
-	};
-
-	enum CameraView
-	{
-		VA_TopDown,
-		VA_Side
-	};
-	*/
-
-	Entities entities;
-};
-const size_t numberOfHorizontalChunks = 14;
-const size_t numberOfVerticalChunks = 14;
-const I32 chunkWidth = 10;
-const I32 chunkHeight = 8;
-typedef Chunk Chunks[numberOfHorizontalChunks][numberOfVerticalChunks];
-Chunks chunks;
-
-Camera camera;
-
-Texture guiPanel;
-Entity te;
-
 
 struct SpriteFileTableLink
 {
@@ -173,28 +71,12 @@ inline void Initialize(SpriteFileTable* sft, U32 numberOfIndices)
 	}
 }
 
-inline U32 SpriteFileTable_HashFunction(char* key, U32 numberOfIndices)
-{
-	U32 hash = 0;
-
-	char* keyI = key;
-	while (*keyI)
-	{
-		++keyI;
-		// NOTE: How is this better ????
-		//result += (U32)*keyI % numberOfIndices;
-		hash = (31 * hash + (*keyI)) % numberOfIndices;
-	}
-
-	return hash;
-}
-
 inline char* GetValue(SpriteFileTable* sft, char* key)
 {
 	char* result = NULL;
 
 	// NOTE: How is this better?
-	U32 i = (SpriteFileTable_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
+	U32 i = (String_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
 	SpriteFileTableLink* l = &sft->table[i];
 
 	if (l->k == NULL)
@@ -247,7 +129,7 @@ inline void AddKVPair(SpriteFileTable* sft, char* key, char* value)
 		++keyI;
 		++keyLength;
 	}
-	char* keyCopy = (char*)malloc(sizeof(char) * (keyLength + 1));
+	char* keyCopy = (char*)malloc(sizeof(char)* (keyLength + 1));
 	for (size_t i = 0; i < keyLength; ++i)
 	{
 		keyCopy[i] = key[i];
@@ -261,7 +143,7 @@ inline void AddKVPair(SpriteFileTable* sft, char* key, char* value)
 		++valueI;
 		++valueLength;
 	}
-	char* valueCopy = (char*)malloc(sizeof(char) * (valueLength + 1));
+	char* valueCopy = (char*)malloc(sizeof(char)* (valueLength + 1));
 	for (size_t i = 0; i < valueLength; ++i)
 	{
 		valueCopy[i] = value[i];
@@ -271,7 +153,7 @@ inline void AddKVPair(SpriteFileTable* sft, char* key, char* value)
 	if (GetValue(sft, key) == NULL)
 	{
 
-		U32 i = (SpriteFileTable_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
+		U32 i = (String_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
 		if (sft->table[i].k == NULL)
 		{
 			sft->table[i].k = keyCopy;
@@ -324,7 +206,347 @@ inline void Destroy(SpriteFileTable* sft)
 	sft->table = NULL;
 	sft->numberOfIndices = 0;
 }
+
 SpriteFileTable spriteFiles;
+
+
+
+struct Animation
+{
+	Texture* frames;
+	U32 numberOfFrames;
+	F32 animationTime;
+};
+typedef std::vector<Animation> Animations;
+
+inline void Initialize(Animation* animation, char* animationFolderPath, U32 numberOfFrames, F32 animationTime)
+{
+	Initialize(&animation->frames, animationFolderPath, numberOfFrames);
+	animation->animationTime = animationTime;
+	animation->numberOfFrames = numberOfFrames;
+}
+
+inline void Destroy(Animation* animation)
+{
+	for (size_t i = 0; i < animation->numberOfFrames; ++i)
+	{
+		Destroy(&animation->frames[i]);
+	}
+	animation->numberOfFrames = 0;
+	animation->animationTime = 0;
+}
+
+struct AnimationHashLink
+{
+	char* k;
+	Animation* v;
+};
+
+struct AnimationHash
+{
+	U32 numberOfIndices;
+	AnimationHashLink** table;
+	U32* subListLength;
+
+	size_t length;
+};
+
+inline void Initialize(AnimationHash* ah, U32 numberOfIndices)
+{
+	ah->numberOfIndices = numberOfIndices;
+	ah->table = (AnimationHashLink**)malloc(sizeof(AnimationHashLink*) * numberOfIndices);
+	ah->subListLength = (U32*)malloc(sizeof(U32) * numberOfIndices);
+
+	for (size_t i = 0; i < numberOfIndices; ++i)
+	{
+		ah->table[i] = NULL;
+		ah->subListLength[i] = 0;
+	}
+
+	ah->length = 0;
+}
+
+struct GetKeyIndexResult
+{
+	bool present;
+	U32 i;
+	U32 j;
+};
+inline GetKeyIndexResult GetKeyIndex(AnimationHash* ah, char* key)
+{
+	GetKeyIndexResult result = {false, 0, 0};
+
+	U32 i = (String_HashFunction(key, ah->numberOfIndices) & 0x7fffffff) % ah->numberOfIndices;
+
+	if (ah->subListLength[i] == 0)
+	{
+		return result;
+	}
+
+	for (U32 j = 0; j < ah->subListLength[i]; ++j)
+	{
+		bool match = Compare(key, ah->table[i][j].k);
+		if (match)
+		{
+			result.present = true;
+			result.i = i;
+			result.j = j;
+			break;
+		}
+	}
+
+	return result;
+}
+
+inline Animation* GetValue(AnimationHash* ah, char* key)
+{
+	Animation* result = NULL;
+
+	GetKeyIndexResult keyIndex = GetKeyIndex(ah, key);
+	if (keyIndex.present)
+	{
+		result = ah->table[keyIndex.i][keyIndex.j].v;
+	}
+
+	return result;
+}
+
+inline void AddKVPair(AnimationHash* ah, char* key, Animation* val)
+{
+	char* keyCopy = Copy(key);
+
+	// If the KV pair is not already in the hash table
+	if (GetValue(ah, key) == NULL)
+	{
+		U32 i = (String_HashFunction(key, ah->numberOfIndices) & 0x7fffffff) % ah->numberOfIndices;
+
+		++ah->subListLength[i];
+		AnimationHashLink* newSubList = (AnimationHashLink*)malloc(sizeof(AnimationHashLink) * ah->subListLength[i]);
+		AnimationHashLink* oldSubList = ah->table[i];
+
+		// Copy old hash list to new hash list
+		for (size_t j = 0; j < ah->subListLength[i] - 1; ++j)
+		{
+			newSubList[j] = oldSubList[j];
+		}
+
+		// Add new kv pair to the new hash list
+		newSubList[ah->subListLength[i] - 1].k = keyCopy;
+		newSubList[ah->subListLength[i] - 1].v = val;
+
+		// Delete old hash list
+		ah->table[i] = newSubList;
+		free(oldSubList);
+
+		++ah->length;
+	}
+}
+
+inline void RemoveKVPair(AnimationHash* ah, char* key)
+{
+	GetKeyIndexResult ki = GetKeyIndex(ah, key);
+	if (ki.present)
+	{
+		AnimationHashLink* oldSubList = ah->table[ki.i];
+
+		if (ah->subListLength[ki.i] == 1)
+		{
+			ah->table[ki.i] = NULL;
+		}
+		else
+		{
+			AnimationHashLink* newSubList = (AnimationHashLink*)malloc(sizeof(AnimationHashLink)* (ah->subListLength[ki.i] - 1));
+			for (U32 j = 0, newNext = 0; j < ah->subListLength[ki.i]; ++j)
+			{
+				if (j != ki.j)
+				{
+					newSubList[newNext] = oldSubList[j];
+					++newNext;
+				}
+			}
+			ah->table[ki.i] = newSubList;
+		}
+		free(oldSubList);
+		--ah->subListLength[ki.i];
+	}
+}
+
+inline size_t Length(AnimationHash* ah)
+{
+	size_t result;
+
+	result = ah->length;
+
+	return result;
+}
+
+inline void Destroy(AnimationHash* ah)
+{
+	for (size_t i = 0; i < ah->numberOfIndices; ++i)
+	{
+		for (size_t j = 0; j < ah->subListLength[i]; ++j)
+		{
+			free(ah->table[i][j].k);
+			Destroy(ah->table[i][j].v);
+		}
+		free(ah->table[i]);
+	}
+	free(ah->table);
+
+	ah->table = NULL;
+	ah->numberOfIndices = 0;
+	ah->length = 0;
+}
+
+
+
+struct Entity
+{
+	Transform transform;
+
+	// Renderable
+	vec2 spriteOffset;
+
+	Texture sprite;
+
+	AnimationHash animations;
+	bool isAnimated;
+	bool isAnimationLooped;
+	bool isAnimationPlaying;
+	bool isAnimationReversed;
+	U32 activeAnimationKI_i;
+	U32 activeAnimationKI_j;
+	F32 elapsedTime = 0.0f;
+};
+typedef std::vector<Entity> Entities;
+
+inline void AddSprite(Entity* entity, char* assetName, vec2 offset = vec2(0.0f, 0.0f))
+{
+	Initialize(&entity->sprite, assetName);
+	entity->spriteOffset = offset;
+}
+
+inline void RemoveSprite(Entity* entity)
+{
+	Destroy(&entity->sprite);
+}
+
+inline void AddAnimation(Entity* entity, char* referenceName, char* assetName, U32 numberOfFrames, F32 animationTime)
+{
+	Animation* animation = (Animation*)malloc(sizeof(Animation));
+	char* filePath = GetValue(&spriteFiles, assetName);
+	Initialize(animation, filePath, numberOfFrames, animationTime);
+	AddKVPair(&entity->animations, referenceName, animation);
+	entity->isAnimated = true;
+}
+
+inline void RemoveAnimation(Entity* entity, char* referenceName)//U32 animationIndex)
+{
+	GetKeyIndexResult ki = GetKeyIndex(&entity->animations, referenceName);
+	if (ki.present && ki.i == entity->activeAnimationKI_i && ki.j == entity->activeAnimationKI_j)
+	{
+		entity->isAnimationPlaying = false;
+		entity->isAnimationLooped = false;
+		entity->isAnimationReversed = false;
+		entity->elapsedTime = 0.0f;
+		entity->activeAnimationKI_i = 0;
+		entity->activeAnimationKI_j = 0;
+	}
+
+	Animation* animation = GetValue(&entity->animations, referenceName);
+	Destroy(animation);
+	RemoveKVPair(&entity->animations, referenceName);
+
+
+	if (Length(&entity->animations) == 0)
+	{
+		entity->isAnimated = false;
+	}
+
+}
+
+inline bool StartAnimation(Entity* entity, char* referenceName, bool loopAnimation = true, F32 startTime = 0.0f)
+{
+	GetKeyIndexResult ki = GetKeyIndex(&entity->animations, referenceName);
+	if (ki.present)
+	{
+		entity->activeAnimationKI_i = ki.i;
+		entity->activeAnimationKI_j = ki.j;
+		entity->elapsedTime = 0.0f;
+		entity->isAnimationPlaying = true;
+		return true;
+	}
+
+	return false;
+}
+
+inline void StopAnimation(Entity* entity)
+{
+	entity->isAnimationPlaying = false;
+	entity->isAnimationLooped = false;
+	entity->isAnimationReversed = false;
+	entity->elapsedTime = 0.0f;
+}
+
+inline void PauseAnimation(Entity* entity)
+{
+	entity->isAnimationPlaying = false;
+}
+
+inline void ReverseAnimation(Entity* entity, bool reverse = true)
+{
+	entity->isAnimationReversed = reverse;
+}
+
+inline void SetAnimationTime(Entity* entity, F32 time)
+{
+	F32 animTime = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+	F32 newTime = time - ((I32)(time/animTime) * animTime);
+	entity->elapsedTime = newTime;
+}
+
+// 0 == 0%, 100 == 100%
+inline void SetAnimationTimeAsPercent(Entity* entity, F32 percent)
+{
+	F32 multiplier = (percent / 100.0f) - (I32)(percent / 100.0f);
+	F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+	F32 newTime = multiplier * animationLength;
+	entity->elapsedTime = newTime;
+}
+
+struct Chunk
+{
+	vec2 position;
+
+	/*
+	enum CameraStyle
+	{
+		CS_Static,
+		CS_Scolling
+	};
+
+	enum CameraView
+	{
+		VA_TopDown,
+		VA_Side
+	};
+	*/
+
+	Entities entities;
+};
+const size_t numberOfHorizontalChunks = 14;
+const size_t numberOfVerticalChunks = 14;
+const I32 chunkWidth = 10;
+const I32 chunkHeight = 8;
+typedef Chunk Chunks[numberOfHorizontalChunks][numberOfVerticalChunks];
+
+
+Chunks chunks;
+Entities entities;
+Camera camera;
+Texture guiPanel;
+Entity te;
+
 
 
 inline void InitChunk_0_0()
@@ -746,7 +968,8 @@ inline void InitChunk_0_5()
 	Chunk* chunk = &chunks[0][5];
 
 	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
+	//Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
+	AddSprite(&e, "tree_Generic");
 	e.transform.position = vec2(0, 2);
 	e.transform.scale = vec2(2);
 	chunk->entities.push_back(e);
@@ -1019,8 +1242,6 @@ inline void InitChunk_0_13()
 	Chunk* chunk = &chunks[0][13];
 }
 
-
-
 inline void InitChunk_1_13()
 {
 	Chunk* chunk = &chunks[1][13];
@@ -1291,8 +1512,11 @@ void InitScene()
 	AddKVPair(&spriteFiles, "tree_Palm", "Assets/x60/Objects/tree_Palm.bmp");
 	AddKVPair(&spriteFiles, "tree_Spooky", "Assets/x60/Objects/tree_Spooky.bmp");
 
-	char* w = GetValue(&spriteFiles, "weed");
-	char* tp = GetValue(&spriteFiles, "tree_Palm");
+	AddKVPair(&spriteFiles, "water_Deep", "Assets/x60/Objects/water_Deep");
+	AddKVPair(&spriteFiles, "link_Right", "Assets/x60/Objects/link_Right");
+	AddKVPair(&spriteFiles, "link_Left", "Assets/x60/Objects/link_Left");
+	AddKVPair(&spriteFiles, "link_Up", "Assets/x60/Objects/link_Up");
+	AddKVPair(&spriteFiles, "link_Down", "Assets/x60/Objects/link_Down");
 
 
 
@@ -1315,7 +1539,7 @@ void InitScene()
 
 	InitChunks();
 
-	camera.position = chunks[0][0].position + vec2(chunkWidth / 2.0f, chunkHeight / 2.0f);
+	camera.position = chunks[13][13].position + vec2(chunkWidth / 2.0f, chunkHeight / 2.0f);
 
 	// Add all chunks to entities
 	for (size_t y = 0; y < numberOfVerticalChunks; ++y)
@@ -1332,13 +1556,16 @@ void InitScene()
 		}
 	}
 
-	te.transform.position = entities.back().transform.position;
-	te.spriteIsAnimated = true;
-	te.numberOfFrames = 4;
-	te.animationTime = 2.0f;
-	InitializeAnimatedSprite(&te.sprites, te.numberOfFrames, "Assets/x60/Objects/water_Deep");
-}
+	te.transform.position = entities.back().transform.position - vec2(0,1);
+	Initialize(&te.animations, 1);
+	AddAnimation(&te, "right", "link_Right", 2, 0.33f);
+	AddAnimation(&te, "left", "link_Left", 2, 0.33f);
+	AddAnimation(&te, "up", "link_Up", 2, 0.33f);
+	AddAnimation(&te, "down", "link_Down", 2, 0.33f);
+	StartAnimation(&te, "right");
 
+	RemoveAnimation(&te, "left");
+}
 
 bool GameInit()
 {
@@ -1367,6 +1594,23 @@ bool GameInit()
 
 void UpdateGamestate_PrePhysics(F32 dt)
 {
+	if (GetKeyDown(KeyCode_Left))
+	{
+		StartAnimation(&te, "left");
+	}
+	if (GetKeyDown(KeyCode_Right))
+	{
+		StartAnimation(&te, "right");
+	}
+	if (GetKeyDown(KeyCode_Down))
+	{
+		StartAnimation(&te, "down");
+	}
+	if (GetKeyDown(KeyCode_Up))
+	{
+		StartAnimation(&te, "up");
+	}
+
 	if (GetKeyDown(KeyCode_Equal))
 	{
 		camera.halfDim /= 2.0f;
@@ -1413,7 +1657,7 @@ void UpdateGamestate_PostPhysics(F32 dt)
 			DrawRectangleOutline(chunks[x][y].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(1, 0, 0, 1), &camera);
 		}
 	}
-	DrawRectangleOutline(chunks[1][13].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(0, 1, 0, 1), &camera, .1);
+	DrawRectangleOutline(chunks[1][13].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(0, 1, 0, 1), &camera, .1f);
 
 	// NOTE: Camera space grid, corresponding to tiles
 	F32 initialXPos = camera.position.x - chunkWidth / 2.0f;
@@ -1436,12 +1680,12 @@ void UpdateGamestate_PostPhysics(F32 dt)
 	}
 
 	te.elapsedTime += dt;
-	if (te.elapsedTime >= te.animationTime)
+	if (te.elapsedTime >= te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime)
 	{
-		te.elapsedTime -= te.animationTime;
+		te.elapsedTime -= te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime;
 	}
-	U32 animationFrame = (U32)(te.elapsedTime / (te.animationTime / (F32)te.numberOfFrames));
-	DrawSprite(&te.sprites[animationFrame], te.spriteOffset, te.transform, &camera);
+	U32 animationFrame = (U32)(te.elapsedTime / (te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime / (F32)te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->numberOfFrames));
+	DrawSprite(&te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->frames[animationFrame], te.spriteOffset, te.transform, &camera);
 
 	DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));
 }
