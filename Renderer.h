@@ -422,6 +422,8 @@ PooledTexture* firstFreePooledTexture;
 PooledTexture* texturePool;
 ProcessedTexturesHash processedTextures;
 
+
+
 inline void StartUpTexturePool(U32 maxNumberOfTextures)
 {
 	numberOfTexturesAllocated = 1; // NOTE: 0 will be used as a null state.
@@ -535,6 +537,15 @@ inline void RemoveFromTexturePool(TextureHandle th)
 	}
 };
 
+inline Texture* GetTexture(TextureHandle handle)
+{
+	Texture* result = NULL;
+
+	
+	//result = &texturePool[handle.poolIndex].data;
+
+	return result;
+}
 
 
 

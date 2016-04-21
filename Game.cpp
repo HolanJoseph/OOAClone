@@ -407,7 +407,7 @@ struct Entity
 	// Renderable
 	vec2 spriteOffset;
 
-	Texture sprite;
+	TextureHandle sprite;
 
 	AnimationHash animations;
 	bool isAnimated;
@@ -422,13 +422,17 @@ typedef std::vector<Entity> Entities;
 
 inline void AddSprite(Entity* entity, char* assetName, vec2 offset = vec2(0.0f, 0.0f))
 {
-	Initialize(&entity->sprite, assetName);
+	//Initialize(&entity->sprite, assetName);
+	char* filePath = GetValue(&spriteFiles, assetName);
+	entity->sprite = AddToTexturePool(filePath);
 	entity->spriteOffset = offset;
+	free(filePath);
 }
 
 inline void RemoveSprite(Entity* entity)
 {
-	Destroy(&entity->sprite);
+	//Destroy(&entity->sprite);
+	entity->sprite = TextureHandle();
 }
 
 inline void AddAnimation(Entity* entity, char* referenceName, char* assetName, U32 numberOfFrames, F32 animationTime)
@@ -549,7 +553,7 @@ Entity te;
 
 
 
-inline void InitChunk_0_0()
+/*inline void InitChunk_0_0()
 {
 	Chunk* chunk = &chunks[0][0];
 
@@ -1447,20 +1451,21 @@ inline void InitChunk_11_13()
 
 inline void InitChunk_12_13()
 {
-}
+}*/
 
 inline void InitChunk_13_13()
 {
 	Chunk* chunk = &chunks[13][13];
 
 	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/heartPiece.bmp");
+	//Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/heartPiece.bmp");
+	AddSprite(&chunk->entities[0], "heartPiece");
 	chunk->entities[0].transform.position = vec2(7.5, 4.5);
 }
 
 inline void InitChunks()
 {
-	InitChunk_0_0();
+	/*InitChunk_0_0();
 	InitChunk_0_1();
 	InitChunk_0_2();
 	InitChunk_0_3();
@@ -1486,7 +1491,7 @@ inline void InitChunks()
 	InitChunk_9_13();
 	InitChunk_10_13();
 	InitChunk_11_13();
-	InitChunk_12_13();
+	InitChunk_12_13();*/
 	InitChunk_13_13();
 
 }
@@ -1511,6 +1516,7 @@ void InitScene()
 	AddKVPair(&spriteFiles, "tree_Generic", "Assets/x60/Objects/tree_generic.bmp");
 	AddKVPair(&spriteFiles, "tree_Palm", "Assets/x60/Objects/tree_Palm.bmp");
 	AddKVPair(&spriteFiles, "tree_Spooky", "Assets/x60/Objects/tree_Spooky.bmp");
+	AddKVPair(&spriteFiles, "heartPiece", "Assets/x60/Objects/heartPiece.bmp");
 
 	AddKVPair(&spriteFiles, "water_Deep", "Assets/x60/Objects/water_Deep");
 	AddKVPair(&spriteFiles, "link_Right", "Assets/x60/Objects/link_Right");
@@ -1647,7 +1653,7 @@ void UpdateGamestate_PostPhysics(F32 dt)
 	{
 		// NOTE: sort by x position
 		// NOTE: render higher x first
-		DrawSprite(&entities[i].sprite, entities[i].spriteOffset, entities[i].transform, &camera);
+		DrawSprite(GetTexture(entities[i].sprite), entities[i].spriteOffset, entities[i].transform, &camera);
 	}
 
 	for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
