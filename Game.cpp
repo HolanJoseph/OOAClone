@@ -213,7 +213,7 @@ SpriteFileTable spriteFiles;
 
 struct Animation
 {
-	Texture* frames;
+	TextureHandle* frames;
 	U32 numberOfFrames;
 	F32 animationTime;
 };
@@ -221,7 +221,36 @@ typedef std::vector<Animation> Animations;
 
 inline void Initialize(Animation* animation, char* animationFolderPath, U32 numberOfFrames, F32 animationTime)
 {
-	Initialize(&animation->frames, animationFolderPath, numberOfFrames);
+	animation->frames = (TextureHandle*)malloc(sizeof(TextureHandle)* numberOfFrames);
+
+	char** files;
+	char fileType[] = ".bmp";
+	size_t fileTypeLength = 5;
+	files = (char**)malloc(sizeof(char*)* numberOfFrames);
+	for (size_t i = 0; i < numberOfFrames; ++i)
+	{
+		char* iAsString = ToString(i);
+		files[i] = Concat(iAsString, fileType);
+		free(iAsString);
+	}
+
+	char* slashPath = Concat(animationFolderPath, "/");
+	for (size_t x = 0; x < numberOfFrames; ++x)
+	{
+		char* frameXFullPath = Concat(slashPath, files[x]);
+		TextureHandle frameX = AddToTexturePool(frameXFullPath);
+		free(frameXFullPath);
+
+		animation->frames[x] = frameX;
+	}
+	free(slashPath);
+
+	for (size_t i = 0; i < numberOfFrames; ++i)
+	{
+		free(files[i]);
+	}
+	free(files);
+	
 	animation->animationTime = animationTime;
 	animation->numberOfFrames = numberOfFrames;
 }
@@ -230,8 +259,10 @@ inline void Destroy(Animation* animation)
 {
 	for (size_t i = 0; i < animation->numberOfFrames; ++i)
 	{
-		Destroy(&animation->frames[i]);
+		//RemoveFromTexturePool(animation->frames[i]);
 	}
+	free(animation->frames);
+
 	animation->numberOfFrames = 0;
 	animation->animationTime = 0;
 }
@@ -1458,7 +1489,6 @@ inline void InitChunk_13_13()
 	Chunk* chunk = &chunks[13][13];
 
 	chunk->entities.push_back(Entity());
-	//Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/heartPiece.bmp");
 	AddSprite(&chunk->entities[0], "heartPiece");
 	chunk->entities[0].transform.position = vec2(7.5, 4.5);
 }
@@ -1691,7 +1721,7 @@ void UpdateGamestate_PostPhysics(F32 dt)
 		te.elapsedTime -= te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime;
 	}
 	U32 animationFrame = (U32)(te.elapsedTime / (te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime / (F32)te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->numberOfFrames));
-	DrawSprite(&te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->frames[animationFrame], te.spriteOffset, te.transform, &camera);
+	DrawSprite(GetTexture(te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->frames[animationFrame]), te.spriteOffset, te.transform, &camera);
 
 	DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));
 }

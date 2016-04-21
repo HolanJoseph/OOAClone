@@ -134,72 +134,72 @@ inline void Initialize(Texture* texture, char* filename)
 	free(textureData.data);
 }
 
-inline void Initialize(Texture** sprites, char* spritesFolder, U32 numberOfSprites)
-{
-	*sprites = (Texture*)malloc(sizeof(Texture)* numberOfSprites);
-
-	size_t pathLength = 0;
-	char* path = spritesFolder;
-	while (*path)
-	{
-		++pathLength;
-		path = path + 1;
-	}
-
-	size_t filenameLength = 7;
-	size_t newLength = pathLength + 1 + filenameLength;
-
-	char* newPath = (char*)malloc(sizeof(char)* newLength);
-	for (size_t i = 0; i < pathLength; ++i)
-	{
-		newPath[i] = spritesFolder[i];
-	}
-
-	newPath[pathLength] = '/';
-	++pathLength;
-
-	char** files;
-	char fileType[] = ".bmp";
-	size_t fileTypeLength = 5;
-	files = (char**)malloc(sizeof(char*)* numberOfSprites);
-	for (size_t i = 0; i < numberOfSprites; ++i)
-	{
-		files[i] = (char*)malloc(sizeof(char)* filenameLength);
-
-		char* iAsString = I32ToString(i);
-		size_t c = 0;
-		while (iAsString[c])
-		{
-			files[i][c] = iAsString[c];
-			++c;
-		}
-		free(iAsString);
-
-		for (size_t j = 0; j < fileTypeLength; ++j)
-		{
-			files[i][c + j] = fileType[j];
-		}
-	}
-
-	for (size_t x = 0; x < numberOfSprites; ++x)
-	{
-		size_t i = 0;
-		for (; i < newLength && files[x][i]; ++i)
-		{
-			newPath[pathLength + i] = files[x][i];
-		}
-		newPath[pathLength + i] = '\0';
-
-		Initialize((*sprites) + x, newPath);
-	}
-
-	for (size_t i = 0; i < numberOfSprites; ++i)
-	{
-		free(files[i]);
-	}
-	free(files);
-	free(newPath);
-}
+// inline void Initialize(Texture** sprites, char* spritesFolder, U32 numberOfSprites)
+// {
+// 	*sprites = (Texture*)malloc(sizeof(Texture)* numberOfSprites);
+// 
+// 	size_t pathLength = 0;
+// 	char* path = spritesFolder;
+// 	while (*path)
+// 	{
+// 		++pathLength;
+// 		path = path + 1;
+// 	}
+// 
+// 	size_t filenameLength = 7;
+// 	size_t newLength = pathLength + 1 + filenameLength;
+// 
+// 	char* newPath = (char*)malloc(sizeof(char)* newLength);
+// 	for (size_t i = 0; i < pathLength; ++i)
+// 	{
+// 		newPath[i] = spritesFolder[i];
+// 	}
+// 
+// 	newPath[pathLength] = '/';
+// 	++pathLength;
+// 
+// 	char** files;
+// 	char fileType[] = ".bmp";
+// 	size_t fileTypeLength = 5;
+// 	files = (char**)malloc(sizeof(char*)* numberOfSprites);
+// 	for (size_t i = 0; i < numberOfSprites; ++i)
+// 	{
+// 		files[i] = (char*)malloc(sizeof(char)* filenameLength);
+// 
+// 		char* iAsString = I32ToString(i);
+// 		size_t c = 0;
+// 		while (iAsString[c])
+// 		{
+// 			files[i][c] = iAsString[c];
+// 			++c;
+// 		}
+// 		free(iAsString);
+// 
+// 		for (size_t j = 0; j < fileTypeLength; ++j)
+// 		{
+// 			files[i][c + j] = fileType[j];
+// 		}
+// 	}
+// 
+// 	for (size_t x = 0; x < numberOfSprites; ++x)
+// 	{
+// 		size_t i = 0;
+// 		for (; i < newLength && files[x][i]; ++i)
+// 		{
+// 			newPath[pathLength + i] = files[x][i];
+// 		}
+// 		newPath[pathLength + i] = '\0';
+// 
+// 		Initialize((*sprites) + x, newPath);
+// 	}
+// 
+// 	for (size_t i = 0; i < numberOfSprites; ++i)
+// 	{
+// 		free(files[i]);
+// 	}
+// 	free(files);
+// 	free(newPath);
+// }
 
 inline void Destroy(Texture* texture)
 {
@@ -542,7 +542,7 @@ inline Texture* GetTexture(TextureHandle handle)
 	Texture* result = NULL;
 
 	
-	//result = &texturePool[handle.poolIndex].data;
+	result = &texturePool[handle.poolIndex].data;
 
 	return result;
 }
@@ -1142,10 +1142,10 @@ inline void InitializeRenderer()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	StartUpTexturePool(10);
+	StartUpTexturePool(150);
 
 
-	AddToTexturePool("Assets/x60/Objects/boulder.bmp");
+	/*AddToTexturePool("Assets/x60/Objects/boulder.bmp");
 	TextureHandle th1 = AddToTexturePool("Assets/x60/Objects/boulder_Dark.bmp");
 	AddToTexturePool("Assets/x60/Objects/boulder_Graveyard.bmp");
 	AddToTexturePool("Assets/x60/Objects/coconut.bmp");
@@ -1162,7 +1162,7 @@ inline void InitializeRenderer()
 	AddToTexturePool("Assets/x60/Objects/gravestone.bmp");
 
 	TextureHandle th2 = AddToTexturePool("Assets/x60/Objects/jelly.bmp");
-	TextureHandle th3 = AddToTexturePool("Assets/x60/Objects/pillar.bmp");
+	TextureHandle th3 = AddToTexturePool("Assets/x60/Objects/pillar.bmp");*/
 }
 
 inline void ShutdownRenderer()
