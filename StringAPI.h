@@ -179,6 +179,138 @@ inline char* Erase(const char* s, size_t erasePosition, size_t eraseCount)
 	return result;
 }
 
+struct StringFindResult
+{
+	bool found;
+	size_t position;
+};
+inline StringFindResult FindFirst(const char* s, char c)
+{
+	StringFindResult result = {false, 0};
+
+	const char* sT = s;
+	while (*sT)
+	{
+		if (*sT == c)
+		{
+			result.found = true;
+			break;
+		}
+		++result.position;
+		++sT;
+	}
+
+	return result;
+}
+
+inline StringFindResult FindLast(const char* s, const char c)
+{
+	StringFindResult result = {false, 0};
+
+	size_t i = 0;
+	const char* sT = s;
+	while (*sT)
+	{
+		if (*sT == c)
+		{
+			result.found = true;
+			result.position = i;
+		}
+		++i;
+		++sT;
+	}
+
+	return result;
+}
+
+inline char* TrimWhitespaceFront(const char* s)
+{
+	char* result;
+
+	if (s[0] == ' ')
+	{
+		const char* sT = s;
+		size_t count = 0;
+		while (*sT && *sT == ' ')
+		{
+			++count;
+			++sT;
+		}
+		char* result = Erase(s, -1, count);
+	}
+
+	return result;
+}
+
+inline char* TrimWhitespaceBack(const char* s)
+{
+	char* result;
+
+	size_t rLength = Length(s);
+	if (s[rLength - 2] == ' ')
+	{
+		const char* tT = &s[rLength - 2];
+		size_t endCount = 0;
+		while (tT != s && *tT == ' ')
+		{
+			++endCount;
+			--tT;
+		}
+
+		char* t = Erase(s, rLength - 2 - endCount, endCount);
+	}
+
+	return result;
+}
+
+inline char* TrimWhitespace(const char* s)
+{
+	char* result;
+
+	// Find the first character that is a space
+	// from that point
+	//	start looping over the rest of the string until you find a non space character
+	//  all the while counting the number of spaces you have encountered
+	// once you encounter a non space character break out of the counting loop
+	// then erase the characters in the string in the range determined in the loop starting at
+	//	the first character.
+
+	result = Copy(s);
+
+	if (result[0] == ' ')
+	{
+		const char* sT = result;
+		size_t count = 0;
+		while (*sT && *sT == ' ')
+		{
+			++count;
+			++sT;
+		}
+		char* t = Erase(result, -1, count);
+		free(result);
+		result = t;
+	}
+
+
+	size_t rLength = Length(result);
+	if (result[rLength - 2] == ' ')
+	{
+		char* tT = &result[rLength - 2];
+		size_t endCount = 0;
+		while (tT != result && *tT == ' ')
+		{
+			++endCount;
+			--tT;
+		}
+
+		char* t = Erase(result, rLength - 2 - endCount, endCount);
+		free(result);
+		result = t;
+	}
+
+	return result;
+}
+
 /*
  * Starting from the beginning of the string converts the string 
  *	to an integer.

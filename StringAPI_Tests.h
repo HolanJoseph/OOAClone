@@ -121,6 +121,8 @@ inline void StringTestsAll()
 	char* f7 = ToString(233.007f, 7);
 	char* f8 = ToString(233.007f, 10);
 
+
+
 	free(f1);
 	free(f2);
 	free(f3);
@@ -129,4 +131,24 @@ inline void StringTestsAll()
 	free(f6);
 	free(f7);
 	free(f8);
+
+	char s1[] = "     hello"; // 0 - 4
+	char s2[] = "hello    "; // 5 - 8
+	char s3[] = "  hello     "; // 0-1  7-11
+
+	StringFindResult s1F = FindFirst(s1, ' ');
+	StringFindResult s1L = FindLast(s1, ' ');
+	char* s1T = TrimWhitespace(s1);
+
+	StringFindResult s2F = FindFirst(s2, ' ');
+	StringFindResult s2L = FindLast(s2, ' ');
+	char* s2T = TrimWhitespace(s2);
+
+	StringFindResult s3F = FindFirst(s3, ' ');
+	StringFindResult s3L = FindLast(s3, ' ');
+	char* s3T = TrimWhitespace(s3);
+
+	free(s1T);
+	free(s2T);
+	free(s3T);
 }

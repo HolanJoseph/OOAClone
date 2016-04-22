@@ -1539,6 +1539,8 @@ void InitScene()
 
 	
 
+	
+
 	Initialize(&spriteFiles, 10);
 
 	AddKVPair(&spriteFiles, "weed", "Assets/x60/Objects/weed.bmp");
