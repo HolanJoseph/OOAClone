@@ -110,6 +110,8 @@ inline char* Concat(const char* s1, const char* s2)
 /*
  * Inserts AFTER
  * counting starts at 0
+ *
+ * This should probably be changed as trying to insert at the head of the string we are wrapping
  */
 inline char* Insert(const char* s, size_t sLength, size_t insertionIndex, const char* s2, size_t s2Length)
 {
@@ -149,6 +151,8 @@ inline char* Insert(const char* s, size_t insertionPosition, const char* s2)
  * counting starts at 0
  * if the amount to erase is greater than the remaining length of the string
  *	the rest of the string will be erased.
+ *
+ * This should probably be changed as trying to erase at the head of the string we are wrapping
  */
 inline char* Erase(const char* s, size_t sLength, size_t erasePosition, size_t eraseCount)
 {
@@ -543,40 +547,30 @@ inline char* ToString(F32 f, U32 numberOfDecimals)
 	return string;
 }
 
-
-#include <cstdlib>
-
-inline I32 StringToI32(char* string)
+/*
+ * THE SPLIT STRINGS ARE NOT ALLOCATED AGAIN.
+ * IE: free(stringComponents[0]) will free all string components AND the origial string you were tring to split
+ * 
+ * ALSO you do need to call free(stringComponents) when you are done using the components to dealloc the pointers
+ *	to the strings
+ */
+struct SplitResult
 {
-	I32 result = atoi(string);
-	return result;
-}
+	char** components;
+	size_t* componentLengths;
 
-inline U32 StringToU32(char* string)
+	size_t numberOfComponents;
+
+	SplitResult() : components(NULL), componentLengths(NULL), numberOfComponents(0) {};
+};
+
+
+inline SplitResult Split(char* string, size_t stringLength, char splitCharacter)
 {
-	U32 result = strtoul(string, NULL, 0);
-	return result;
-}
+	SplitResult result;
 
-inline F32 StringToF32(char* string)
-{
-	F32 result = strtof(string, NULL);
-	return result;
-}
-
-inline char* I32ToString(I32 number)
-{
-	char* result;
-	result = (char*)malloc(sizeof(char) * 64);
-
-	result = itoa(number, result, 10);
-	return result;
-}
-
-inline char** SplitStringOnCharacter(char* string, size_t stringLength, char splitCharacter, U64* out_numberOfSplits, U64** out_lineLengths)
-{
-	char** stringComponents = (char**)malloc(sizeof(char*) * stringLength);
-	U64* stringComponentLengths = (U64*)malloc(sizeof(U64) * stringLength);
+	char** stringComponents = (char**)malloc(sizeof(char*)* stringLength);
+	size_t* stringComponentLengths = (size_t*)malloc(sizeof(size_t)* stringLength);
 
 	char* stringFront = string;
 	size_t numberOfSplits = 0;
@@ -597,9 +591,48 @@ inline char** SplitStringOnCharacter(char* string, size_t stringLength, char spl
 	++numberOfSplits;
 
 	stringComponents = (char**)realloc(stringComponents, sizeof(char*) * numberOfSplits);
- 	stringComponentLengths = (U64*)realloc(stringComponentLengths, sizeof(U64) * numberOfSplits);
+	stringComponentLengths = (size_t*)realloc(stringComponentLengths, sizeof(size_t) * numberOfSplits);
 
-	*out_numberOfSplits = numberOfSplits;
-	*out_lineLengths = stringComponentLengths;
-	return stringComponents;
+	result.numberOfComponents = numberOfSplits;
+	result.componentLengths = stringComponentLengths;
+	result.components = stringComponents;
+	return result;
 }
+
+inline SplitResult Split(char* string, char splitCharacter)
+{
+	size_t stringLength = Length(string);
+	SplitResult result = Split(string, stringLength, splitCharacter);
+	return result;
+}
+
+/*inline char** SplitStringOnCharacter(char* string, size_t stringLength, char splitCharacter, U64* out_numberOfSplits, U64** out_lineLengths)
+{
+char** stringComponents = (char**)malloc(sizeof(char*) * stringLength);
+U64* stringComponentLengths = (U64*)malloc(sizeof(U64) * stringLength);
+
+char* stringFront = string;
+size_t numberOfSplits = 0;
+for (U64 i = 0; i < stringLength; ++i)
+{
+if (string[i] == splitCharacter)
+{
+string[i] = '\0';
+stringComponents[numberOfSplits] = stringFront;
+stringComponentLengths[numberOfSplits] = (&(string[i]) - stringFront + 1) / sizeof(char);
+stringFront = &(string[i + 1]);
+++numberOfSplits;
+}
+}
+
+stringComponents[numberOfSplits] = stringFront;
+stringComponentLengths[numberOfSplits] = (&(string[stringLength]) - stringFront) / sizeof(char);
+++numberOfSplits;
+
+stringComponents = (char**)realloc(stringComponents, sizeof(char*) * numberOfSplits);
+stringComponentLengths = (U64*)realloc(stringComponentLengths, sizeof(U64) * numberOfSplits);
+
+*out_numberOfSplits = numberOfSplits;
+*out_lineLengths = stringComponentLengths;
+return stringComponents;
+}*/

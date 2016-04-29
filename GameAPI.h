@@ -2,6 +2,6 @@
 #include "Types.h"
 
 // NOTE: deltaTime is in milliseconds
-bool GameInit();
+bool GameInitialize();
 void GameUpdate(F32 deltaTime);
 bool GameShutdown();

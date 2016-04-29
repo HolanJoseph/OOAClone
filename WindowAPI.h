@@ -3,8 +3,8 @@
 #include "Types.h"
 #include "Math.h"
 
-vec2 GetWindowDimensions();
-void SetWindowDimensions(vec2 dimensions);
+vec2 GetClientWindowDimensions();
+void SetClientWindowDimensions(vec2 dimensions);
 
 char* GetWindowTitle();
-void SetWindowTitle(char* newTitle);
+void  SetWindowTitle(char* newTitle);

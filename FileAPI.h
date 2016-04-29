@@ -5,21 +5,21 @@ bool CreateFile(char* filename, bool overwriteIfExists);
 
 struct GetFileSizeReturnType
 {
-	U64 fileSize;
+	size_t fileSize;
 	bool fileExists;
 };
 GetFileSizeReturnType GetFileSize(char* filename);
 
 struct ReadFileReturnType
 {
-	U64 numberOfBytesRead;
+	size_t numberOfBytesRead;
 	bool errorEncountered;
 };
 ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition = 0);
 
 struct WriteFileReturnType
 {
-	U64 numberOfBytesWritten;
+	size_t numberOfBytesWritten;
 	bool errorEncountered;
 };
 WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition = 0);

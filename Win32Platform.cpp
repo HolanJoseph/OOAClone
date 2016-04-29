@@ -5,7 +5,7 @@
 #include <gl/GL.h>
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_BMP
-#include "stb_image.h"
+#include "3rdParty/stb_image.h"
 
 #include <stdio.h>
 //#define NDEBUG
@@ -61,6 +61,7 @@ KeyCode TranslateVKCodeToKeyCode(UINT_PTR vkCode);
 void QueryController();
 
 
+
 LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam )    
 {
 	switch (message)
@@ -76,7 +77,7 @@ LRESULT CALLBACK Win32WindowCallback( HWND windowHandle, UINT message, WPARAM wP
 						// NOTE: icon, min, max, close already present
 						// NOTE: Shows the window title
 						return DefWindowProc(windowHandle, message, wParam, lParam);
-						break;
+						break;;
 	}
 
 	case WM_CREATE:
@@ -378,7 +379,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 
 
 
-	bool gameSetup = GameInit();
+	bool gameSetup = GameInitialize();
 	if (!gameSetup)
 	{
 		DebugPrint("Couldn't set up game state\n");
@@ -469,42 +470,42 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 			gamepad.connected = true;
 			
 			// Buttons
-			SetBit(&gamepad.buttons, GamepadCode_Up,    (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_Down,  (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_Left,  (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_Right, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_Start, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_START), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_Back,  (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_X, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_X), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_Y, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_Y), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_A, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_A), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_B, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_B), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_RightBumper, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_R3, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_LeftBumper, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER), 0, 1));
-			SetBit(&gamepad.buttons, GamepadCode_L3, (U8)ClampRange((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Up,    (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Down,  (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Left,  (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Right, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Start, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_START), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Back,  (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_X, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_X), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_Y, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_Y), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_A, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_A), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_B, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_B), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_RightBumper, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_R3, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_LeftBumper, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER), 0, 1));
+			SetBit(&gamepad.buttons, GamepadCode_L3, (U8)ClampRange_F32((F32)(controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB), 0, 1));
 
 			// Thumb sticks
 			gamepad.leftThumbstick = vec2(controllerState.Gamepad.sThumbLX, controllerState.Gamepad.sThumbLY);
 			F32 leftStickMagnitude = length(gamepad.leftThumbstick);
-			leftStickMagnitude = ClampRange(leftStickMagnitude, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, I16_MAX);
+			leftStickMagnitude = ClampRange_F32(leftStickMagnitude, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, I16_MAX);
 			leftStickMagnitude -= XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;
 			leftStickMagnitude /= (I16_MAX - XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 			gamepad.leftThumbstick = normalize(gamepad.leftThumbstick) * leftStickMagnitude;
 
 			gamepad.rightThumbstick = vec2(controllerState.Gamepad.sThumbRX, controllerState.Gamepad.sThumbRY);
 			F32 rightStickMagnitude = length(gamepad.rightThumbstick);
-			rightStickMagnitude = ClampRange(rightStickMagnitude, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, I16_MAX);
+			rightStickMagnitude = ClampRange_F32(rightStickMagnitude, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, I16_MAX);
 			rightStickMagnitude -= XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE;
 			rightStickMagnitude /= (I16_MAX - XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 			gamepad.rightThumbstick = normalize(gamepad.rightThumbstick) * rightStickMagnitude;
 
 			// Triggers
-			gamepad.leftTrigger = ClampRange(controllerState.Gamepad.bLeftTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
+			gamepad.leftTrigger = ClampRange_F32(controllerState.Gamepad.bLeftTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
 			gamepad.leftTrigger -= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 			gamepad.leftTrigger /= (U8_MAX - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
 
-			gamepad.rightTrigger = ClampRange(controllerState.Gamepad.bRightTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
+			gamepad.rightTrigger = ClampRange_F32(controllerState.Gamepad.bRightTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD, U8_MAX);
 			gamepad.rightTrigger -= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 			gamepad.rightTrigger /= (U8_MAX - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
 
@@ -547,7 +548,7 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 /*
 	WINDOW API IMPLEMENTATION
  */
-vec2 GetWindowDimensions()
+vec2 GetClientWindowDimensions()
 {
 	vec2 result;
 
@@ -561,7 +562,7 @@ vec2 GetWindowDimensions()
 }
 
 // NOTE: FIND AND END WHOEVER CAME UP WITH AND DOCUMENTED THIS TRASHCAN API
-void SetWindowDimensions(vec2 dimensions)
+void SetClientWindowDimensions(vec2 dimensions)
 {
 	WINDOWINFO windowInfo;
 	GetWindowInfo(windowHandle, &windowInfo);
@@ -570,21 +571,21 @@ void SetWindowDimensions(vec2 dimensions)
 	GetWindowRect(windowHandle, &curPos);
 
 	RECT newDimensions = {0};
-	newDimensions.right = dimensions.x;
-	newDimensions.bottom = dimensions.y;
+	newDimensions.right = (I32)dimensions.x;
+	newDimensions.bottom = (I32)dimensions.y;
 	AdjustWindowRect(&newDimensions, windowInfo.dwStyle, false);
 	
 	vec2 d;
-	d.x = newDimensions.right - newDimensions.left;
-	d.y = newDimensions.bottom - newDimensions.top;
+	d.x = (F32)(newDimensions.right - newDimensions.left);
+	d.y = (F32)(newDimensions.bottom - newDimensions.top);
 
 	SetWindowPos(
 		windowHandle,
 		NULL,
 		curPos.left,
 		curPos.top,
-		d.x,
-		d.y,
+		(I32)d.x,
+		(I32)d.y,
 		NULL
 		);
 
@@ -1148,7 +1149,7 @@ GetFileSizeReturnType GetFileSize(char* filename)
 	{
 		LARGE_INTEGER fileSizeLI;
 		GetFileSizeEx(fileHandle, &fileSizeLI);
-		result.fileSize = fileSizeLI.QuadPart;
+		result.fileSize = (size_t)fileSizeLI.QuadPart;
 		result.fileExists = true;
 	}
 	CloseHandle(fileHandle);

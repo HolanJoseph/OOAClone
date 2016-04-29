@@ -8,18 +8,14 @@
 #include "DebugAPI.h"
 #include "InputAPI.h"
 #include "FileAPI.h"
-#include "StringAPI.h"
+#include "String.h"
 
 #include "Renderer.h"
 
 #include "AssetLoading.h"
-#include "CollisionDetection.h"
 #include "CollisionDetection2D.h"
 
-#include "CollisionDetection_Tests.h"
 #include "StringAPI_Tests.h"
-
-#include "CollisionDetection_Visualization.h"
 
 #include "CollisionDetection2D_Applet.h"
 
@@ -30,21 +26,7 @@
 //#define COLLISION2DAPPLET 1
 #define GAME 1
 
-inline U32 String_HashFunction(char* key, U32 numberOfIndices)
-{
-	U32 hash = 0;
 
-	char* keyI = key;
-	while (*keyI)
-	{
-		++keyI;
-		// NOTE: How is this better ????
-		//result += (U32)*keyI % numberOfIndices;
-		hash = (31 * hash + (*keyI)) % numberOfIndices;
-	}
-
-	return hash;
-}
 
 struct SpriteFileTableLink
 {
@@ -58,6 +40,8 @@ struct SpriteFileTable
 {
 	U32 numberOfIndices;
 	SpriteFileTableLink* table;
+
+	SpriteFileTable() : numberOfIndices(0), table(NULL) {}; // NOTE: Causes heapvalidate issue?
 };
 
 inline void Initialize(SpriteFileTable* sft, U32 numberOfIndices)
@@ -209,6 +193,39 @@ inline void Destroy(SpriteFileTable* sft)
 
 SpriteFileTable spriteFiles;
 
+inline void PopulateSpriteFiles(SpriteFileTable* hash, char* filename)
+{
+	GetFileSizeReturnType assetFileSize = GetFileSize(filename);
+	if (assetFileSize.fileExists)
+	{
+		char* fullFile = (char*)malloc(sizeof(char) * assetFileSize.fileSize);
+		ReadFileReturnType readStats = ReadFile(filename, fullFile, assetFileSize.fileSize);
+		SplitResult lines = Split(fullFile, assetFileSize.fileSize, '\n');
+
+		for (size_t i = 0; i < lines.numberOfComponents; ++i)
+		{
+			SplitResult lineParts = Split(lines.components[i], lines.componentLengths[i], '=');
+			Assert(lineParts.numberOfComponents == 2);
+
+			char* assetName = TrimWhitespace(lineParts.components[0]);
+			char* assetPath = TrimWhitespace(lineParts.components[1]);
+			size_t assetPathLength = Length(assetPath);
+			char* assetPathClean = Erase(assetPath, assetPathLength - 3, 1); // NOTE: Really need split on string for \r\n this is manually removing \r
+			AddKVPair(hash, assetName, assetPathClean);
+			free(assetName);
+			free(assetPath);
+			free(assetPathClean);
+
+			free(lineParts.components);
+			free(lineParts.componentLengths);
+		}
+
+
+		free(lines.componentLengths);
+		free(lines.components);
+		free(fullFile);
+	}
+};
 
 
 struct Animation
@@ -216,6 +233,8 @@ struct Animation
 	TextureHandle* frames;
 	U32 numberOfFrames;
 	F32 animationTime;
+
+	Animation() : frames(NULL), numberOfFrames(0), animationTime(0) {};
 };
 typedef std::vector<Animation> Animations;
 
@@ -280,6 +299,8 @@ struct AnimationHash
 	U32* subListLength;
 
 	size_t length;
+
+	AnimationHash() : numberOfIndices(0), table(NULL), subListLength(NULL), length(0) {};
 };
 
 inline void Initialize(AnimationHash* ah, U32 numberOfIndices)
@@ -302,10 +323,12 @@ struct GetKeyIndexResult
 	bool present;
 	U32 i;
 	U32 j;
+
+	GetKeyIndexResult() : present(false), i(0), j(0) {};
 };
 inline GetKeyIndexResult GetKeyIndex(AnimationHash* ah, char* key)
 {
-	GetKeyIndexResult result = {false, 0, 0};
+	GetKeyIndexResult result = GetKeyIndexResult();
 
 	U32 i = (String_HashFunction(key, ah->numberOfIndices) & 0x7fffffff) % ah->numberOfIndices;
 
@@ -438,6 +461,7 @@ struct Entity
 	// Renderable
 	vec2 spriteOffset;
 
+	bool hasSprite;
 	TextureHandle sprite;
 
 	AnimationHash animations;
@@ -451,19 +475,32 @@ struct Entity
 };
 typedef std::vector<Entity> Entities;
 
+inline void Initialize(Entity* entity)
+{
+	entity->hasSprite = false;
+	Initialize(&entity->animations, 1);
+	entity->isAnimated = false;
+	entity->isAnimationLooped = false;
+	entity->isAnimationPlaying = false;
+	entity->isAnimationReversed = false;
+	entity->activeAnimationKI_i = 0;
+	entity->activeAnimationKI_j = 0;
+	entity->elapsedTime = 0.0f;
+}
+
 inline void AddSprite(Entity* entity, char* assetName, vec2 offset = vec2(0.0f, 0.0f))
 {
-	//Initialize(&entity->sprite, assetName);
 	char* filePath = GetValue(&spriteFiles, assetName);
 	entity->sprite = AddToTexturePool(filePath);
 	entity->spriteOffset = offset;
 	free(filePath);
+	entity->hasSprite = true;
 }
 
 inline void RemoveSprite(Entity* entity)
 {
-	//Destroy(&entity->sprite);
 	entity->sprite = TextureHandle();
+	entity->hasSprite = false;
 }
 
 inline void AddAnimation(Entity* entity, char* referenceName, char* assetName, U32 numberOfFrames, F32 animationTime)
@@ -507,8 +544,9 @@ inline bool StartAnimation(Entity* entity, char* referenceName, bool loopAnimati
 	{
 		entity->activeAnimationKI_i = ki.i;
 		entity->activeAnimationKI_j = ki.j;
-		entity->elapsedTime = 0.0f;
+		entity->elapsedTime = startTime;
 		entity->isAnimationPlaying = true;
+		entity->isAnimationLooped = loopAnimation;
 		return true;
 	}
 
@@ -533,7 +571,7 @@ inline void ReverseAnimation(Entity* entity, bool reverse = true)
 	entity->isAnimationReversed = reverse;
 }
 
-inline void SetAnimationTime(Entity* entity, F32 time)
+inline void SetElapsedAnimationTime(Entity* entity, F32 time)
 {
 	F32 animTime = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
 	F32 newTime = time - ((I32)(time/animTime) * animTime);
@@ -541,13 +579,15 @@ inline void SetAnimationTime(Entity* entity, F32 time)
 }
 
 // 0 == 0%, 100 == 100%
-inline void SetAnimationTimeAsPercent(Entity* entity, F32 percent)
+inline void SetElapsedAnimationTimeAsPercent(Entity* entity, F32 percent)
 {
 	F32 multiplier = (percent / 100.0f) - (I32)(percent / 100.0f);
 	F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
 	F32 newTime = multiplier * animationLength;
 	entity->elapsedTime = newTime;
 }
+
+
 
 struct Chunk
 {
@@ -1489,6 +1529,7 @@ inline void InitChunk_13_13()
 	Chunk* chunk = &chunks[13][13];
 
 	chunk->entities.push_back(Entity());
+	Initialize(&chunk->entities[0]);
 	AddSprite(&chunk->entities[0], "heartPiece");
 	chunk->entities[0].transform.position = vec2(7.5, 4.5);
 }
@@ -1531,8 +1572,8 @@ inline void InitChunks()
 void InitScene()
 {
 	SetWindowTitle("Oracle of Ages Clone");
-	SetWindowDimensions(vec2(600, 540));
-	SetViewport({ vec2(0, 0), vec2(600, 540) });
+	SetClientWindowDimensions(vec2(600, 540));
+	SetViewport(vec2(0, 0), vec2(600, 540));
 	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
 
 	Initialize(&guiPanel, "Assets/x60/Objects/guiPanel.bmp");
@@ -1541,9 +1582,10 @@ void InitScene()
 
 	
 
-	Initialize(&spriteFiles, 10);
+	Initialize(&spriteFiles, 60);
+	PopulateSpriteFiles(&spriteFiles, "Assets.txt");
 
-	AddKVPair(&spriteFiles, "weed", "Assets/x60/Objects/weed.bmp");
+	/*AddKVPair(&spriteFiles, "weed", "Assets/x60/Objects/weed.bmp");
 	AddKVPair(&spriteFiles, "treePlot", "Assets/x60/Objects/treePlot.bmp");
 	AddKVPair(&spriteFiles, "tree_Generic", "Assets/x60/Objects/tree_generic.bmp");
 	AddKVPair(&spriteFiles, "tree_Palm", "Assets/x60/Objects/tree_Palm.bmp");
@@ -1554,7 +1596,7 @@ void InitScene()
 	AddKVPair(&spriteFiles, "link_Right", "Assets/x60/Objects/link_Right");
 	AddKVPair(&spriteFiles, "link_Left", "Assets/x60/Objects/link_Left");
 	AddKVPair(&spriteFiles, "link_Up", "Assets/x60/Objects/link_Up");
-	AddKVPair(&spriteFiles, "link_Down", "Assets/x60/Objects/link_Down");
+	AddKVPair(&spriteFiles, "link_Down", "Assets/x60/Objects/link_Down");*/
 
 
 
@@ -1603,9 +1645,10 @@ void InitScene()
 	StartAnimation(&te, "right");
 
 	RemoveAnimation(&te, "left");
+	entities.push_back(te);
 }
 
-bool GameInit()
+bool GameInitialize()
 {
 	// Initialize game sub systems.
 	InitializeRenderer();
@@ -1634,19 +1677,19 @@ void UpdateGamestate_PrePhysics(F32 dt)
 {
 	if (GetKeyDown(KeyCode_Left))
 	{
-		StartAnimation(&te, "left");
+		StartAnimation(&entities[1], "left");
 	}
 	if (GetKeyDown(KeyCode_Right))
 	{
-		StartAnimation(&te, "right");
+		StartAnimation(&entities[1], "right");
 	}
 	if (GetKeyDown(KeyCode_Down))
 	{
-		StartAnimation(&te, "down");
+		StartAnimation(&entities[1], "down");
 	}
 	if (GetKeyDown(KeyCode_Up))
 	{
-		StartAnimation(&te, "up");
+		StartAnimation(&entities[1], "up");
 	}
 
 	if (GetKeyDown(KeyCode_Equal))
@@ -1673,19 +1716,23 @@ void UpdateGamestate_PrePhysics(F32 dt)
 	{
 		camera.position.y -= chunkHeight;
 	}
-	camera.position.x = ClampRange(camera.position.x, chunks[0][0].position.x + chunkWidth / 2.0f, chunks[13][0].position.x + chunkWidth / 2.0f);
-	camera.position.y = ClampRange(camera.position.y, chunks[0][0].position.y + chunkHeight / 2.0f, chunks[0][13].position.y + chunkHeight / 2.0f);
+	camera.position.x = ClampRange_F32(camera.position.x, chunks[0][0].position.x + chunkWidth / 2.0f, chunks[13][0].position.x + chunkWidth / 2.0f);
+	camera.position.y = ClampRange_F32(camera.position.y, chunks[0][0].position.y + chunkHeight / 2.0f, chunks[0][13].position.y + chunkHeight / 2.0f);
 }
 
 void UpdateGamestate_PostPhysics(F32 dt)
 {
-	SetViewport({ vec2(0, 0), vec2(600, 480) });
+	SetViewport(vec2(0, 0), vec2(600, 480));
 
 	for (size_t i = 0; i < entities.size(); ++i)
 	{
-		// NOTE: sort by x position
-		// NOTE: render higher x first
-		DrawSprite(GetTexture(entities[i].sprite), entities[i].spriteOffset, entities[i].transform, &camera);
+		bool hasSprite = entities[i].hasSprite;
+		if (hasSprite)
+		{
+			// NOTE: sort by x position
+			// NOTE: render higher x first
+			DrawSprite(GetTexture(entities[i].sprite), entities[i].spriteOffset, entities[i].transform, &camera);
+		}
 	}
 
 	for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
@@ -1717,13 +1764,63 @@ void UpdateGamestate_PostPhysics(F32 dt)
 		DrawLine(vec2(posX, yPos), vec2(negX, yPos), gridLineColor, &camera);
 	}
 
-	te.elapsedTime += dt;
-	if (te.elapsedTime >= te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime)
+
+	for (size_t i = 0; i < entities.size(); ++i)
 	{
-		te.elapsedTime -= te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime;
+		bool isAnimated = entities[i].isAnimated;
+		size_t numberOfAnimations = Length(&entities[i].animations);
+		if (isAnimated && numberOfAnimations > 0)
+		{
+			F32 animationTime = entities[i].animations.table[entities[i].activeAnimationKI_i][entities[i].activeAnimationKI_j].v->animationTime;
+
+			if (entities[i].isAnimationPlaying)
+			{
+				if (entities[i].isAnimationReversed)
+				{
+					entities[i].elapsedTime -= dt;
+
+					if (entities[i].elapsedTime <= 0)
+					{
+						if (entities[i].isAnimationLooped)
+						{
+							entities[i].elapsedTime += animationTime;
+						}
+						else
+						{
+							entities[i].elapsedTime = 0.0f;
+						}
+
+					}
+				}
+				else
+				{
+					entities[i].elapsedTime += dt;
+
+					if (entities[i].elapsedTime >= animationTime)
+					{
+						if (entities[i].isAnimationLooped)
+						{
+							entities[i].elapsedTime -= animationTime;
+						}
+						else
+						{
+							entities[i].elapsedTime = animationTime;
+						}
+					}
+				}
+			}
+
+			F32 elapsedTime = entities[i].elapsedTime;
+			U32 numberOfFrames = entities[i].animations.table[entities[i].activeAnimationKI_i][entities[i].activeAnimationKI_j].v->numberOfFrames;
+			U32 animationFrame = (U32)(elapsedTime / (animationTime / (F32)numberOfFrames));
+			animationFrame = ClampRange_U32(animationFrame, 0, numberOfFrames - 1);
+			AnimationHashLink** t = entities[i].animations.table;
+			U32 indI = entities[i].activeAnimationKI_i;
+			U32 indJ = entities[i].activeAnimationKI_j;
+			DrawSprite(GetTexture(t[indI][indJ].v->frames[animationFrame]), entities[i].spriteOffset, entities[i].transform, &camera);
+		}
 	}
-	U32 animationFrame = (U32)(te.elapsedTime / (te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->animationTime / (F32)te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->numberOfFrames));
-	DrawSprite(GetTexture(te.animations.table[te.activeAnimationKI_i][te.activeAnimationKI_j].v->frames[animationFrame]), te.spriteOffset, te.transform, &camera);
+	
 
 	DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));
 }

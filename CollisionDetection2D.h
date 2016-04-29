@@ -395,7 +395,7 @@ inline GJKInfo_2D GJK_2D(S1 shapeA, Transform shapeATransform, S2 shapeB, Transf
 		case Simplex_2D::Simplex_Line_2D:
 		{
 									  RandomNumberGenerator randomNumberGenerator;
-									  SeedRandomNumberGenerator(&randomNumberGenerator, 1);
+									  Seed(&randomNumberGenerator, 1);
 
 									  vec2 newPoint = simplex.A;
 									  while (newPoint == simplex.A || newPoint == simplex.B)

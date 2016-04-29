@@ -1,5 +1,5 @@
 #pragma once
-#include "StringAPI.h"
+#include "String.h"
 
 inline void StringTestsAll()
 {
@@ -80,7 +80,7 @@ inline void StringTestsAll()
 	bool tf12 = ToF32("-.1") == -.1f;
 	bool tf13 = ToF32("-0.12") == -.12f;
 	bool tf14 = ToF32("0.14") == .14f;
-	F32 stof1 = StringToF32("-0.12");
+	F32 stof1 = ToF32("-0.12");
 	bool tf15 = ToF32("-0.12") == stof1;
 
 	char* s1 = ToString(1);
@@ -132,23 +132,23 @@ inline void StringTestsAll()
 	free(f7);
 	free(f8);
 
-	char s1[] = "     hello"; // 0 - 4
-	char s2[] = "hello    "; // 5 - 8
-	char s3[] = "  hello     "; // 0-1  7-11
+	char tr1[] = "     hello"; // 0 - 4
+	char tr2[] = "hello    "; // 5 - 8
+	char tr3[] = "  hello     "; // 0-1  7-11
 
-	StringFindResult s1F = FindFirst(s1, ' ');
-	StringFindResult s1L = FindLast(s1, ' ');
-	char* s1T = TrimWhitespace(s1);
+	StringFindResult tr1F = FindFirst(tr1, ' ');
+	StringFindResult tr1L = FindLast(tr1, ' ');
+	char* tr1T = TrimWhitespace(tr1);
 
-	StringFindResult s2F = FindFirst(s2, ' ');
-	StringFindResult s2L = FindLast(s2, ' ');
-	char* s2T = TrimWhitespace(s2);
+	StringFindResult tr2F = FindFirst(tr2, ' ');
+	StringFindResult tr2L = FindLast(tr2, ' ');
+	char* tr2T = TrimWhitespace(tr2);
 
-	StringFindResult s3F = FindFirst(s3, ' ');
-	StringFindResult s3L = FindLast(s3, ' ');
-	char* s3T = TrimWhitespace(s3);
+	StringFindResult tr3F = FindFirst(tr3, ' ');
+	StringFindResult tr3L = FindLast(tr3, ' ');
+	char* tr3T = TrimWhitespace(tr3);
 
-	free(s1T);
-	free(s2T);
-	free(s3T);
+	free(tr1T);
+	free(tr2T);
+	free(tr3T);
 }

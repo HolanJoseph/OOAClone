@@ -9,7 +9,7 @@ struct RandomNumberGenerator
 	std::uniform_real_distribution<F32> getF32from0To1Exclusive;
 };
 
-void SeedRandomNumberGenerator(RandomNumberGenerator *generator, U32 seed)
+void Seed(RandomNumberGenerator *generator, U32 seed)
 {
 	generator->randomNumberGenerator.seed(seed);
 }

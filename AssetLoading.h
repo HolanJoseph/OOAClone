@@ -1,11 +1,12 @@
 #pragma once
 
-#include "stb_image.h"
+#include "3rdParty/stb_image.h"
 
 #include "Types.h"
 #include "FileAPI.h"
-#include "StringAPI.h"
+#include "String.h"
 
+// NOTE: User is responsible for freeing vertices and indices
 struct TextureData
 {
 	U8* data;
@@ -22,8 +23,10 @@ TextureData LoadTexture(char* filename, I32 textureNumberOfImageComponentsDesire
 	return result;
 }
 
-//NOTE: Loads as vec3
-//NOTE: indices are stored as U32s if larger is needed change this
+// NOTE: despite being F32s each vertex is is a triplet so for any process looking to use the vertex data typecast
+//			to vec3 and divide numberOfVertices by 3
+// NOTE: indices are stored as U32s if larger is needed change this
+// NOTE: User is responsible for freeing vertices and indices
 struct ModelData
 {
 	F32* vertices;
@@ -50,74 +53,64 @@ ModelData Load3DModel(char* filename)
 		return result;
 	}
 
-	U64 numberOfLines = 0;
-	U64* fileLineLengths = NULL;
-	char** fileLines = SplitStringOnCharacter(fileContents, fr.numberOfBytesRead, '\n', &numberOfLines, &fileLineLengths);
+	SplitResult fileLines = Split(fileContents, fr.numberOfBytesRead, '\n');
 
-	F32 * vertices = (F32*)malloc(sizeof(F32)* numberOfLines * 3); // 3 components per vertex
-	U64 numberOfVertices = 0;
+	F32 * vertices = (F32*)malloc(sizeof(F32)* fileLines.numberOfComponents * 3); // 3 components per vertex
+	size_t numberOfVertices = 0;
 
-	U32* indices = (U32*)malloc(sizeof(U32)* numberOfLines * 3); // 3 indices per line
-	U64 numberOfIndices = 0;
+	U32* indices = (U32*)malloc(sizeof(U32)* fileLines.numberOfComponents * 3); // 3 indices per line
+	size_t numberOfIndices = 0;
 
-	for (U64 i = 0; i < numberOfLines; ++i)
+	for (U64 i = 0; i < fileLines.numberOfComponents; ++i)
 	{
-		if (fileLineLengths[i] > 0)
+		if (fileLines.componentLengths[i] > 0)
 		{
-			U64 numberOfComponents = 0;
-			U64* lineComponentLengths = NULL;
-			char** lineComponents = SplitStringOnCharacter(fileLines[i], fileLineLengths[i], ' ', &numberOfComponents, &lineComponentLengths);
-			if (lineComponents[0][0] == 'v' && lineComponentLengths[0] == 2)
+			SplitResult lineComponents = Split(fileLines.components[i], fileLines.componentLengths[i], ' ');
+			if (lineComponents.components[0][0] == 'v' && lineComponents.componentLengths[0] == 2)
 			{
 				// Process vertex
-				vertices[numberOfVertices++] = StringToF32(lineComponents[1]); // x
-				vertices[numberOfVertices++] = StringToF32(lineComponents[2]); // y
-				vertices[numberOfVertices++] = StringToF32(lineComponents[3]); // z
+				vertices[numberOfVertices++] = ToF32(lineComponents.components[1]); // x
+				vertices[numberOfVertices++] = ToF32(lineComponents.components[2]); // y
+				vertices[numberOfVertices++] = ToF32(lineComponents.components[3]); // z
 			}
-			else if (lineComponents[0][0] == 'f')
+			else if (lineComponents.components[0][0] == 'f')
 			{
 				// Process face indices
-				U64 faceVertex1NumberOfIndices = 0;
-				U64* faceVertex1IndiceLengths = NULL;
-				char** faceVertex1Indices = SplitStringOnCharacter(lineComponents[1], lineComponentLengths[1], '/', &faceVertex1NumberOfIndices, &faceVertex1IndiceLengths);
-				indices[numberOfIndices++] = StringToU32(faceVertex1Indices[0]) - 1;
+				SplitResult faceVertex1Indices = Split(lineComponents.components[1], lineComponents.componentLengths[1], '/');
+				indices[numberOfIndices++] = ToU32(faceVertex1Indices.components[0]) - 1;
 
-				U64 faceVertex2NumberOfIndices = 0;
-				U64* faceVertex2IndiceLengths = NULL;
-				char** faceVertex2Indices = SplitStringOnCharacter(lineComponents[2], lineComponentLengths[2], '/', &faceVertex2NumberOfIndices, &faceVertex2IndiceLengths);
-				indices[numberOfIndices++] = StringToU32(faceVertex2Indices[0]) - 1;
+				SplitResult faceVertex2Indices = Split(lineComponents.components[2], lineComponents.componentLengths[2], '/');
+				indices[numberOfIndices++] = ToU32(faceVertex2Indices.components[0]) - 1;
 
-				U64 faceVertex3NumberOfIndices = 0;
-				U64* faceVertex3IndiceLengths = NULL;
-				char** faceVertex3Indices = SplitStringOnCharacter(lineComponents[3], lineComponentLengths[3], '/', &faceVertex3NumberOfIndices, &faceVertex3IndiceLengths);
-				indices[numberOfIndices++] = StringToU32(faceVertex3Indices[0]) - 1;
+				SplitResult faceVertex3Indices = Split(lineComponents.components[3], lineComponents.componentLengths[3], '/');
+				indices[numberOfIndices++] = ToU32(faceVertex3Indices.components[0]) - 1;
 
-				free(faceVertex1Indices);
-				free(faceVertex1IndiceLengths);
+				free(faceVertex1Indices.components);
+				free(faceVertex1Indices.componentLengths);
 
-				free(faceVertex2Indices);
-				free(faceVertex2IndiceLengths);
+				free(faceVertex2Indices.components);
+				free(faceVertex2Indices.componentLengths);
 
-				free(faceVertex3Indices);
-				free(faceVertex3IndiceLengths);
+				free(faceVertex3Indices.components);
+				free(faceVertex3Indices.componentLengths);
 			}
 
-			free(lineComponents);
-			free(lineComponentLengths);
+			free(lineComponents.components);
+			free(lineComponents.componentLengths);
 
 		}
 	}
 
-	vertices = (F32*)realloc(vertices, sizeof(F32)* numberOfVertices);
-	indices = (U32*)realloc(indices, sizeof(U32)* numberOfIndices);
+	vertices = (F32*)realloc(vertices, sizeof(F32) * numberOfVertices);
+	indices = (U32*)realloc(indices, sizeof(U32) * numberOfIndices);
 
 	result.vertices = vertices;
 	result.numberOfVertices = numberOfVertices;
 	result.indices = indices;
 	result.numberOfIndices = numberOfIndices;
 
-	free(fileLines);
-	free(fileLineLengths);
+	free(fileLines.components);
+	free(fileLines.componentLengths);
 
 	free(fileContents);
 	return result;

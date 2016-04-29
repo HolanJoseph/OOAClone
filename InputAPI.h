@@ -5,6 +5,7 @@
 enum KeyCode
 {
 	KeyCode_NULL = 0,
+
 	KeyCode_1 = 4,
 	KeyCode_2 = 5,
 	KeyCode_3 = 6,
@@ -55,20 +56,26 @@ enum KeyCode
 	KeyCode_Up = 51,
 	KeyCode_Down = 52,
 	KeyCode_Left = 53,
-	KeyCode_Right = 54
+	KeyCode_Right = 54,
+
+	KeyCode_COUNT
 };
 
 enum MouseCode
 {
 	MouseCode_NULL = 0,
+
 	MouseCode_Left = 1,
 	MouseCode_Middle = 2,
-	MouseCode_Right = 3
+	MouseCode_Right = 3,
+
+	MouseCode_COUNT
 };
 
 enum GamepadCode
 {
 	GamepadCode_NULL = 0,
+
 	GamepadCode_Up = 1,
 	GamepadCode_Down = 2,
 	GamepadCode_Left = 3,
@@ -82,7 +89,9 @@ enum GamepadCode
 	GamepadCode_A = 11,
 	GamepadCode_B = 12,
 	GamepadCode_X = 13,
-	GamepadCode_Y = 14
+	GamepadCode_Y = 14,
+
+	GamepadCode_COUNT
 };
 
 
