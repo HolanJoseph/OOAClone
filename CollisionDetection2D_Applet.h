@@ -16,9 +16,7 @@
 #include "Types.h"
 #include "Math.h"
 
-#include "WindowAPI.h"
-#include "DebugAPI.h"
-#include "InputAPI.h"
+#include "_SystemAPI.h"
 
 #include "CollisionDetection2D.h"
 

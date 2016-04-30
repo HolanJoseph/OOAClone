@@ -4,10 +4,9 @@
 #include "Util.h"
 #include "RandomNumberGenerator.h"
 
-#include "GameAPI.h"
-#include "DebugAPI.h"
-#include "InputAPI.h"
-#include "FileAPI.h"
+#include "_GameAPI.h"
+#include "_SystemAPI.h"
+
 #include "String.h"
 
 #include "Renderer.h"

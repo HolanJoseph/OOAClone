@@ -1,7 +1,71 @@
 #pragma once
+
 #include "Types.h"
 #include "Math.h"
 
+
+
+/*
+ *  DEBUG API
+ */
+void Assert(int expression);
+
+void DebugPrint(char* outputString);
+void DebugPrintf(U32 size, char* formatString, ...);
+
+
+
+
+
+
+/*
+ *  FILE API
+ */
+bool CreateFile(char* filename, bool overwriteIfExists);
+
+struct GetFileSizeReturnType
+{
+	size_t fileSize;
+	bool fileExists;
+};
+GetFileSizeReturnType GetFileSize(char* filename);
+
+struct ReadFileReturnType
+{
+	size_t numberOfBytesRead;
+	bool errorEncountered;
+};
+ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition = 0);
+
+struct WriteFileReturnType
+{
+	size_t numberOfBytesWritten;
+	bool errorEncountered;
+};
+WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition = 0);
+
+
+
+
+
+
+/*
+ *  WINDOW API
+ */
+vec2 GetClientWindowDimensions();
+void SetClientWindowDimensions(vec2 dimensions);
+
+char* GetWindowTitle();
+void  SetWindowTitle(char* newTitle);
+
+
+
+
+
+
+/*
+ *  INPUT API
+ */
 enum KeyCode
 {
 	KeyCode_NULL = 0,

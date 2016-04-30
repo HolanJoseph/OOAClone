@@ -20,16 +20,12 @@
 
 
 // NOTE: Functions from these files must be implemented in this file
-#include "WindowAPI.h"
-#include "InputAPI.h"
-#include "FileAPI.h"
-#include "DebugAPI.h"
-
+#include "_SystemAPI.h"
 
 
 // NOTE: These functions are NOT implemented in this file, they
 //			are called to let the game do what it needs to do.
-#include "GameAPI.h"
+#include "_GameAPI.h"
 
 
 
