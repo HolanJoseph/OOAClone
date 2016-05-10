@@ -31,6 +31,7 @@
 
 /*
  *  Sprite Filename Management
+ *  NOTE: This really needs to be switched to Link** the current method is really error prone and occasionally faults.
  */
 struct SpriteFileTableLink
 {

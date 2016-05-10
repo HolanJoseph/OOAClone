@@ -239,6 +239,8 @@ struct PooledTexture
 			U32 loadNumber;
 			U32 poolIndex;
 
+			bool isDataLoaded;
+
 			Texture data;
 		};
 
@@ -248,6 +250,8 @@ struct PooledTexture
 
 U32 texturePoolSize;
 U32 numberOfTexturesAllocated;
+U32 numberOfAllocatedBytes;
+U32 maxNumberOfAllocatableBytes;
 PooledTexture* firstFreePooledTexture;
 PooledTexture* texturePool;
 ProcessedTexturesHash processedTextures;
@@ -256,6 +260,9 @@ ProcessedTexturesHash processedTextures;
 
 inline void StartUpTexturePool(U32 maxNumberOfTextures)
 {
+	numberOfAllocatedBytes = 0;
+	maxNumberOfAllocatableBytes = U32_MAX; // NOTE: When LRU is actually implemented this will be changed.
+
 	numberOfTexturesAllocated = 1; // NOTE: 0 will be used as a null state.
 	texturePoolSize = maxNumberOfTextures;
 	texturePool = (PooledTexture*)malloc(sizeof(PooledTexture) * texturePoolSize);
@@ -288,6 +295,9 @@ inline void ShutDownTexturePool()
 	firstFreePooledTexture = NULL;
 	numberOfTexturesAllocated = 0;
 	texturePoolSize = 0;
+
+	numberOfAllocatedBytes = 0;
+	maxNumberOfAllocatableBytes = U32_MAX;
 };
 
 inline U32 GenerateLoadNumberTexturePool()
@@ -341,10 +351,21 @@ inline TextureHandle AddToTexturePool(char* filepath)
 			pt->initialized = true;
 			pt->loadNumber = GenerateLoadNumberTexturePool();
 			pt->poolIndex = pt - texturePool;
+			pt->isDataLoaded = true;
 			Initialize(&pt->data, filepath);
+
+			if (numberOfAllocatedBytes + (pt->data.width * pt->data.height) > maxNumberOfAllocatableBytes)
+			{
+				// LRU = GetLRU
+				// destroy LRUs texture
+				// set LRUs loaded to false
+				// loop until we are under the maxNumberOfAllocatableBytes
+			}
 
 			result = TextureHandle(pt->loadNumber, pt->poolIndex);
 			AddKVPair(&processedTextures, filepath, result);
+			Texture* t = GetTexture(result);
+			numberOfAllocatedBytes += (t->width * t->height);
 		}
 	}
 
