@@ -3,10 +3,9 @@
 #include "Types.h"
 #include "Math.h"
 
+#include "_SystemAPI.h"
 
 #include "AssetLoading.h"
-
-#include "_SystemAPI.h"
 
 #include "glew/GL/glew.h"
 #include <gl/GL.h>

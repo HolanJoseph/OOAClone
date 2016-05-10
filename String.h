@@ -1,7 +1,8 @@
 #pragma once
-// NOTE: At this point this is basically a shell
 
 #include "Types.h"
+
+
 
 /*
  * Length counts the terminating character.
@@ -68,6 +69,19 @@ inline char* Copy(const char* s, size_t sLength)
 	{
 		copy[i] = s[i];
 	}
+
+	return copy;
+}
+
+inline char* CopyAndTerminate(const char* s, size_t sLength)
+{
+	char* copy = (char*)malloc(sizeof(char)* (sLength + 1));
+
+	for (size_t i = 0; i < sLength; ++i)
+	{
+		copy[i] = s[i];
+	}
+	copy[sLength] = '\0';
 
 	return copy;
 }

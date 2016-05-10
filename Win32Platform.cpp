@@ -1,20 +1,21 @@
+#include "Types.h"
+#include "Math.h"
+
 #include <windows.h>
 #include <Xinput.h>
 #include "glew/GL/glew.h"
 #include "glew/GL/wglew.h"
 #include <gl/GL.h>
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_BMP
-#include "3rdParty/stb_image.h"
-
 #include <stdio.h>
 //#define NDEBUG
 #include <cassert>
 #include <stdarg.h>
 #include <random>
 
-#include "Types.h"
-#include "Math.h"
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_BMP
+#include "3rdParty/stb_image.h"
+
 #include "BitManip.h"
 #include "Util.h"
 

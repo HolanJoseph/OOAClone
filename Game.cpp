@@ -1,17 +1,16 @@
 #include "Types.h"
 #include "Math.h"
-#include "BitManip.h"
-#include "Util.h"
-#include "RandomNumberGenerator.h"
 
 #include "_GameAPI.h"
 #include "_SystemAPI.h"
 
+#include "BitManip.h"
+#include "Util.h"
+#include "RandomNumberGenerator.h"
 #include "String.h"
 
-#include "Renderer.h"
-
 #include "AssetLoading.h"
+#include "Renderer.h"
 #include "CollisionDetection2D.h"
 
 #include "StringAPI_Tests.h"
@@ -20,13 +19,19 @@
 
 #include <vector>
 
-//#define RUN_UNIT_TESTS 1
 
+
+//#define RUN_UNIT_TESTS 1
 //#define COLLISION2DAPPLET 1
 #define GAME 1
 
 
 
+
+
+/*
+ *  Sprite Filename Management
+ */
 struct SpriteFileTableLink
 {
 	char* k;
@@ -182,7 +187,7 @@ inline void Destroy(SpriteFileTable* sft)
 		}
 
 		free(sft->table[i].k);
-		free(sft->table[i].v);
+		free(sft->table[i].v); // NOTE: Something is causing a memory error here. Wiggle link around a bunch and then close the app.9
 	}
 	free(sft->table);
 
@@ -197,11 +202,11 @@ inline void PopulateSpriteFiles(SpriteFileTable* hash, char* filename)
 	GetFileSizeReturnType assetFileSize = GetFileSize(filename);
 	if (assetFileSize.fileExists)
 	{
-		char* fullFile = (char*)malloc(sizeof(char) * assetFileSize.fileSize);
-		ReadFileReturnType readStats = ReadFile(filename, fullFile, assetFileSize.fileSize);
+		char* fullFile = (char*)malloc(sizeof(char) * (assetFileSize.fileSize + 1));
+		ReadFileReturnType readStats = ReadFile(filename, fullFile, assetFileSize.fileSize+1);
 		SplitResult lines = Split(fullFile, assetFileSize.fileSize, '\n');
 
-		for (size_t i = 0; i < lines.numberOfComponents; ++i)
+		for (size_t i = 0; i < lines.numberOfComponents - 1; ++i)
 		{
 			SplitResult lineParts = Split(lines.components[i], lines.componentLengths[i], '=');
 			Assert(lineParts.numberOfComponents == 2);
@@ -219,6 +224,17 @@ inline void PopulateSpriteFiles(SpriteFileTable* hash, char* filename)
 			free(lineParts.componentLengths);
 		}
 
+		// Last line needs to be handled differently because it is not null terminated.
+		char* lastLine = CopyAndTerminate(lines.components[lines.numberOfComponents - 1], lines.componentLengths[lines.numberOfComponents - 1]);
+		SplitResult lastLineParts = Split(lastLine, Length(lastLine), '=');
+		Assert(lastLineParts.numberOfComponents == 2);
+		char* lastLineAssetName = TrimWhitespace(lastLineParts.components[0]);
+		char* lastLineAssetPath = TrimWhitespace(lastLineParts.components[1]);
+		AddKVPair(hash, lastLineAssetName, lastLineAssetPath);
+		free(lastLineAssetName);
+		free(lastLineAssetPath);
+		free(lastLine);
+
 
 		free(lines.componentLengths);
 		free(lines.components);
@@ -227,6 +243,12 @@ inline void PopulateSpriteFiles(SpriteFileTable* hash, char* filename)
 };
 
 
+
+
+
+/*
+ *  Animations
+ */
 struct Animation
 {
 	TextureHandle* frames;
@@ -421,6 +443,7 @@ inline void RemoveKVPair(AnimationHash* ah, char* key)
 		}
 		free(oldSubList);
 		--ah->subListLength[ki.i];
+		--ah->length;
 	}
 }
 
@@ -453,6 +476,11 @@ inline void Destroy(AnimationHash* ah)
 
 
 
+
+
+/*
+ *  Entities
+ */
 struct Entity
 {
 	Transform transform;
@@ -464,18 +492,19 @@ struct Entity
 	TextureHandle sprite;
 
 	AnimationHash animations;
-	bool isAnimated;
-	bool isAnimationLooped;
-	bool isAnimationPlaying;
-	bool isAnimationReversed;
 	U32 activeAnimationKI_i;
 	U32 activeAnimationKI_j;
+	bool isAnimated;
+	bool isAnimationPlaying;
+	bool isAnimationLooped;
+	bool isAnimationReversed;
 	F32 elapsedTime = 0.0f;
 };
 typedef std::vector<Entity> Entities;
 
 inline void Initialize(Entity* entity)
 {
+	entity->transform = Transform();
 	entity->hasSprite = false;
 	Initialize(&entity->animations, 1);
 	entity->isAnimated = false;
@@ -486,6 +515,25 @@ inline void Initialize(Entity* entity)
 	entity->activeAnimationKI_j = 0;
 	entity->elapsedTime = 0.0f;
 }
+
+inline void Destroy(Entity* entity)
+{
+	entity->transform = Transform();
+
+	entity->spriteOffset = vec2(0.0f, 0.0f);
+	entity->hasSprite = false;
+	entity->sprite = TextureHandle();
+
+	Destroy(&entity->animations);
+	entity->activeAnimationKI_i = 0;
+	entity->activeAnimationKI_j = 0;
+	entity->isAnimated = false;
+	entity->isAnimationPlaying = false;
+	entity->isAnimationLooped = false;
+	entity->isAnimationReversed = false;
+	entity->elapsedTime = 0.0f;
+}
+
 
 inline void AddSprite(Entity* entity, char* assetName, vec2 offset = vec2(0.0f, 0.0f))
 {
@@ -502,6 +550,7 @@ inline void RemoveSprite(Entity* entity)
 	entity->hasSprite = false;
 }
 
+
 inline void AddAnimation(Entity* entity, char* referenceName, char* assetName, U32 numberOfFrames, F32 animationTime)
 {
 	Animation* animation = (Animation*)malloc(sizeof(Animation));
@@ -511,8 +560,10 @@ inline void AddAnimation(Entity* entity, char* referenceName, char* assetName, U
 	entity->isAnimated = true;
 }
 
-inline void RemoveAnimation(Entity* entity, char* referenceName)//U32 animationIndex)
+inline void RemoveAnimation(Entity* entity, char* referenceName)
 {
+	char* currentAnimationName = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].k;
+
 	GetKeyIndexResult ki = GetKeyIndex(&entity->animations, referenceName);
 	if (ki.present && ki.i == entity->activeAnimationKI_i && ki.j == entity->activeAnimationKI_j)
 	{
@@ -528,6 +579,9 @@ inline void RemoveAnimation(Entity* entity, char* referenceName)//U32 animationI
 	Destroy(animation);
 	RemoveKVPair(&entity->animations, referenceName);
 
+	GetKeyIndexResult currentAnimationNewKeyIndex = GetKeyIndex(&entity->animations, currentAnimationName);
+	entity->activeAnimationKI_i = currentAnimationNewKeyIndex.i;
+	entity->activeAnimationKI_j = currentAnimationNewKeyIndex.j;
 
 	if (Length(&entity->animations) == 0)
 	{
@@ -536,14 +590,53 @@ inline void RemoveAnimation(Entity* entity, char* referenceName)//U32 animationI
 
 }
 
-inline bool StartAnimation(Entity* entity, char* referenceName, bool loopAnimation = true, F32 startTime = 0.0f)
+inline void StartAnimation(Entity* entity)
+{
+	if (entity->isAnimated &&
+		entity->isAnimationPlaying == false && 
+		entity->animations.length > 0)
+	{
+		entity->isAnimationPlaying = true;
+
+		F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+		if (entity->elapsedTime == 0.0f && entity->isAnimationReversed)
+		{
+			entity->elapsedTime = animationLength;
+		}
+		if (entity->elapsedTime == animationLength && !entity->isAnimationReversed)
+		{
+			entity->elapsedTime = 0.0f;
+		}
+	}
+}
+
+inline bool StartAnimation(Entity* entity, char* referenceName, bool loopAnimation = true, bool playInReverse = false, F32 startTime = 0.0f)
 {
 	GetKeyIndexResult ki = GetKeyIndex(&entity->animations, referenceName);
 	if (ki.present)
 	{
 		entity->activeAnimationKI_i = ki.i;
 		entity->activeAnimationKI_j = ki.j;
-		entity->elapsedTime = startTime;
+		if (playInReverse)
+		{
+			entity->isAnimationReversed = true;
+
+			if (startTime != 0.0f)
+			{
+				entity->elapsedTime = startTime;
+			}
+			else
+			{
+				entity->elapsedTime = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+			}
+		}
+		else
+		{
+			// NOTE: If we forward declare StepElapsedAnimationTime we could use that here and it would be 
+			//			the correct way of doing this, BUT seeing as it is called every frame before displaying
+			//			an erroneous value will be dealt with before and animation frames are displayed anyway.
+			entity->elapsedTime = startTime; 
+		}
 		entity->isAnimationPlaying = true;
 		entity->isAnimationLooped = loopAnimation;
 		return true;
@@ -552,22 +645,64 @@ inline bool StartAnimation(Entity* entity, char* referenceName, bool loopAnimati
 	return false;
 }
 
-inline void StopAnimation(Entity* entity)
-{
-	entity->isAnimationPlaying = false;
-	entity->isAnimationLooped = false;
-	entity->isAnimationReversed = false;
-	entity->elapsedTime = 0.0f;
-}
-
 inline void PauseAnimation(Entity* entity)
 {
 	entity->isAnimationPlaying = false;
 }
 
+inline void StopAnimation(Entity* entity)
+{
+	entity->isAnimationPlaying = false;
+	// NOTE: Maybe leave these in? Only time will tell.
+	//entity->isAnimationLooped = false;
+	//entity->isAnimationReversed = false;
+	entity->elapsedTime = 0.0f;
+}
+
+// ?? Useful?
 inline void ReverseAnimation(Entity* entity, bool reverse = true)
 {
 	entity->isAnimationReversed = reverse;
+}
+
+inline void StepElapsedAnimationTime(Entity* entity, F32 time)
+{
+	if (entity->isAnimated && entity->isAnimationPlaying)
+	{
+		F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+
+		if (entity->isAnimationReversed)
+		{
+			entity->elapsedTime -= time;
+		}
+		else
+		{
+			entity->elapsedTime += time;
+		}
+
+		if (entity->isAnimationLooped)
+		{
+			if (entity->elapsedTime > animationLength || entity->elapsedTime < 0.0f)
+			{
+				I32 completionCount = (I32)(entity->elapsedTime / animationLength);
+				F32 deadTime = completionCount * animationLength;
+				entity->elapsedTime -= deadTime;
+
+				if (entity->elapsedTime < 0.0f)
+				{
+					entity->elapsedTime += animationLength;
+				}
+			}
+		}
+		else
+		{
+			if (entity->elapsedTime > animationLength || entity->elapsedTime < 0.0f)
+			{
+				entity->elapsedTime = ClampRange_F32(entity->elapsedTime, 0.0f, animationLength);
+				PauseAnimation(entity);
+			}
+		}
+	}
 }
 
 inline void SetElapsedAnimationTime(Entity* entity, F32 time)
@@ -586,8 +721,32 @@ inline void SetElapsedAnimationTimeAsPercent(Entity* entity, F32 percent)
 	entity->elapsedTime = newTime;
 }
 
+inline TextureHandle GetCurrentAnimationFrame(Entity* entity)
+{
+	TextureHandle result = TextureHandle();
+
+	if (entity->isAnimated && entity->animations.length > 0)
+	{
+		F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+		U32 numberOfFrames = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->numberOfFrames;
+		F32 elapsedTime = entity->elapsedTime;
+		U32 animationFrame = (U32)(elapsedTime / (animationLength / (F32)numberOfFrames));
+		animationFrame = ClampRange_U32(animationFrame, 0, numberOfFrames - 1);
+		AnimationHashLink** t = entity->animations.table;
+		U32 indI = entity->activeAnimationKI_i;
+		U32 indJ = entity->activeAnimationKI_j;
+		result = t[indI][indJ].v->frames[animationFrame];
+	}
+
+	return result;
+};
 
 
+
+
+/*
+ *  Maps / Chunks
+ */
 struct Chunk
 {
 	vec2 position;
@@ -615,11 +774,48 @@ const I32 chunkHeight = 8;
 typedef Chunk Chunks[numberOfHorizontalChunks][numberOfVerticalChunks];
 
 
+enum MapName
+{
+	MapName_NULL,
+
+	// World Maps
+	MapName_Present_World,
+	MapName_Past_World,
+
+	// Dungeons
+	MapName_Spirits_Grave,
+	MapName_Wing_Dungeon,
+	MapName_Moonlit_Grotto,
+	MapName_Skull_Dungeon,
+	MapName_Crown_Dungeon,
+	MapName_Mermaid_Dungeon,
+	MapName_Jabu_Jabus_Belly,
+	MapName_The_Ancient_Tomb,
+	MapName_Moblin_Fort,
+
+	// Shops
+
+	// Houses
+
+
+	MapName_COUNT
+};
+
+struct Map
+{
+	MapName name;
+
+
+};
+
+
+
+
+
 Chunks chunks;
 Entities entities;
 Camera camera;
 Texture guiPanel;
-Entity te;
 
 
 
@@ -1572,37 +1768,31 @@ void InitScene()
 {
 	SetWindowTitle("Oracle of Ages Clone");
 	SetClientWindowDimensions(vec2(600, 540));
-	SetViewport(vec2(0, 0), vec2(600, 540));
 	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
 
-	Initialize(&guiPanel, "Assets/x60/Objects/guiPanel.bmp");
+	Initialize(&guiPanel, "Assets/x60/Objects/guiPanel.bmp"); // NOTE: Just for visualization ATM
 
 	
 
 	
-
+	// NOTE: Should probably figure out what the actual optimal number is for this
 	Initialize(&spriteFiles, 60);
 	PopulateSpriteFiles(&spriteFiles, "Assets.txt");
 
-	/*AddKVPair(&spriteFiles, "weed", "Assets/x60/Objects/weed.bmp");
-	AddKVPair(&spriteFiles, "treePlot", "Assets/x60/Objects/treePlot.bmp");
-	AddKVPair(&spriteFiles, "tree_Generic", "Assets/x60/Objects/tree_generic.bmp");
-	AddKVPair(&spriteFiles, "tree_Palm", "Assets/x60/Objects/tree_Palm.bmp");
-	AddKVPair(&spriteFiles, "tree_Spooky", "Assets/x60/Objects/tree_Spooky.bmp");
-	AddKVPair(&spriteFiles, "heartPiece", "Assets/x60/Objects/heartPiece.bmp");
-
-	AddKVPair(&spriteFiles, "water_Deep", "Assets/x60/Objects/water_Deep");
-	AddKVPair(&spriteFiles, "link_Right", "Assets/x60/Objects/link_Right");
-	AddKVPair(&spriteFiles, "link_Left", "Assets/x60/Objects/link_Left");
-	AddKVPair(&spriteFiles, "link_Up", "Assets/x60/Objects/link_Up");
-	AddKVPair(&spriteFiles, "link_Down", "Assets/x60/Objects/link_Down");*/
 
 
 
-	camera.halfDim = vec2(5, 4); // *2.0f;
-	camera.position = vec2(0, -10);
+
+
+	camera.halfDim = vec2(5.0f, 4.0f); // *2.0f;
+	camera.position = vec2(0.0f, -10.0f);
 	camera.rotationAngle = 0.0f;
 	camera.scale = 1.0f;
+
+
+
+
+
 
 	vec2 chunkPos = vec2(-(numberOfHorizontalChunks / 2.0f) * chunkWidth, -(numberOfVerticalChunks / 2.0f) * chunkHeight);
 	for (size_t y = 0; y < numberOfVerticalChunks; ++y)
@@ -1612,7 +1802,7 @@ void InitScene()
 			chunks[x][y].position = chunkPos;
 			chunkPos.x = chunkPos.x + chunkWidth;
 		}
-		chunkPos.x = -70;
+		chunkPos.x = -70.0f;
 		chunkPos.y = chunkPos.y + chunkHeight;
 	}
 
@@ -1635,13 +1825,15 @@ void InitScene()
 		}
 	}
 
-	te.transform.position = entities.back().transform.position - vec2(0,1);
-	Initialize(&te.animations, 1);
+	Entity te;
+	Initialize(&te);
+	te.transform.position = entities.back().transform.position - vec2(0.0f,1.0f);
 	AddAnimation(&te, "right", "link_Right", 2, 0.33f);
 	AddAnimation(&te, "left", "link_Left", 2, 0.33f);
 	AddAnimation(&te, "up", "link_Up", 2, 0.33f);
 	AddAnimation(&te, "down", "link_Down", 2, 0.33f);
-	StartAnimation(&te, "right");
+	AddAnimation(&te, "water", "water_Deep", 4, 4.0f);
+	StartAnimation(&te, "water", true, true);
 
 	RemoveAnimation(&te, "left");
 	entities.push_back(te);
@@ -1690,6 +1882,18 @@ void UpdateGamestate_PrePhysics(F32 dt)
 	{
 		StartAnimation(&entities[1], "up");
 	}
+	if (GetKeyDown(KeyCode_1))
+	{
+		StartAnimation(&entities[1]);
+	}
+	if (GetKeyDown(KeyCode_2))
+	{
+		PauseAnimation(&entities[1]);
+	}
+	if (GetKeyDown(KeyCode_3))
+	{
+		StopAnimation(&entities[1]);
+	}
 
 	if (GetKeyDown(KeyCode_Equal))
 	{
@@ -1723,6 +1927,7 @@ void UpdateGamestate_PostPhysics(F32 dt)
 {
 	SetViewport(vec2(0, 0), vec2(600, 480));
 
+	// Draw entities with sprites
 	for (size_t i = 0; i < entities.size(); ++i)
 	{
 		bool hasSprite = entities[i].hasSprite;
@@ -1734,6 +1939,7 @@ void UpdateGamestate_PostPhysics(F32 dt)
 		}
 	}
 
+	// Draw chunk outlines
 	for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
 	{
 		for (size_t y = 0; y < numberOfVerticalChunks; ++y)
@@ -1741,7 +1947,10 @@ void UpdateGamestate_PostPhysics(F32 dt)
 			DrawRectangleOutline(chunks[x][y].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(1, 0, 0, 1), &camera);
 		}
 	}
+
+	// NOTE: Draw inset chunk outline for test purposes
 	DrawRectangleOutline(chunks[1][13].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(0, 1, 0, 1), &camera, .1f);
+
 
 	// NOTE: Camera space grid, corresponding to tiles
 	F32 initialXPos = camera.position.x - chunkWidth / 2.0f;
@@ -1764,59 +1973,17 @@ void UpdateGamestate_PostPhysics(F32 dt)
 	}
 
 
+	// Draw entities with animations
 	for (size_t i = 0; i < entities.size(); ++i)
 	{
 		bool isAnimated = entities[i].isAnimated;
 		size_t numberOfAnimations = Length(&entities[i].animations);
+
 		if (isAnimated && numberOfAnimations > 0)
 		{
-			F32 animationTime = entities[i].animations.table[entities[i].activeAnimationKI_i][entities[i].activeAnimationKI_j].v->animationTime;
-
-			if (entities[i].isAnimationPlaying)
-			{
-				if (entities[i].isAnimationReversed)
-				{
-					entities[i].elapsedTime -= dt;
-
-					if (entities[i].elapsedTime <= 0)
-					{
-						if (entities[i].isAnimationLooped)
-						{
-							entities[i].elapsedTime += animationTime;
-						}
-						else
-						{
-							entities[i].elapsedTime = 0.0f;
-						}
-
-					}
-				}
-				else
-				{
-					entities[i].elapsedTime += dt;
-
-					if (entities[i].elapsedTime >= animationTime)
-					{
-						if (entities[i].isAnimationLooped)
-						{
-							entities[i].elapsedTime -= animationTime;
-						}
-						else
-						{
-							entities[i].elapsedTime = animationTime;
-						}
-					}
-				}
-			}
-
-			F32 elapsedTime = entities[i].elapsedTime;
-			U32 numberOfFrames = entities[i].animations.table[entities[i].activeAnimationKI_i][entities[i].activeAnimationKI_j].v->numberOfFrames;
-			U32 animationFrame = (U32)(elapsedTime / (animationTime / (F32)numberOfFrames));
-			animationFrame = ClampRange_U32(animationFrame, 0, numberOfFrames - 1);
-			AnimationHashLink** t = entities[i].animations.table;
-			U32 indI = entities[i].activeAnimationKI_i;
-			U32 indJ = entities[i].activeAnimationKI_j;
-			DrawSprite(GetTexture(t[indI][indJ].v->frames[animationFrame]), entities[i].spriteOffset, entities[i].transform, &camera);
+			StepElapsedAnimationTime(&entities[i], dt);
+			TextureHandle animationFrame = GetCurrentAnimationFrame(&entities[i]);
+			DrawSprite(GetTexture(animationFrame), entities[i].spriteOffset, entities[i].transform, &camera);
 		}
 	}
 	
