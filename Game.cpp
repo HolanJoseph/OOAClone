@@ -479,6 +479,120 @@ inline void Destroy(AnimationHash* ah)
 
 
 
+#define DEFAULT_DAMPING_FACTOR 1.0f
+struct PointMass
+{
+	vec2 position;
+	vec2 velocity; // m/s
+	vec2 forceAccumulator;
+
+	F32 inverseMass; // Kg
+	F32 dampingFactor;
+};
+
+/*void Initialize(PointMass* pointMass)
+{
+	pointMass->position = vec3(0.0f, 0.0f, 0.0f);
+	pointMass->velocity = vec3(0.0f, 0.0f, 0.0f);
+	pointMass->forceAccumulator = vec3(0.0f, 0.0f, 0.0f);
+
+	pointMass->inverseMass = 0.0f;
+	pointMass->dampingFactor = DEFAULT_DAMPING_FACTOR;
+};*/
+
+void Initialize(PointMass* pointMass,
+				vec2 position = vec2(0.0f, 0.0f), 
+				vec2 velocity = vec2(0.0f, 0.0f), 
+				vec2 force = vec2(0.0f, 0.0f), 
+				F32 inverseMass = 0.0f, 
+				F32 dampingFactor = DEFAULT_DAMPING_FACTOR)
+{
+	pointMass->position = position;
+	pointMass->velocity = velocity;
+	pointMass->forceAccumulator = force;
+
+	pointMass->inverseMass = inverseMass;
+	pointMass->dampingFactor = dampingFactor;
+};
+
+void Destroy(PointMass* pointMass)
+{
+	pointMass->position = vec2(0.0f, 0.0f);
+	pointMass->velocity = vec2(0.0f, 0.0f);
+	pointMass->forceAccumulator = vec2(0.0f, 0.0f);
+
+	pointMass->inverseMass = 0.0f;
+	pointMass->dampingFactor = DEFAULT_DAMPING_FACTOR;
+};
+
+F32 GetMass(PointMass* pointMass)
+{
+	F32 result;
+
+	if (pointMass->inverseMass == 0.0f)
+	{
+		result = 0.0f;
+	}
+	else
+	{
+		result = 1.0f / pointMass->inverseMass;
+	}
+
+	return result;
+}
+
+vec2 GetAcceleration(PointMass* pointMass)
+{
+	vec2 result = pointMass->inverseMass * pointMass->forceAccumulator;
+	return result;
+}
+
+void Integrate(PointMass* pointMass, F32 deltaTime)
+{
+	vec2 acceleration = GetAcceleration(pointMass);
+	pointMass->position = pointMass->position + (pointMass->velocity * deltaTime);
+	pointMass->velocity = (pointMass->velocity * pow(pointMass->dampingFactor, deltaTime)) + (acceleration * deltaTime);
+	pointMass->forceAccumulator = vec2(0.0f, 0.0f);
+}
+
+void ApplyForce(PointMass* pointMass, vec2 direction, F32 power)
+{
+	vec2 scaledForce = direction * power;
+	pointMass->forceAccumulator += scaledForce;
+}
+
+void ApplyImpulse(PointMass* pointMass, vec2 direction, F32 power)
+{
+	vec2 scaledVelocity = direction * power;
+	pointMass->velocity += scaledVelocity;
+}
+
+void FixInterpenetration(PointMass* pointMass1, PointMass* pointMass2, CollisionInfo_2D collisionInfo)
+{
+
+	if (pointMass1->inverseMass == 0)
+	{
+		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
+		pointMass2->position += displacement;
+	}
+	else if (pointMass2->inverseMass == 0)
+	{
+		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
+		pointMass1->position -= displacement;
+	}
+	else
+	{
+		F32 pm1Mass = 1.0f / pointMass1->inverseMass;
+		F32 pm2Mass = 1.0f / pointMass2->inverseMass;
+		vec2 pm1Displacement = (pm2Mass / (pm1Mass + pm2Mass)) * collisionInfo.normal * collisionInfo.distance;
+		vec2 pm2Displacement = (pm1Mass / (pm1Mass + pm2Mass)) * -collisionInfo.normal * collisionInfo.distance;
+		pointMass1->position -= pm1Displacement;
+		pointMass2->position -= pm2Displacement;
+	}
+}
+
+
+
 /*
  *  Entities
  */
@@ -818,6 +932,9 @@ Entities entities;
 Camera camera;
 Texture guiPanel;
 
+Entity physEnts[2];
+PointMass pm[2];
+Rectangle_2D cs[2];
 
 
 /*inline void InitChunk_0_0()
@@ -1838,6 +1955,27 @@ void InitScene()
 
 	RemoveAnimation(&te, "left");
 	entities.push_back(te);
+
+	// Initialize physics/ collision test game objects
+	Initialize(&physEnts[0]);
+	AddSprite(&physEnts[0], "stump");
+
+	Initialize(&physEnts[1]);
+	AddSprite(&physEnts[1], "boulder");
+
+
+
+	Initialize(&pm[0]);
+	pm[0].position = vec2(64.5f, 54.5f);
+	pm[0].inverseMass = 0.5f;
+
+	Initialize(&pm[1]);
+	pm[1].position = vec2(64.5f, 50.5f);
+	pm[1].inverseMass = 0.5f;
+
+
+	cs[0].halfDim = vec2(.5f, .5f);
+	cs[1].halfDim = vec2(.5f, .5f);
 }
 
 bool GameInitialize()
@@ -1864,7 +2002,7 @@ bool GameInitialize()
 
 
 
-
+F32 etime = 0.0f;
 void UpdateGamestate_PrePhysics(F32 dt)
 {
 	if (GetKeyDown(KeyCode_Left))
@@ -1922,6 +2060,36 @@ void UpdateGamestate_PrePhysics(F32 dt)
 	}
 	camera.position.x = ClampRange_F32(camera.position.x, chunks[0][0].position.x + chunkWidth / 2.0f, chunks[13][0].position.x + chunkWidth / 2.0f);
 	camera.position.y = ClampRange_F32(camera.position.y, chunks[0][0].position.y + chunkHeight / 2.0f, chunks[0][13].position.y + chunkHeight / 2.0f);
+
+	// Update test physics/ collision objects
+	ApplyForce(&pm[0], vec2(0, -1), 1.0f);
+
+
+
+	Integrate(&pm[0], dt);
+	Integrate(&pm[1], dt);
+
+	physEnts[0].transform.position = pm[0].position;
+	physEnts[1].transform.position = pm[1].position;
+
+	CollisionInfo_2D ci = DetectCollision_2D(cs[0], physEnts[0].transform, cs[1], physEnts[1].transform);
+	if (ci.collided)
+	{
+		// Resolve Interpenetration
+		FixInterpenetration(&pm[0], &pm[1], ci);
+		physEnts[0].transform.position = pm[0].position;
+		physEnts[1].transform.position = pm[1].position;
+	}
+
+
+// 	if (etime > 16.8f)
+// 	{
+// 		etime = 600;
+// 	}
+// 	else
+// 	{
+// 		etime += dt;
+// 	}
 }
 
 void UpdateGamestate_PostPhysics(F32 dt)
@@ -1990,6 +2158,23 @@ void UpdateGamestate_PostPhysics(F32 dt)
 	
 
 	DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));
+
+	// DRAW PHYSICS TEST OBJECTS
+	for (size_t i = 0; i < 2; ++i)
+	{
+		bool hasSprite = physEnts[i].hasSprite;
+		if (hasSprite)
+		{
+			// NOTE: sort by x position
+			// NOTE: render higher x first
+			DrawSprite(GetTexture(physEnts[i].sprite), physEnts[i].spriteOffset, physEnts[i].transform, &camera);
+		}
+	}
+
+	for (size_t i = 0; i < 2; ++i)
+	{
+		DrawRectangleOutline(physEnts[i].transform.position + vec2(-cs[i].halfDim.x, cs[i].halfDim.y), cs[i].halfDim * 2.0f, vec4(1.0f, 0.0f, 0.0f, 1.0f), &camera);
+	}
 }
 
 void GameUpdate(F32 deltaTime)
@@ -2010,7 +2195,7 @@ bool GameShutdown()
 	ShutdownCollisionDetection2DApplet();
 #endif
 
-	Destroy(&spriteFiles);
+	//Destroy(&spriteFiles);
 
 	ShutdownRenderer();
 	return true;

@@ -629,15 +629,15 @@ struct CollisionInfo_2D
 };
 
 template<typename S1, typename S2>
-inline CollisionInfo_2D DetectCollision_2D(S1 shapeA, S2 shapeB)
+inline CollisionInfo_2D DetectCollision_2D(S1 shapeA, Transform shapeATransform, S2 shapeB, Transform shapeBTransform)
 {
 	CollisionInfo_2D result;
 	result.collided = false;
 
-	GJKInfo_2D gjkInfo = GJK(shapeA, shapeB);
+	GJKInfo_2D gjkInfo = GJK_2D(shapeA, shapeATransform, shapeB, shapeBTransform);
 	if (gjkInfo.collided)
 	{
-		EPAInfo_2D epaInfo = EPA(shapeA, shapeB, gjkInfo.simplex);
+		EPAInfo_2D epaInfo = EPA_2D(shapeA, shapeATransform, shapeB, shapeBTransform, gjkInfo.simplex);
 		
 		result.collided = true;
 		result.normal = epaInfo.normal;

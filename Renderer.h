@@ -309,6 +309,16 @@ inline U32 GenerateLoadNumberTexturePool()
 	return result;
 }
 
+inline Texture* GetTexture(TextureHandle handle)
+{
+	Texture* result = NULL;
+
+
+	result = &texturePool[handle.poolIndex].data;
+
+	return result;
+}
+
 inline bool IsValidTextureHandle(TextureHandle th)
 {
 	Assert(th.loadNumber < numberOfTexturesAllocated);
@@ -388,15 +398,7 @@ inline void RemoveFromTexturePool(TextureHandle th)
 	}
 };
 
-inline Texture* GetTexture(TextureHandle handle)
-{
-	Texture* result = NULL;
 
-	
-	result = &texturePool[handle.poolIndex].data;
-
-	return result;
-}
 
 
 
