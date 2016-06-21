@@ -655,7 +655,7 @@ inline void AddSprite(Entity* entity, char* assetName, vec2 offset = vec2(0.0f, 
 	char* filePath = GetValue(&spriteFiles, assetName);
 	entity->sprite = AddToTexturePool(filePath);
 	entity->spriteOffset = offset;
-	free(filePath);
+	//free(filePath);
 	entity->hasSprite = true;
 }
 
@@ -932,9 +932,9 @@ Entities entities;
 Camera camera;
 Texture guiPanel;
 
-Entity physEnts[2];
-PointMass pm[2];
-Rectangle_2D cs[2];
+Entity physEnts[19];
+PointMass pm[19];
+Rectangle_2D cs[19];
 
 
 /*inline void InitChunk_0_0()
@@ -1837,6 +1837,17 @@ inline void InitChunk_12_13()
 {
 }*/
 
+inline void InitChunk_10_5()
+{
+	Chunk* chunk = &chunks[10][5];
+
+	chunk->entities.push_back(Entity());
+	Initialize(&chunk->entities[0]);
+	AddSprite(&chunk->entities[0], "background_10-5");
+	chunk->entities[0].transform.position = vec2(5.0f, 4.0f);
+	chunk->entities[0].transform.scale = vec2(10.0f, 8.0f);
+}
+
 inline void InitChunk_13_13()
 {
 	Chunk* chunk = &chunks[13][13];
@@ -1876,6 +1887,7 @@ inline void InitChunks()
 	InitChunk_10_13();
 	InitChunk_11_13();
 	InitChunk_12_13();*/
+	InitChunk_10_5();
 	InitChunk_13_13();
 
 }
@@ -1902,7 +1914,7 @@ void InitScene()
 
 
 
-	camera.halfDim = vec2(5.0f, 4.0f); // *2.0f;
+	camera.halfDim = vec2(5.0f, 4.0f)*2.0f;
 	camera.position = vec2(0.0f, -10.0f);
 	camera.rotationAngle = 0.0f;
 	camera.scale = 1.0f;
@@ -1926,7 +1938,7 @@ void InitScene()
 
 	InitChunks();
 
-	camera.position = chunks[13][13].position + vec2(chunkWidth / 2.0f, chunkHeight / 2.0f);
+	camera.position = vec2(35.0f, -12.0f);//chunks[13][13].position + vec2(chunkWidth / 2.0f, chunkHeight / 2.0f);
 
 	// Add all chunks to entities
 	for (size_t y = 0; y < numberOfVerticalChunks; ++y)
@@ -1957,25 +1969,134 @@ void InitScene()
 	entities.push_back(te);
 
 	// Initialize physics/ collision test game objects
+	////////////////////////////////////////////////////
+	// NOTE: 0 - 8 ARE TREES
+	////////////////////////////////////////////////////
 	Initialize(&physEnts[0]);
-	AddSprite(&physEnts[0], "stump");
+	AddSprite(&physEnts[0], "tree_Generic");
+	physEnts[0].transform.position = vec2(30.0f, -8.0f);
+	physEnts[0].transform.scale = vec2(2.0f, 2.0f);
 
 	Initialize(&physEnts[1]);
-	AddSprite(&physEnts[1], "boulder");
+	AddSprite(&physEnts[1], "tree_Generic");
+	physEnts[1].transform.position = vec2(32.0f, -8.0f);
+	physEnts[1].transform.scale = vec2(2.0f, 2.0f);
+
+	Initialize(&physEnts[2]);
+	AddSprite(&physEnts[2], "tree_Generic");
+	physEnts[2].transform.position = vec2(39.0f, -8.0f);
+	physEnts[2].transform.scale = vec2(2.0f, 2.0f);
+
+	Initialize(&physEnts[3]);
+	AddSprite(&physEnts[3], "tree_Generic");
+	physEnts[3].transform.position = vec2(30.0f, -10.0f);
+	physEnts[3].transform.scale = vec2(2.0f, 2.0f);
+
+	Initialize(&physEnts[4]);
+	AddSprite(&physEnts[4], "tree_Generic");
+	physEnts[4].transform.position = vec2(39.0f, -10.0f);
+	physEnts[4].transform.scale = vec2(2.0f, 2.0f);
+
+	Initialize(&physEnts[5]);
+	AddSprite(&physEnts[5], "tree_Generic");
+	physEnts[5].transform.position = vec2(30.0f, -12.0f);
+	physEnts[5].transform.scale = vec2(2.0f, 2.0f);
+
+	Initialize(&physEnts[6]);
+	AddSprite(&physEnts[6], "tree_Generic");
+	physEnts[6].transform.position = vec2(39.0f, -12.0f);
+	physEnts[6].transform.scale = vec2(2.0f, 2.0f);
+
+	Initialize(&physEnts[7]);
+	AddSprite(&physEnts[7], "tree_Generic");
+	physEnts[7].transform.position = vec2(30.0f, -14.0f);
+	physEnts[7].transform.scale = vec2(2.0f, 2.0f);
+
+	Initialize(&physEnts[8]);
+	AddSprite(&physEnts[8], "tree_Generic");
+	physEnts[8].transform.position = vec2(39.0f, -14.0f);
+	physEnts[8].transform.scale = vec2(2.0f, 2.0f);
+
+	// NOTE: This represents the lower wall
+	Initialize(&physEnts[9]);
+	physEnts[9].transform.position = vec2(35.5f, -16.0f);
+	physEnts[9].transform.scale = vec2(1.0f, 1.0f);
+
+	//////////////////////////////////////////////////////////////
+	// NOTE: 10 - 17 ARE WEEDS
+	//////////////////////////////////////////////////////////////
+	Initialize(&physEnts[10]);
+	AddSprite(&physEnts[10], "weed");
+	physEnts[10].transform.position = vec2(31.5f, -12.5f);
+
+	Initialize(&physEnts[11]);
+	AddSprite(&physEnts[11], "weed");
+	physEnts[11].transform.position = vec2(32.5f, -12.5f);
+
+	Initialize(&physEnts[12]);
+	AddSprite(&physEnts[12], "weed");
+	physEnts[12].transform.position = vec2(37.5f, -12.5f);
+
+	Initialize(&physEnts[13]);
+	AddSprite(&physEnts[13], "weed");
+	physEnts[13].transform.position = vec2(31.5f, -13.5f);
+
+	Initialize(&physEnts[14]);
+	AddSprite(&physEnts[14], "weed");
+	physEnts[14].transform.position = vec2(36.5f, -13.5f);
+
+	Initialize(&physEnts[15]);
+	AddSprite(&physEnts[15], "weed");
+	physEnts[15].transform.position = vec2(37.5f, -13.5f);
+
+	Initialize(&physEnts[16]);
+	AddSprite(&physEnts[16], "weed");
+	physEnts[16].transform.position = vec2(36.5f, -14.5f);
+
+	Initialize(&physEnts[17]);
+	AddSprite(&physEnts[17], "weed");
+	physEnts[17].transform.position = vec2(37.5f, -14.5f);
 
 
 
-	Initialize(&pm[0]);
-	pm[0].position = vec2(64.5f, 54.5f);
-	pm[0].inverseMass = 0.5f;
 
-	Initialize(&pm[1]);
-	pm[1].position = vec2(64.5f, 50.5f);
-	pm[1].inverseMass = 0.5f;
+	Initialize(&pm[0], physEnts[0].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 1.0f, 0.0f);
+	Initialize(&pm[1], physEnts[1].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[2], physEnts[2].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[3], physEnts[3].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[4], physEnts[4].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[5], physEnts[5].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[6], physEnts[6].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[7], physEnts[7].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[8], physEnts[8].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[9], physEnts[9].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[10], physEnts[10].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[11], physEnts[11].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[12], physEnts[12].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[13], physEnts[13].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[14], physEnts[14].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[15], physEnts[15].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[16], physEnts[16].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
+	Initialize(&pm[17], physEnts[17].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
 
-
-	cs[0].halfDim = vec2(.5f, .5f);
-	cs[1].halfDim = vec2(.5f, .5f);
+	cs[0].halfDim = vec2(0.5f, 0.5f);
+	cs[1].halfDim = vec2(0.5f, 0.5f);
+	cs[2].halfDim = vec2(0.5f, 0.5f);
+	cs[3].halfDim = vec2(0.5f, 0.5f);
+	cs[4].halfDim = vec2(0.5f, 0.5f);
+	cs[5].halfDim = vec2(0.5f, 0.5f);
+	cs[6].halfDim = vec2(0.5f, 0.5f);
+	cs[7].halfDim = vec2(0.5f, 0.5f);
+	cs[8].halfDim = vec2(0.5f, 0.5f);
+	cs[9].halfDim = vec2(8.5f, 1.0f);
+	cs[10].halfDim = vec2(0.5f, 0.5f);
+	cs[11].halfDim = vec2(0.5f, 0.5f);
+	cs[12].halfDim = vec2(0.5f, 0.5f);
+	cs[13].halfDim = vec2(0.5f, 0.5f);
+	cs[14].halfDim = vec2(0.5f, 0.5f);
+	cs[15].halfDim = vec2(0.5f, 0.5f);
+	cs[16].halfDim = vec2(0.5f, 0.5f);
+	cs[17].halfDim = vec2(0.5f, 0.5f);
 }
 
 bool GameInitialize()
@@ -2007,31 +2128,31 @@ void UpdateGamestate_PrePhysics(F32 dt)
 {
 	if (GetKeyDown(KeyCode_Left))
 	{
-		StartAnimation(&entities[1], "left");
+		StartAnimation(&entities[2], "left");
 	}
 	if (GetKeyDown(KeyCode_Right))
 	{
-		StartAnimation(&entities[1], "right");
+		StartAnimation(&entities[2], "right");
 	}
 	if (GetKeyDown(KeyCode_Down))
 	{
-		StartAnimation(&entities[1], "down");
+		StartAnimation(&entities[2], "down");
 	}
 	if (GetKeyDown(KeyCode_Up))
 	{
-		StartAnimation(&entities[1], "up");
+		StartAnimation(&entities[2], "up");
 	}
 	if (GetKeyDown(KeyCode_1))
 	{
-		StartAnimation(&entities[1]);
+		StartAnimation(&entities[2]);
 	}
 	if (GetKeyDown(KeyCode_2))
 	{
-		PauseAnimation(&entities[1]);
+		PauseAnimation(&entities[2]);
 	}
 	if (GetKeyDown(KeyCode_3))
 	{
-		StopAnimation(&entities[1]);
+		StopAnimation(&entities[2]);
 	}
 
 	if (GetKeyDown(KeyCode_Equal))
@@ -2062,8 +2183,23 @@ void UpdateGamestate_PrePhysics(F32 dt)
 	camera.position.y = ClampRange_F32(camera.position.y, chunks[0][0].position.y + chunkHeight / 2.0f, chunks[0][13].position.y + chunkHeight / 2.0f);
 
 	// Update test physics/ collision objects
-	ApplyForce(&pm[0], vec2(0, -1), 1.0f);
-
+	//ApplyForce(&pm[0], vec2(0, -1), 1.0f);
+	if (GetKey(KeyCode_J))
+	{
+		ApplyImpulse(&pm[0], vec2(-1.0f, 0.0f), 100.0f * dt);
+	}
+	if (GetKey(KeyCode_L))
+	{
+		ApplyImpulse(&pm[0], vec2(1.0f, 0.0f), 100.0f * dt);
+	}
+	if (GetKey(KeyCode_I))
+	{
+		ApplyImpulse(&pm[0], vec2(0.0f, 1.0f), 100.0f * dt);
+	}
+	if (GetKey(KeyCode_K))
+	{
+		ApplyImpulse(&pm[0], vec2(0.0f, -1.0f), 100.0f * dt);
+	}
 
 
 	Integrate(&pm[0], dt);
@@ -2160,7 +2296,7 @@ void UpdateGamestate_PostPhysics(F32 dt)
 	DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));
 
 	// DRAW PHYSICS TEST OBJECTS
-	for (size_t i = 0; i < 2; ++i)
+	for (size_t i = 0; i < 18; ++i)
 	{
 		bool hasSprite = physEnts[i].hasSprite;
 		if (hasSprite)
@@ -2171,9 +2307,9 @@ void UpdateGamestate_PostPhysics(F32 dt)
 		}
 	}
 
-	for (size_t i = 0; i < 2; ++i)
+	for (size_t i = 0; i < 18; ++i)
 	{
-		DrawRectangleOutline(physEnts[i].transform.position + vec2(-cs[i].halfDim.x, cs[i].halfDim.y), cs[i].halfDim * 2.0f, vec4(1.0f, 0.0f, 0.0f, 1.0f), &camera);
+		DrawRectangleOutline(physEnts[i].transform.position + (vec2(-cs[i].halfDim.x, cs[i].halfDim.y) * physEnts[i].transform.scale), cs[i].halfDim * 2.0f * physEnts[i].transform.scale, vec4(1.0f, 0.0f, 0.0f, 1.0f), &camera);
 	}
 }
 
