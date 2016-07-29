@@ -598,7 +598,7 @@ char* GetWindowTitle()
 	return result;
 }
 
-void SetWindowTitle(char* newTitle)
+void SetWindowTitle(const char* newTitle)
 {
 	SetWindowText( windowHandle, newTitle);
 }
@@ -1103,7 +1103,7 @@ static void QueryController()
   File API Implementation
  */
 
-bool CreateFile(char* filename, bool overwriteIfExists)
+bool CreateFile(const char* filename, bool overwriteIfExists)
 {
 	bool result = true;
 	DWORD creationDisposition = (overwriteIfExists) ? CREATE_ALWAYS : CREATE_NEW;
@@ -1126,7 +1126,7 @@ bool CreateFile(char* filename, bool overwriteIfExists)
 	return result;
 }
 
-GetFileSizeReturnType GetFileSize(char* filename)
+GetFileSizeReturnType GetFileSize(const char* filename)
 {
 	GetFileSizeReturnType result = {0};
 	HANDLE fileHandle = CreateFile(
@@ -1156,7 +1156,7 @@ GetFileSizeReturnType GetFileSize(char* filename)
 
 // NOTE: casting down U64 to U32 
 //		if huge files need to be supported this actually needs to be dealt with.
-ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition)
+ReadFileReturnType ReadFile(const char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition)
 {
 	ReadFileReturnType result = {0};
 
@@ -1192,7 +1192,7 @@ ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesT
 
 // NOTE: casting down U64 to U32 
 //		if huge files need to be supported this actually needs to be dealt with.
-WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition)
+WriteFileReturnType WriteFileconst (char* filename, const char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition)
 {
 	WriteFileReturnType result = {0};
 
@@ -1239,12 +1239,12 @@ void Assert(int expression)
 	assert(expression);
 }
 
-void DebugPrint(char* outputString)
+void DebugPrint(const char* outputString)
 {
 	OutputDebugString(outputString);
 }
 
-void DebugPrintf(U32 size, char* formatString, ...)
+void DebugPrintf(U32 size, const char* formatString, ...)
 {
 	va_list vl;
 	va_start(vl, formatString);

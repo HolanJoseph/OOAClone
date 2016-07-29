@@ -18,7 +18,7 @@ struct TextureData
 	I32 height;
 	I32 numberOfComponents;
 };
-TextureData LoadTexture(char* filename, I32 textureNumberOfImageComponentsDesired = 4)
+TextureData LoadTexture(const char* filename, I32 textureNumberOfImageComponentsDesired = 4)
 {
 	TextureData result;
 
@@ -39,7 +39,7 @@ struct ModelData
 	U32* indices;
 	size_t numberOfIndices;
 };
-ModelData Load3DModel(char* filename)
+ModelData Load3DModel(const char* filename)
 {
 	ModelData result;
 

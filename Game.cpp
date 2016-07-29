@@ -8,16 +8,22 @@
 #include "Util.h"
 #include "RandomNumberGenerator.h"
 #include "String.h"
+#include "MergeSort.h"
 
 #include "AssetLoading.h"
+#include "AssetNameToFilepathTable.h"
+
 #include "Renderer.h"
-#include "CollisionDetection2D.h"
+//#include "CollisionDetection2D.h"
+#include "CollisionDetection2DObj.h"
 
 #include "StringAPI_Tests.h"
 
-#include "CollisionDetection2D_Applet.h"
+//#include "CollisionDetection2D_Applet.h"
 
 #include <vector>
+using std::vector;
+#include <typeinfo>
 
 
 
@@ -25,231 +31,69 @@
 //#define COLLISION2DAPPLET 1
 #define GAME 1
 
+const vec2 TileDimensions = vec2(0.5f, 0.5f);
 
 
-
-
-/*
- *  Sprite Filename Management
- *  NOTE: This really needs to be switched to Link** the current method is really error prone and occasionally faults.
- */
-struct SpriteFileTableLink
-{
-	char* k;
-	char* v;
-
-	SpriteFileTableLink* next;
-};
-
-struct SpriteFileTable
-{
-	U32 numberOfIndices;
-	SpriteFileTableLink* table;
-
-	SpriteFileTable() : numberOfIndices(0), table(NULL) {}; // NOTE: Causes heapvalidate issue?
-};
-
-inline void Initialize(SpriteFileTable* sft, U32 numberOfIndices)
-{
-	sft->numberOfIndices = numberOfIndices;
-	sft->table = (SpriteFileTableLink*)malloc(sizeof(SpriteFileTableLink)* numberOfIndices);
-
-	for (size_t i = 0; i < numberOfIndices; ++i)
-	{
-		sft->table[i] = { 0 };
-	}
-}
-
-inline char* GetValue(SpriteFileTable* sft, char* key)
-{
-	char* result = NULL;
-
-	// NOTE: How is this better?
-	U32 i = (String_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
-	SpriteFileTableLink* l = &sft->table[i];
-
-	if (l->k == NULL)
-	{
-		return result;
-	}
-
-	while (l)
-	{
-		// if key and l->key match up to key length
-		char* k = key;
-		char* lk = l->k;
-		bool match = true;
-		while (*k && *lk)
-		{
-			if (*k != *lk)
-			{
-				match = false;
-				break;
-			}
-
-			++k;
-			++lk;
-		}
-
-		// Make sure lk is not longer than k
-		if (match && (*k != NULL || *lk != NULL))
-		{
-			match = false;
-		}
-
-		if (match)
-		{
-			result = l->v;
-			break;
-		}
-
-		l = l->next;
-	}
-
-	return result;
-}
-
-inline void AddKVPair(SpriteFileTable* sft, char* key, char* value)
-{
-	size_t keyLength = 0;
-	char* keyI = key;
-	while (*keyI)
-	{
-		++keyI;
-		++keyLength;
-	}
-	char* keyCopy = (char*)malloc(sizeof(char)* (keyLength + 1));
-	for (size_t i = 0; i < keyLength; ++i)
-	{
-		keyCopy[i] = key[i];
-	}
-	keyCopy[keyLength] = '\0';
-
-	size_t valueLength = 0;
-	char* valueI = value;
-	while (*valueI)
-	{
-		++valueI;
-		++valueLength;
-	}
-	char* valueCopy = (char*)malloc(sizeof(char)* (valueLength + 1));
-	for (size_t i = 0; i < valueLength; ++i)
-	{
-		valueCopy[i] = value[i];
-	}
-	valueCopy[valueLength] = '\0';
-
-	if (GetValue(sft, key) == NULL)
-	{
-
-		U32 i = (String_HashFunction(key, sft->numberOfIndices) & 0x7fffffff) % sft->numberOfIndices;
-		if (sft->table[i].k == NULL)
-		{
-			sft->table[i].k = keyCopy;
-			sft->table[i].v = valueCopy;
-			sft->table[i].next = NULL; // NOTE: For the consistency.
-		}
-		else
-		{
-			SpriteFileTableLink* l = &sft->table[i];
-			while (l->next)
-			{
-				l = l->next;
-			}
-			l->next = (SpriteFileTableLink*)malloc(sizeof(SpriteFileTableLink));
-			l->next->k = keyCopy;
-			l->next->v = valueCopy;
-			l->next->next = NULL;
-		}
-
-	}
-}
-
-inline void Destroy(SpriteFileTable* sft)
-{
-	for (size_t i = 0; i < sft->numberOfIndices; ++i)
-	{
-		SpriteFileTableLink* lPrev = NULL;
-		SpriteFileTableLink* l = sft->table[i].next;
-		while (l != NULL)
-		{
-			if (l->k)
-			{
-				free(l->k);
-			}
-			if (l->v)
-			{
-				free(l->v);
-			}
-			lPrev = l;
-			l = l->next;
-
-			free(lPrev);
-		}
-
-		free(sft->table[i].k);
-		free(sft->table[i].v); // NOTE: Something is causing a memory error here. Wiggle link around a bunch and then close the app.9
-	}
-	free(sft->table);
-
-	sft->table = NULL;
-	sft->numberOfIndices = 0;
-}
-
-SpriteFileTable spriteFiles;
-
-inline void PopulateSpriteFiles(SpriteFileTable* hash, char* filename)
+StringStringHashTable spriteAssetFilepathTable;
+inline void ReadInSpriteAssets(StringStringHashTable* hash, char* filename)
 {
 	GetFileSizeReturnType assetFileSize = GetFileSize(filename);
 	if (assetFileSize.fileExists)
 	{
 		char* fullFile = (char*)malloc(sizeof(char) * (assetFileSize.fileSize + 1));
-		ReadFileReturnType readStats = ReadFile(filename, fullFile, assetFileSize.fileSize+1);
-		SplitResult lines = Split(fullFile, assetFileSize.fileSize, '\n');
+		ReadFileReturnType readStats = ReadFile(filename, fullFile, assetFileSize.fileSize);
+		fullFile[assetFileSize.fileSize] = '\0';
+		SplitResult lines = Split(fullFile, assetFileSize.fileSize, "\r\n", 3);
+		free(fullFile);
 
-		for (size_t i = 0; i < lines.numberOfComponents - 1; ++i)
+		for (size_t i = 0; i < lines.numberOfComponents; ++i)
 		{
 			SplitResult lineParts = Split(lines.components[i], lines.componentLengths[i], '=');
 			Assert(lineParts.numberOfComponents == 2);
 
-			char* assetName = TrimWhitespace(lineParts.components[0]);
-			char* assetPath = TrimWhitespace(lineParts.components[1]);
-			size_t assetPathLength = Length(assetPath);
-			char* assetPathClean = Erase(assetPath, assetPathLength - 3, 1); // NOTE: Really need split on string for \r\n this is manually removing \r
-			AddKVPair(hash, assetName, assetPathClean);
-			free(assetName);
-			free(assetPath);
-			free(assetPathClean);
-
-			free(lineParts.components);
-			free(lineParts.componentLengths);
+			const char* assetName = lineParts.components[0];
+			const char* assetPath = lineParts.components[1];
+			hash->AddKVPair(assetName, assetPath);
+			
+			lineParts.Destroy();
 		}
-
-		// Last line needs to be handled differently because it is not null terminated.
-		char* lastLine = CopyAndTerminate(lines.components[lines.numberOfComponents - 1], lines.componentLengths[lines.numberOfComponents - 1]);
-		SplitResult lastLineParts = Split(lastLine, Length(lastLine), '=');
-		Assert(lastLineParts.numberOfComponents == 2);
-		char* lastLineAssetName = TrimWhitespace(lastLineParts.components[0]);
-		char* lastLineAssetPath = TrimWhitespace(lastLineParts.components[1]);
-		AddKVPair(hash, lastLineAssetName, lastLineAssetPath);
-		free(lastLineAssetName);
-		free(lastLineAssetPath);
-		free(lastLine);
-
-
-		free(lines.componentLengths);
-		free(lines.components);
-		free(fullFile);
+		lines.Destroy();
 	}
 };
 
-
+const char* AssetNameToFilepath(const char* assetName)
+{
+	const char* result = spriteAssetFilepathTable.GetValue(assetName);
+	return result;
+}
 
 
 
 /*
- *  Animations
+ * GameObject Components
  */
+struct Sprite
+{
+	TextureHandle texture;
+	vec2 offset;
+
+	Sprite()
+	{
+		texture = TextureHandle();
+		offset = vec2();
+	}
+
+	void Initialize(const char* assetName, vec2 offset = vec2(0.0f, 0.0f))
+	{
+		const char* filePath = AssetNameToFilepath(assetName);
+		this->texture = AddToTexturePool(filePath);
+		this->offset = offset;
+	}
+};
+
+/*
+*  Animations
+*/
 struct Animation
 {
 	TextureHandle* frames;
@@ -257,65 +101,64 @@ struct Animation
 	F32 animationTime;
 
 	Animation() : frames(NULL), numberOfFrames(0), animationTime(0) {};
-};
-typedef std::vector<Animation> Animations;
 
-inline void Initialize(Animation* animation, char* animationFolderPath, U32 numberOfFrames, F32 animationTime)
-{
-	animation->frames = (TextureHandle*)malloc(sizeof(TextureHandle)* numberOfFrames);
-
-	char** files;
-	char fileType[] = ".bmp";
-	size_t fileTypeLength = 5;
-	files = (char**)malloc(sizeof(char*)* numberOfFrames);
-	for (size_t i = 0; i < numberOfFrames; ++i)
+	void Initialize(const char* animationFolderPath, U32 numberOfFrames, F32 animationTime)
 	{
-		char* iAsString = ToString(i);
-		files[i] = Concat(iAsString, fileType);
-		free(iAsString);
+		this->frames = (TextureHandle*)malloc(sizeof(TextureHandle)* numberOfFrames);
+
+		char** files;
+		char fileType[] = ".bmp";
+		size_t fileTypeLength = 5;
+		files = (char**)malloc(sizeof(char*)* numberOfFrames);
+		for (size_t i = 0; i < numberOfFrames; ++i)
+		{
+			char* iAsString = ToString(i);
+			files[i] = Concat(iAsString, fileType);
+			free(iAsString);
+		}
+
+		char* slashPath = Concat(animationFolderPath, "/");
+		for (size_t x = 0; x < numberOfFrames; ++x)
+		{
+			char* frameXFullPath = Concat(slashPath, files[x]);
+			TextureHandle frameX = AddToTexturePool(frameXFullPath);
+			free(frameXFullPath);
+
+			this->frames[x] = frameX;
+		}
+		free(slashPath);
+
+		for (size_t i = 0; i < numberOfFrames; ++i)
+		{
+			free(files[i]);
+		}
+		free(files);
+
+		this->animationTime = animationTime;
+		this->numberOfFrames = numberOfFrames;
 	}
 
-	char* slashPath = Concat(animationFolderPath, "/");
-	for (size_t x = 0; x < numberOfFrames; ++x)
+	void Destroy()
 	{
-		char* frameXFullPath = Concat(slashPath, files[x]);
-		TextureHandle frameX = AddToTexturePool(frameXFullPath);
-		free(frameXFullPath);
+		for (size_t i = 0; i < this->numberOfFrames; ++i)
+		{
+			//RemoveFromTexturePool(animation->frames[i]);
+		}
+		free(this->frames);
 
-		animation->frames[x] = frameX;
+		this->numberOfFrames = 0;
+		this->animationTime = 0;
 	}
-	free(slashPath);
-
-	for (size_t i = 0; i < numberOfFrames; ++i)
-	{
-		free(files[i]);
-	}
-	free(files);
-	
-	animation->animationTime = animationTime;
-	animation->numberOfFrames = numberOfFrames;
-}
-
-inline void Destroy(Animation* animation)
-{
-	for (size_t i = 0; i < animation->numberOfFrames; ++i)
-	{
-		//RemoveFromTexturePool(animation->frames[i]);
-	}
-	free(animation->frames);
-
-	animation->numberOfFrames = 0;
-	animation->animationTime = 0;
-}
-
-struct AnimationHashLink
-{
-	char* k;
-	Animation* v;
 };
 
 struct AnimationHash
 {
+	struct AnimationHashLink
+	{
+		const char* k;
+		Animation* v;
+	};
+
 	U32 numberOfIndices;
 	AnimationHashLink** table;
 	U32* subListLength;
@@ -323,289 +166,160 @@ struct AnimationHash
 	size_t length;
 
 	AnimationHash() : numberOfIndices(0), table(NULL), subListLength(NULL), length(0) {};
-};
 
-inline void Initialize(AnimationHash* ah, U32 numberOfIndices)
-{
-	ah->numberOfIndices = numberOfIndices;
-	ah->table = (AnimationHashLink**)malloc(sizeof(AnimationHashLink*) * numberOfIndices);
-	ah->subListLength = (U32*)malloc(sizeof(U32) * numberOfIndices);
-
-	for (size_t i = 0; i < numberOfIndices; ++i)
+	void Initialize(U32 numberOfIndices)
 	{
-		ah->table[i] = NULL;
-		ah->subListLength[i] = 0;
+		this->numberOfIndices = numberOfIndices;
+		this->table = (AnimationHashLink**)malloc(sizeof(AnimationHashLink*)* numberOfIndices);
+		this->subListLength = (U32*)malloc(sizeof(U32)* numberOfIndices);
+
+		for (size_t i = 0; i < numberOfIndices; ++i)
+		{
+			this->table[i] = NULL;
+			this->subListLength[i] = 0;
+		}
+
+		this->length = 0;
 	}
 
-	ah->length = 0;
-}
-
-struct GetKeyIndexResult
-{
-	bool present;
-	U32 i;
-	U32 j;
-
-	GetKeyIndexResult() : present(false), i(0), j(0) {};
-};
-inline GetKeyIndexResult GetKeyIndex(AnimationHash* ah, char* key)
-{
-	GetKeyIndexResult result = GetKeyIndexResult();
-
-	U32 i = (String_HashFunction(key, ah->numberOfIndices) & 0x7fffffff) % ah->numberOfIndices;
-
-	if (ah->subListLength[i] == 0)
+	struct GetKeyIndexResult
 	{
+		bool present;
+		U32 i;
+		U32 j;
+
+		GetKeyIndexResult() : present(false), i(0), j(0) {};
+	};
+	GetKeyIndexResult GetKeyIndex(const char* key)
+	{
+		GetKeyIndexResult result = GetKeyIndexResult();
+
+		U32 i = (String_HashFunction(key, this->numberOfIndices) & 0x7fffffff) % this->numberOfIndices;
+
+		if (this->subListLength[i] == 0)
+		{
+			return result;
+		}
+
+		for (U32 j = 0; j < this->subListLength[i]; ++j)
+		{
+			bool match = Compare(key, this->table[i][j].k);
+			if (match)
+			{
+				result.present = true;
+				result.i = i;
+				result.j = j;
+				break;
+			}
+		}
+
 		return result;
 	}
 
-	for (U32 j = 0; j < ah->subListLength[i]; ++j)
+	Animation* GetValue(const char* key)
 	{
-		bool match = Compare(key, ah->table[i][j].k);
-		if (match)
+		Animation* result = NULL;
+
+		GetKeyIndexResult keyIndex = GetKeyIndex(key);
+		if (keyIndex.present)
 		{
-			result.present = true;
-			result.i = i;
-			result.j = j;
-			break;
-		}
-	}
-
-	return result;
-}
-
-inline Animation* GetValue(AnimationHash* ah, char* key)
-{
-	Animation* result = NULL;
-
-	GetKeyIndexResult keyIndex = GetKeyIndex(ah, key);
-	if (keyIndex.present)
-	{
-		result = ah->table[keyIndex.i][keyIndex.j].v;
-	}
-
-	return result;
-}
-
-inline void AddKVPair(AnimationHash* ah, char* key, Animation* val)
-{
-	char* keyCopy = Copy(key);
-
-	// If the KV pair is not already in the hash table
-	if (GetValue(ah, key) == NULL)
-	{
-		U32 i = (String_HashFunction(key, ah->numberOfIndices) & 0x7fffffff) % ah->numberOfIndices;
-
-		++ah->subListLength[i];
-		AnimationHashLink* newSubList = (AnimationHashLink*)malloc(sizeof(AnimationHashLink) * ah->subListLength[i]);
-		AnimationHashLink* oldSubList = ah->table[i];
-
-		// Copy old hash list to new hash list
-		for (size_t j = 0; j < ah->subListLength[i] - 1; ++j)
-		{
-			newSubList[j] = oldSubList[j];
+			result = this->table[keyIndex.i][keyIndex.j].v;
 		}
 
-		// Add new kv pair to the new hash list
-		newSubList[ah->subListLength[i] - 1].k = keyCopy;
-		newSubList[ah->subListLength[i] - 1].v = val;
-
-		// Delete old hash list
-		ah->table[i] = newSubList;
-		free(oldSubList);
-
-		++ah->length;
+		return result;
 	}
-}
 
-inline void RemoveKVPair(AnimationHash* ah, char* key)
-{
-	GetKeyIndexResult ki = GetKeyIndex(ah, key);
-	if (ki.present)
+	void AddKVPair(const char* key, Animation* val)
 	{
-		AnimationHashLink* oldSubList = ah->table[ki.i];
+		const char* keyCopy = Copy(key);
 
-		if (ah->subListLength[ki.i] == 1)
+		// If the KV pair is not already in the hash table
+		if (GetValue(key) == NULL)
 		{
-			ah->table[ki.i] = NULL;
-		}
-		else
-		{
-			AnimationHashLink* newSubList = (AnimationHashLink*)malloc(sizeof(AnimationHashLink)* (ah->subListLength[ki.i] - 1));
-			for (U32 j = 0, newNext = 0; j < ah->subListLength[ki.i]; ++j)
+			U32 i = (String_HashFunction(key, this->numberOfIndices) & 0x7fffffff) % this->numberOfIndices;
+
+			++this->subListLength[i];
+			AnimationHashLink* newSubList = (AnimationHashLink*)malloc(sizeof(AnimationHashLink)* this->subListLength[i]);
+			AnimationHashLink* oldSubList = this->table[i];
+
+			// Copy old hash list to new hash list
+			for (size_t j = 0; j < this->subListLength[i] - 1; ++j)
 			{
-				if (j != ki.j)
-				{
-					newSubList[newNext] = oldSubList[j];
-					++newNext;
-				}
+				newSubList[j] = oldSubList[j];
 			}
-			ah->table[ki.i] = newSubList;
+
+			// Add new kv pair to the new hash list
+			newSubList[this->subListLength[i] - 1].k = keyCopy;
+			newSubList[this->subListLength[i] - 1].v = val;
+
+			// Delete old hash list
+			this->table[i] = newSubList;
+			free(oldSubList);
+
+			++this->length;
 		}
-		free(oldSubList);
-		--ah->subListLength[ki.i];
-		--ah->length;
 	}
-}
 
-inline size_t Length(AnimationHash* ah)
-{
-	size_t result;
-
-	result = ah->length;
-
-	return result;
-}
-
-inline void Destroy(AnimationHash* ah)
-{
-	for (size_t i = 0; i < ah->numberOfIndices; ++i)
+	void RemoveKVPair(const char* key)
 	{
-		for (size_t j = 0; j < ah->subListLength[i]; ++j)
+		GetKeyIndexResult ki = GetKeyIndex(key);
+		if (ki.present)
 		{
-			free(ah->table[i][j].k);
-			Destroy(ah->table[i][j].v);
+			AnimationHashLink* oldSubList = this->table[ki.i];
+
+			if (this->subListLength[ki.i] == 1)
+			{
+				this->table[ki.i] = NULL;
+			}
+			else
+			{
+				AnimationHashLink* newSubList = (AnimationHashLink*)malloc(sizeof(AnimationHashLink)* (this->subListLength[ki.i] - 1));
+				for (U32 j = 0, newNext = 0; j < this->subListLength[ki.i]; ++j)
+				{
+					if (j != ki.j)
+					{
+						newSubList[newNext] = oldSubList[j];
+						++newNext;
+					}
+				}
+				this->table[ki.i] = newSubList;
+			}
+			free(oldSubList);
+			--this->subListLength[ki.i];
+			--this->length;
 		}
-		free(ah->table[i]);
 	}
-	free(ah->table);
 
-	ah->table = NULL;
-	ah->numberOfIndices = 0;
-	ah->length = 0;
-}
+	size_t Length()
+	{
+		size_t result;
 
+		result = this->length;
 
+		return result;
+	}
 
+	void Destroy()
+	{
+		for (size_t i = 0; i < this->numberOfIndices; ++i)
+		{
+			for (size_t j = 0; j < this->subListLength[i]; ++j)
+			{
+				free((void*)this->table[i][j].k);
+				this->table[i][j].v->Destroy();
+			}
+			free(this->table[i]);
+		}
+		free(this->table);
 
-
-#define DEFAULT_DAMPING_FACTOR 1.0f
-struct PointMass
-{
-	vec2 position;
-	vec2 velocity; // m/s
-	vec2 forceAccumulator;
-
-	F32 inverseMass; // Kg
-	F32 dampingFactor;
+		this->table = NULL;
+		this->numberOfIndices = 0;
+		this->length = 0;
+	}
 };
 
-/*void Initialize(PointMass* pointMass)
+struct AnimationController
 {
-	pointMass->position = vec3(0.0f, 0.0f, 0.0f);
-	pointMass->velocity = vec3(0.0f, 0.0f, 0.0f);
-	pointMass->forceAccumulator = vec3(0.0f, 0.0f, 0.0f);
-
-	pointMass->inverseMass = 0.0f;
-	pointMass->dampingFactor = DEFAULT_DAMPING_FACTOR;
-};*/
-
-void Initialize(PointMass* pointMass,
-				vec2 position = vec2(0.0f, 0.0f), 
-				vec2 velocity = vec2(0.0f, 0.0f), 
-				vec2 force = vec2(0.0f, 0.0f), 
-				F32 inverseMass = 0.0f, 
-				F32 dampingFactor = DEFAULT_DAMPING_FACTOR)
-{
-	pointMass->position = position;
-	pointMass->velocity = velocity;
-	pointMass->forceAccumulator = force;
-
-	pointMass->inverseMass = inverseMass;
-	pointMass->dampingFactor = dampingFactor;
-};
-
-void Destroy(PointMass* pointMass)
-{
-	pointMass->position = vec2(0.0f, 0.0f);
-	pointMass->velocity = vec2(0.0f, 0.0f);
-	pointMass->forceAccumulator = vec2(0.0f, 0.0f);
-
-	pointMass->inverseMass = 0.0f;
-	pointMass->dampingFactor = DEFAULT_DAMPING_FACTOR;
-};
-
-F32 GetMass(PointMass* pointMass)
-{
-	F32 result;
-
-	if (pointMass->inverseMass == 0.0f)
-	{
-		result = 0.0f;
-	}
-	else
-	{
-		result = 1.0f / pointMass->inverseMass;
-	}
-
-	return result;
-}
-
-vec2 GetAcceleration(PointMass* pointMass)
-{
-	vec2 result = pointMass->inverseMass * pointMass->forceAccumulator;
-	return result;
-}
-
-void Integrate(PointMass* pointMass, F32 deltaTime)
-{
-	vec2 acceleration = GetAcceleration(pointMass);
-	pointMass->position = pointMass->position + (pointMass->velocity * deltaTime);
-	pointMass->velocity = (pointMass->velocity * pow(pointMass->dampingFactor, deltaTime)) + (acceleration * deltaTime);
-	pointMass->forceAccumulator = vec2(0.0f, 0.0f);
-}
-
-void ApplyForce(PointMass* pointMass, vec2 direction, F32 power)
-{
-	vec2 scaledForce = direction * power;
-	pointMass->forceAccumulator += scaledForce;
-}
-
-void ApplyImpulse(PointMass* pointMass, vec2 direction, F32 power)
-{
-	vec2 scaledVelocity = direction * power;
-	pointMass->velocity += scaledVelocity;
-}
-
-void FixInterpenetration(PointMass* pointMass1, PointMass* pointMass2, CollisionInfo_2D collisionInfo)
-{
-
-	if (pointMass1->inverseMass == 0)
-	{
-		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
-		pointMass2->position += displacement;
-	}
-	else if (pointMass2->inverseMass == 0)
-	{
-		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
-		pointMass1->position -= displacement;
-	}
-	else
-	{
-		F32 pm1Mass = 1.0f / pointMass1->inverseMass;
-		F32 pm2Mass = 1.0f / pointMass2->inverseMass;
-		vec2 pm1Displacement = (pm2Mass / (pm1Mass + pm2Mass)) * collisionInfo.normal * collisionInfo.distance;
-		vec2 pm2Displacement = (pm1Mass / (pm1Mass + pm2Mass)) * -collisionInfo.normal * collisionInfo.distance;
-		pointMass1->position -= pm1Displacement;
-		pointMass2->position -= pm2Displacement;
-	}
-}
-
-
-
-/*
- *  Entities
- */
-struct Entity
-{
-	Transform transform;
-
-	// Renderable
-	vec2 spriteOffset;
-
-	bool hasSprite;
-	TextureHandle sprite;
-
 	AnimationHash animations;
 	U32 activeAnimationKI_i;
 	U32 activeAnimationKI_j;
@@ -613,1652 +327,1003 @@ struct Entity
 	bool isAnimationPlaying;
 	bool isAnimationLooped;
 	bool isAnimationReversed;
-	F32 elapsedTime = 0.0f;
-};
-typedef std::vector<Entity> Entities;
+	F32 elapsedTime;
 
-inline void Initialize(Entity* entity)
-{
-	entity->transform = Transform();
-	entity->hasSprite = false;
-	Initialize(&entity->animations, 1);
-	entity->isAnimated = false;
-	entity->isAnimationLooped = false;
-	entity->isAnimationPlaying = false;
-	entity->isAnimationReversed = false;
-	entity->activeAnimationKI_i = 0;
-	entity->activeAnimationKI_j = 0;
-	entity->elapsedTime = 0.0f;
-}
-
-inline void Destroy(Entity* entity)
-{
-	entity->transform = Transform();
-
-	entity->spriteOffset = vec2(0.0f, 0.0f);
-	entity->hasSprite = false;
-	entity->sprite = TextureHandle();
-
-	Destroy(&entity->animations);
-	entity->activeAnimationKI_i = 0;
-	entity->activeAnimationKI_j = 0;
-	entity->isAnimated = false;
-	entity->isAnimationPlaying = false;
-	entity->isAnimationLooped = false;
-	entity->isAnimationReversed = false;
-	entity->elapsedTime = 0.0f;
-}
-
-
-inline void AddSprite(Entity* entity, char* assetName, vec2 offset = vec2(0.0f, 0.0f))
-{
-	char* filePath = GetValue(&spriteFiles, assetName);
-	entity->sprite = AddToTexturePool(filePath);
-	entity->spriteOffset = offset;
-	//free(filePath);
-	entity->hasSprite = true;
-}
-
-inline void RemoveSprite(Entity* entity)
-{
-	entity->sprite = TextureHandle();
-	entity->hasSprite = false;
-}
-
-
-inline void AddAnimation(Entity* entity, char* referenceName, char* assetName, U32 numberOfFrames, F32 animationTime)
-{
-	Animation* animation = (Animation*)malloc(sizeof(Animation));
-	char* filePath = GetValue(&spriteFiles, assetName);
-	Initialize(animation, filePath, numberOfFrames, animationTime);
-	AddKVPair(&entity->animations, referenceName, animation);
-	entity->isAnimated = true;
-}
-
-inline void RemoveAnimation(Entity* entity, char* referenceName)
-{
-	char* currentAnimationName = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].k;
-
-	GetKeyIndexResult ki = GetKeyIndex(&entity->animations, referenceName);
-	if (ki.present && ki.i == entity->activeAnimationKI_i && ki.j == entity->activeAnimationKI_j)
+	AnimationController()
 	{
-		entity->isAnimationPlaying = false;
-		entity->isAnimationLooped = false;
-		entity->isAnimationReversed = false;
-		entity->elapsedTime = 0.0f;
-		entity->activeAnimationKI_i = 0;
-		entity->activeAnimationKI_j = 0;
+		this->animations = AnimationHash();
+		this->isAnimated = false;
+		this->isAnimationLooped = false;
+		this->isAnimationPlaying = false;
+		this->isAnimationReversed = false;
+		this->activeAnimationKI_i = 0;
+		this->activeAnimationKI_j = 0;
+		this->elapsedTime = 0.0f;
 	}
 
-	Animation* animation = GetValue(&entity->animations, referenceName);
-	Destroy(animation);
-	RemoveKVPair(&entity->animations, referenceName);
-
-	GetKeyIndexResult currentAnimationNewKeyIndex = GetKeyIndex(&entity->animations, currentAnimationName);
-	entity->activeAnimationKI_i = currentAnimationNewKeyIndex.i;
-	entity->activeAnimationKI_j = currentAnimationNewKeyIndex.j;
-
-	if (Length(&entity->animations) == 0)
+	void Initialize()
 	{
-		entity->isAnimated = false;
+		this->animations = AnimationHash();
+		this->animations.Initialize(1);
+		this->isAnimated = false;
+		this->isAnimationLooped = false;
+		this->isAnimationPlaying = false;
+		this->isAnimationReversed = false;
+		this->activeAnimationKI_i = 0;
+		this->activeAnimationKI_j = 0;
+		this->elapsedTime = 0.0f;
 	}
 
-}
-
-inline void StartAnimation(Entity* entity)
-{
-	if (entity->isAnimated &&
-		entity->isAnimationPlaying == false && 
-		entity->animations.length > 0)
+	void AddAnimation(const char* referenceName, const char* assetName, U32 numberOfFrames, F32 animationTime)
 	{
-		entity->isAnimationPlaying = true;
+		const char* filePath = spriteAssetFilepathTable.GetValue(assetName);
+		Animation* animation = new Animation();
+		animation->Initialize(filePath, numberOfFrames, animationTime);
+		this->animations.AddKVPair(referenceName, animation);
+		this->isAnimated = true;
+	}
 
-		F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
-		if (entity->elapsedTime == 0.0f && entity->isAnimationReversed)
+	void RemoveAnimation(const char* referenceName)
+	{
+		const char* currentAnimationName = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].k;
+
+		AnimationHash::GetKeyIndexResult ki = this->animations.GetKeyIndex(referenceName);
+		if (ki.present && ki.i == this->activeAnimationKI_i && ki.j == this->activeAnimationKI_j)
 		{
-			entity->elapsedTime = animationLength;
+			this->isAnimationPlaying = false;
+			this->isAnimationLooped = false;
+			this->isAnimationReversed = false;
+			this->elapsedTime = 0.0f;
+			this->activeAnimationKI_i = 0;
+			this->activeAnimationKI_j = 0;
 		}
-		if (entity->elapsedTime == animationLength && !entity->isAnimationReversed)
+
+		Animation* animation = animations.GetValue(referenceName);
+		animation->Destroy();
+		animations.RemoveKVPair(referenceName);
+
+		AnimationHash::GetKeyIndexResult currentAnimationNewKeyIndex = animations.GetKeyIndex(currentAnimationName);
+		this->activeAnimationKI_i = currentAnimationNewKeyIndex.i;
+		this->activeAnimationKI_j = currentAnimationNewKeyIndex.j;
+
+		if (animations.Length() == 0)
 		{
-			entity->elapsedTime = 0.0f;
+			this->isAnimated = false;
 		}
+
 	}
-}
 
-inline bool StartAnimation(Entity* entity, char* referenceName, bool loopAnimation = true, bool playInReverse = false, F32 startTime = 0.0f)
-{
-	GetKeyIndexResult ki = GetKeyIndex(&entity->animations, referenceName);
-	if (ki.present)
+	void StartAnimation()
 	{
-		entity->activeAnimationKI_i = ki.i;
-		entity->activeAnimationKI_j = ki.j;
-		if (playInReverse)
+		if (this->isAnimated &&
+			this->isAnimationPlaying == false &&
+			this->animations.length > 0)
 		{
-			entity->isAnimationReversed = true;
+			this->isAnimationPlaying = true;
 
-			if (startTime != 0.0f)
+			F32 animationLength = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].v->animationTime;
+			if (this->elapsedTime == 0.0f && this->isAnimationReversed)
 			{
-				entity->elapsedTime = startTime;
+				this->elapsedTime = animationLength;
+			}
+			if (this->elapsedTime == animationLength && !this->isAnimationReversed)
+			{
+				this->elapsedTime = 0.0f;
+			}
+		}
+	}
+
+	bool StartAnimation(const char* referenceName, bool loopAnimation = true, bool playInReverse = false, F32 startTime = 0.0f)
+	{
+		AnimationHash::GetKeyIndexResult ki = this->animations.GetKeyIndex(referenceName);
+		if (ki.present)
+		{
+			this->activeAnimationKI_i = ki.i;
+			this->activeAnimationKI_j = ki.j;
+			if (playInReverse)
+			{
+				this->isAnimationReversed = true;
+
+				if (startTime != 0.0f)
+				{
+					this->elapsedTime = startTime;
+				}
+				else
+				{
+					this->elapsedTime = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].v->animationTime;
+				}
 			}
 			else
 			{
-				entity->elapsedTime = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+				// NOTE: If we forward declare StepElapsedAnimationTime we could use that here and it would be 
+				//			the correct way of doing this, BUT seeing as it is called every frame before displaying
+				//			an erroneous value will be dealt with before and animation frames are displayed anyway.
+				this->elapsedTime = startTime;
 			}
+			this->isAnimationPlaying = true;
+			this->isAnimationLooped = loopAnimation;
+			return true;
 		}
-		else
-		{
-			// NOTE: If we forward declare StepElapsedAnimationTime we could use that here and it would be 
-			//			the correct way of doing this, BUT seeing as it is called every frame before displaying
-			//			an erroneous value will be dealt with before and animation frames are displayed anyway.
-			entity->elapsedTime = startTime; 
-		}
-		entity->isAnimationPlaying = true;
-		entity->isAnimationLooped = loopAnimation;
-		return true;
+
+		return false;
 	}
 
-	return false;
-}
-
-inline void PauseAnimation(Entity* entity)
-{
-	entity->isAnimationPlaying = false;
-}
-
-inline void StopAnimation(Entity* entity)
-{
-	entity->isAnimationPlaying = false;
-	// NOTE: Maybe leave these in? Only time will tell.
-	//entity->isAnimationLooped = false;
-	//entity->isAnimationReversed = false;
-	entity->elapsedTime = 0.0f;
-}
-
-// ?? Useful?
-inline void ReverseAnimation(Entity* entity, bool reverse = true)
-{
-	entity->isAnimationReversed = reverse;
-}
-
-inline void StepElapsedAnimationTime(Entity* entity, F32 time)
-{
-	if (entity->isAnimated && entity->isAnimationPlaying)
+	void PauseAnimation()
 	{
-		F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
+		this->isAnimationPlaying = false;
+	}
 
-		if (entity->isAnimationReversed)
-		{
-			entity->elapsedTime -= time;
-		}
-		else
-		{
-			entity->elapsedTime += time;
-		}
+	void StopAnimation()
+	{
+		this->isAnimationPlaying = false;
+		// NOTE: Maybe leave these in? Only time will tell.
+		//entity->isAnimationLooped = false;
+		//entity->isAnimationReversed = false;
+		this->elapsedTime = 0.0f;
+	}
 
-		if (entity->isAnimationLooped)
+	// ?? Useful?
+	void ReverseAnimation(bool reverse = true)
+	{
+		this->isAnimationReversed = reverse;
+	}
+
+	void StepElapsedAnimationTime(F32 time)
+	{
+		if (this->isAnimated && this->isAnimationPlaying)
 		{
-			if (entity->elapsedTime > animationLength || entity->elapsedTime < 0.0f)
+			F32 animationLength = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].v->animationTime;
+
+			if (this->isAnimationReversed)
 			{
-				I32 completionCount = (I32)(entity->elapsedTime / animationLength);
-				F32 deadTime = completionCount * animationLength;
-				entity->elapsedTime -= deadTime;
+				this->elapsedTime -= time;
+			}
+			else
+			{
+				this->elapsedTime += time;
+			}
 
-				if (entity->elapsedTime < 0.0f)
+			if (this->isAnimationLooped)
+			{
+				if (this->elapsedTime > animationLength || this->elapsedTime < 0.0f)
 				{
-					entity->elapsedTime += animationLength;
+					I32 completionCount = (I32)(this->elapsedTime / animationLength);
+					F32 deadTime = completionCount * animationLength;
+					this->elapsedTime -= deadTime;
+
+					if (this->elapsedTime < 0.0f)
+					{
+						this->elapsedTime += animationLength;
+					}
+				}
+			}
+			else
+			{
+				if (this->elapsedTime > animationLength || this->elapsedTime < 0.0f)
+				{
+					this->elapsedTime = ClampRange_F32(this->elapsedTime, 0.0f, animationLength);
+					this->PauseAnimation();
 				}
 			}
 		}
-		else
-		{
-			if (entity->elapsedTime > animationLength || entity->elapsedTime < 0.0f)
-			{
-				entity->elapsedTime = ClampRange_F32(entity->elapsedTime, 0.0f, animationLength);
-				PauseAnimation(entity);
-			}
-		}
 	}
-}
 
-inline void SetElapsedAnimationTime(Entity* entity, F32 time)
-{
-	F32 animTime = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
-	F32 newTime = time - ((I32)(time/animTime) * animTime);
-	entity->elapsedTime = newTime;
-}
-
-// 0 == 0%, 100 == 100%
-inline void SetElapsedAnimationTimeAsPercent(Entity* entity, F32 percent)
-{
-	F32 multiplier = (percent / 100.0f) - (I32)(percent / 100.0f);
-	F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
-	F32 newTime = multiplier * animationLength;
-	entity->elapsedTime = newTime;
-}
-
-inline TextureHandle GetCurrentAnimationFrame(Entity* entity)
-{
-	TextureHandle result = TextureHandle();
-
-	if (entity->isAnimated && entity->animations.length > 0)
+	void SetElapsedAnimationTime(F32 time)
 	{
-		F32 animationLength = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->animationTime;
-		U32 numberOfFrames = entity->animations.table[entity->activeAnimationKI_i][entity->activeAnimationKI_j].v->numberOfFrames;
-		F32 elapsedTime = entity->elapsedTime;
-		U32 animationFrame = (U32)(elapsedTime / (animationLength / (F32)numberOfFrames));
-		animationFrame = ClampRange_U32(animationFrame, 0, numberOfFrames - 1);
-		AnimationHashLink** t = entity->animations.table;
-		U32 indI = entity->activeAnimationKI_i;
-		U32 indJ = entity->activeAnimationKI_j;
-		result = t[indI][indJ].v->frames[animationFrame];
+		F32 animTime = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].v->animationTime;
+		F32 newTime = time - ((I32)(time / animTime) * animTime);
+		this->elapsedTime = newTime;
 	}
 
-	return result;
+	// 0 == 0%, 100 == 100%
+	void SetElapsedAnimationTimeAsPercent(F32 percent)
+	{
+		F32 multiplier = (percent / 100.0f) - (I32)(percent / 100.0f);
+		F32 animationLength = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].v->animationTime;
+		F32 newTime = multiplier * animationLength;
+		this->elapsedTime = newTime;
+	}
+
+	size_t NumberOfAnimations()
+	{
+		size_t result;
+		result = this->animations.Length();
+		return result;
+	}
+
+	TextureHandle GetCurrentAnimationFrame()
+	{
+		TextureHandle result = TextureHandle();
+
+		if (this->isAnimated && this->animations.length > 0)
+		{
+			F32 animationLength = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].v->animationTime;
+			U32 numberOfFrames = this->animations.table[this->activeAnimationKI_i][this->activeAnimationKI_j].v->numberOfFrames;
+			F32 elapsedTime = this->elapsedTime;
+			U32 animationFrame = (U32)(elapsedTime / (animationLength / (F32)numberOfFrames));
+			animationFrame = ClampRange_U32(animationFrame, 0, numberOfFrames - 1);
+			AnimationHash::AnimationHashLink** t = this->animations.table;
+			U32 indI = this->activeAnimationKI_i;
+			U32 indJ = this->activeAnimationKI_j;
+			result = t[indI][indJ].v->frames[animationFrame];
+		}
+
+		return result;
+	};
 };
 
+/*
+ * RigidBodies
+ */
+#define DEFAULT_DAMPING_FACTOR 1.0f
+struct RigidBody
+{
+	vec2 position;
+	vec2 velocity; // m/s
+	vec2 forceAccumulator;
+
+	F32 inverseMass; // Kg
+	F32 dampingFactor;
+
+	RigidBody()
+	{
+		this->position = vec2(0.0f, 0.0f);
+		this->velocity = vec2(0.0f, 0.0f);
+		this->forceAccumulator = vec2(0.0f, 0.0f);
+		this->inverseMass = 0.0f;
+		this->dampingFactor = DEFAULT_DAMPING_FACTOR;
+	}
+
+	void Initialize(
+		vec2 position = vec2(0.0f, 0.0f),
+		vec2 velocity = vec2(0.0f, 0.0f),
+		vec2 force = vec2(0.0f, 0.0f),
+		F32 inverseMass = 0.0f,
+		F32 dampingFactor = DEFAULT_DAMPING_FACTOR)
+	{
+		this->position = position;
+		this->velocity = velocity;
+		this->forceAccumulator = force;
+
+		this->inverseMass = inverseMass;
+		this->dampingFactor = dampingFactor;
+	};
+
+	void Destroy()
+	{
+		this->position = vec2(0.0f, 0.0f);
+		this->velocity = vec2(0.0f, 0.0f);
+		this->forceAccumulator = vec2(0.0f, 0.0f);
+
+		this->inverseMass = 0.0f;
+		this->dampingFactor = DEFAULT_DAMPING_FACTOR;
+	};
+
+	F32 GetMass()
+	{
+		F32 result;
+
+		if (this->inverseMass == 0.0f)
+		{
+			result = 0.0f;
+		}
+		else
+		{
+			result = 1.0f / this->inverseMass;
+		}
+
+		return result;
+	}
+
+	vec2 GetAcceleration()
+	{
+		vec2 result = this->inverseMass * this->forceAccumulator;
+		return result;
+	}
+
+	void SetPosition(vec2 position)
+	{
+		this->position = position;
+	}
+
+	void Integrate(F32 deltaTime)
+	{
+		vec2 acceleration = this->GetAcceleration();
+		this->position = this->position + (this->velocity * deltaTime);
+		this->velocity = (this->velocity * pow(this->dampingFactor, deltaTime)) + (acceleration * deltaTime);
+		this->forceAccumulator = vec2(0.0f, 0.0f);
+	}
+
+	void ApplyForce(vec2 direction, F32 power)
+	{
+		vec2 scaledForce = direction * power;
+		this->forceAccumulator += scaledForce;
+	}
+
+	void ApplyImpulse(vec2 direction, F32 power)
+	{
+		vec2 scaledVelocity = direction * power;
+		this->velocity += scaledVelocity;
+	}
+};
 
 
 
 /*
- *  Maps / Chunks
+ * GameObject
  */
-struct Chunk
+struct GameObject
 {
-	vec2 position;
-
-	/*
-	enum CameraStyle
+	enum Type
 	{
-		CS_Static,
-		CS_Scolling
+		Null,
+
+		PlayerCharacter,
+		StaticEnvironmentPiece,
+		PlayerCamera,
+		/*// Player Character
+		Link,
+
+		// Key NPCs
+		Impa,
+		Ralph,
+		Nayru,
+		Veran,
+		MakuTree,
+		BabyMakuTree,
+		
+		// Friendly NPCs
+		Monkey,
+		Parrot,
+		Bear,
+		Bunny,
+		Villager,
+		Foreman,
+		Soldier,
+		Worker,
+		StoreKeeper,
+		
+		// Enemies
+		RedOctorok,
+		Keese,
+		Zol,
+		Gel,
+		BlueStalfos,
+		RedMoblin,
+		Crow,
+		Rope,
+		Ghini,
+		Wallmaster,
+		
+		// Mini Bosses
+		GiantGhini,
+		MiniGhini,
+		
+		// Bosses
+		PumpkinHead,
+
+		// Environment
+		Weed,
+		DancingFlowers,
+		Sign,
+		Shrub,
+		TriforceGate,
+		Portal,
+		Dirt,
+		Tree,
+		SpookyTree,
+		Jar,
+		TallGrass,
+		Brazier,
+		Rock,
+		Stairs,
+		StairPortal,
+		Hole,
+		MoveableBlock,
+		Door,
+		KeyDoor,
+		BossKeyDoor,
+		FloorSwitch,
+		EyeStatue,
+		TreePlot,
+		GraveyardGate,
+		ColorCube,
+		WallRoots,
+		Crystal,
+		Chest,
+		MovingPlatform,
+		Cliff,
+		MinibossPortal,
+		
+		// Pickups
+		KeyItemPickup, // HeartPiece, HeartContainer, EssenceOfTime, Key, BossKey 
+		ItemPickup,    // Rupee, Heart
+		Fairy,*/
+
+		
+		COUNT
 	};
 
-	enum CameraView
+	enum Tags
 	{
-		VA_TopDown,
-		VA_Side
+		// Friendliness
+		Hero,
+		Friendly,
+		Enemy,
+		Environment,
+		Background,
+		Effect,
+
+		// Equipment Interactions
+		Readable,
+		Cutable,
+		Diggable,
+		Openable,
+		Burnable,
+		Lightweight,
 	};
-	*/
 
-	Entities entities;
-};
-const size_t numberOfHorizontalChunks = 14;
-const size_t numberOfVerticalChunks = 14;
-const I32 chunkWidth = 10;
-const I32 chunkHeight = 8;
-typedef Chunk Chunks[numberOfHorizontalChunks][numberOfVerticalChunks];
+	// Debug Variables
+	bool drawCollisionShapeOutline;
 
+	Type type;
+	U64  tags;
 
-enum MapName
-{
-	MapName_NULL,
+	Transform transform;
+	Sprite*   sprite;
+	AnimationController* animator;
+	RigidBody* rigidbody;
+	Shape_2D* collisionShape;
 
-	// World Maps
-	MapName_Present_World,
-	MapName_Past_World,
-
-	// Dungeons
-	MapName_Spirits_Grave,
-	MapName_Wing_Dungeon,
-	MapName_Moonlit_Grotto,
-	MapName_Skull_Dungeon,
-	MapName_Crown_Dungeon,
-	MapName_Mermaid_Dungeon,
-	MapName_Jabu_Jabus_Belly,
-	MapName_The_Ancient_Tomb,
-	MapName_Moblin_Fort,
-
-	// Shops
-
-	// Houses
-
-
-	MapName_COUNT
-};
-
-struct Map
-{
-	MapName name;
-
-
-};
-
-
-
-
-
-Chunks chunks;
-Entities entities;
-Camera camera;
-Texture guiPanel;
-
-Entity physEnts[19];
-PointMass pm[19];
-Rectangle_2D cs[19];
-
-
-/*inline void InitChunk_0_0()
-{
-	Chunk* chunk = &chunks[0][0];
-
-	Texture t;
-	Transform tr;
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_Palm.bmp");
-	e.transform.position = vec2(2,5);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_Palm.bmp");
-	e.transform.position = vec2(4, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_Palm.bmp");
-	e.transform.position = vec2(8, 3);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_Palm.bmp");
-	e.transform.position = vec2(10, 3);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(3.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(4.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(6.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(4.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(5.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(6.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(3.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(5.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_1()
-{
-	Chunk* chunk = &chunks[0][1];
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(6.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(4.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(1.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(7.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(3.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(4.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(5.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, 5.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(8.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(6.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(5.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(4.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(3.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(2.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_2()
-{
-	Chunk* chunk = &chunks[0][2];
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(1.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(2.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(3.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(4.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(5.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(6.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(7.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(8.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(2.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(3.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(1.5, 2.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(2.5,3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(7.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(1.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(2.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(7.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(8.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(9.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(6.5, 5.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/jelly.bmp");
-	e.transform.position = vec2(9.5, 5.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(1.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(8.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(1.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(8.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(9.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_3()
-{
-	Chunk* chunk = &chunks[0][3];
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(1.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(8.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, .5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(1.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(8.5, 2.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_LargeWater.bmp");
-	e.transform.position = vec2(9.5, 2.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_Palm.bmp");
-	e.transform.position = vec2(4, 5);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_Palm.bmp");
-	e.transform.position = vec2(2, 6);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_4()
-{
-	Chunk* chunk = &chunks[0][4];
-
-	Entity e;
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 2);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/treePlot.bmp");
-	e.transform.position = vec2(1.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(5, 3);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(2, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(4, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(1, 5);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 6);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(10, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_5()
-{
-	Chunk* chunk = &chunks[0][5];
-
-	Entity e;
-	//Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	AddSprite(&e, "tree_Generic");
-	e.transform.position = vec2(0, 2);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 6);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(3, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(8, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(5.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-	
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(4.5, 2.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(6.5, 2.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(5.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(4.5, 5.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(6.5, 5.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(10, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_6()
-{
-	Chunk* chunk = &chunks[0][6];
-
-	Entity e;
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 2);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 4);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(0, 6);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(1, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(3, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(5, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(7, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(9, 8);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(4, 5);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/tree_generic.bmp");
-	e.transform.position = vec2(6, 3);
-	e.transform.scale = vec2(2);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(3.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(4.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(5.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(6.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_7()
-{
-	Chunk* chunk = &chunks[0][7];
-}
-
-inline void InitChunk_0_8()
-{
-	Chunk* chunk = &chunks[0][8];
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(6.5, 6.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-}
-
-inline void InitChunk_0_9()
-{
-	Chunk* chunk = &chunks[0][9];
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(6.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_10()
-{
-	Chunk* chunk = &chunks[0][10];
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/treePlot.bmp");
-	e.transform.position = vec2(2.5, 2.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(3.5, 2.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(2.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/weed.bmp");
-	e.transform.position = vec2(3.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(7.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(8.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(9.5, 1.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-}
-
-inline void InitChunk_0_11()
-{
-	Chunk* chunk = &chunks[0][11];
-
-	Entity e;
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(1.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(3.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(4.5, 3.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(1.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/dirt.bmp");
-	e.transform.position = vec2(2.5, 4.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/portal.bmp");
-	e.transform.position = vec2(4.5, 5.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(8.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-	Initialize(&e.sprite, "Assets/x60/Objects/rocks_SmallWater.bmp");
-	e.transform.position = vec2(9.5, 7.5);
-	e.transform.scale = vec2(1);
-	chunk->entities.push_back(e);
-
-}
-
-inline void InitChunk_0_12()
-{
-	Chunk* chunk = &chunks[0][12];
-
-	Entity e;
-
-}
-
-inline void InitChunk_0_13()
-{
-
-	Chunk* chunk = &chunks[0][13];
-}
-
-inline void InitChunk_1_13()
-{
-	Chunk* chunk = &chunks[1][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/pit.bmp");
-	chunk->entities[0].transform.position = vec2(8.5, 6.5);
-}
-
-inline void InitChunk_2_13()
-{
-	Chunk* chunk = &chunks[2][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/house_Red.bmp");
-	chunk->entities[0].transform.position = vec2(2.5, 6.5);
-	chunk->entities[0].transform.scale = vec2(3);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[1].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[1].transform.position = vec2(1.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[2].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[2].transform.position = vec2(3.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[3].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[3].transform.position = vec2(4.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[4].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[4].transform.position = vec2(4.5, 5.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[5].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[5].transform.position = vec2(4.5, 6.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[6].sprite, "Assets/x60/Objects/tree_Generic.bmp");
-	chunk->entities[6].transform.position = vec2(10, 0);
-	chunk->entities[6].transform.scale = vec2(2);
-}
-
-inline void InitChunk_3_13()
-{
-	Chunk* chunk = &chunks[3][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/dungeon_SkullDungeon.bmp");
-	chunk->entities[0].transform.position = vec2(5, 6);
-	chunk->entities[0].transform.scale = vec2(6, 4);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[1].sprite, "Assets/x60/Objects/tree_generic.bmp");
-	chunk->entities[1].transform.position = vec2(0, 0);
-	chunk->entities[1].transform.scale = vec2(2);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[2].sprite, "Assets/x60/Objects/tree_generic.bmp");
-	chunk->entities[2].transform.position = vec2(5, 0);
-	chunk->entities[2].transform.scale = vec2(2);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[3].sprite, "Assets/x60/Objects/tree_generic.bmp");
-	chunk->entities[3].transform.position = vec2(10, 0);
-	chunk->entities[3].transform.scale = vec2(2);
-}
-
-inline void InitChunk_4_13()
-{
-	Chunk* chunk = &chunks[4][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/tree_generic.bmp");
-	chunk->entities[0].transform.position = vec2(0, 0);
-	chunk->entities[0].transform.scale = vec2(2);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[1].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[1].transform.position = vec2(5.5, 6.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[2].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[2].transform.position = vec2(5.5, 5.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[3].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[3].transform.position = vec2(5.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[4].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[4].transform.position = vec2(6.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[5].sprite, "Assets/x60/Objects/flower_Blue.bmp");
-	chunk->entities[5].transform.position = vec2(8.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[6].sprite, "Assets/x60/Objects/house_Red.bmp");
-	chunk->entities[6].transform.position = vec2(7.5,  6.5);
-	chunk->entities[6].transform.scale = vec2(3);
-}
-
-inline void InitChunk_5_13()
-{
-	Chunk* chunk = &chunks[5][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/treePlot.bmp");
-	chunk->entities[0].transform.position = vec2(6.5, 5.5);
-}
-
-inline void InitChunk_6_13()
-{
-	Chunk* chunk = &chunks[6][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/tree_generic.bmp");
-	chunk->entities[0].transform.position = vec2(4, 4);
-	chunk->entities[0].transform.scale = vec2(2);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[1].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[1].transform.position = vec2(2.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[2].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[2].transform.position = vec2(4.5, 5.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[3].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[3].transform.position = vec2(5.5, 3.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[4].sprite, "Assets/x60/Objects/weed.bmp");
-	chunk->entities[4].transform.position = vec2(2.5, 3.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[5].sprite, "Assets/x60/Objects/weed.bmp");
-	chunk->entities[5].transform.position = vec2(3.5, 5.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[6].sprite, "Assets/x60/Objects/weed.bmp");
-	chunk->entities[6].transform.position = vec2(5.5, 4.5);
-}
-
-inline void InitChunk_7_13()
-{
-	Chunk* chunk = &chunks[7][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/tree_generic.bmp");
-	chunk->entities[0].transform.position = vec2(6, 3);
-	chunk->entities[0].transform.scale = vec2(2);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[1].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[1].transform.position = vec2(4.5, 3.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[2].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[2].transform.position = vec2(4.5, 2.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[3].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[3].transform.position = vec2(5.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[4].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[4].transform.position = vec2(6.5, 4.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[5].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[5].transform.position = vec2(7.5, 3.5);
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[6].sprite, "Assets/x60/Objects/flower_Red.bmp");
-	chunk->entities[6].transform.position = vec2(7.5, 2.5);
-}
-
-inline void InitChunk_8_13()
-{
-}
-
-inline void InitChunk_9_13()
-{
-	Chunk* chunk = &chunks[9][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0].sprite, "Assets/x60/Objects/dungeon_MoblinCastle.bmp");
-	chunk->entities[0].transform.position = vec2(5.5, 5);
-	chunk->entities[0].transform.scale = vec2(5, 4);
-}
-
-inline void InitChunk_10_13()
-{
-}
-
-inline void InitChunk_11_13()
-{
-}
-
-inline void InitChunk_12_13()
-{
-}*/
-
-inline void InitChunk_10_5()
-{
-	Chunk* chunk = &chunks[10][5];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0]);
-	AddSprite(&chunk->entities[0], "background_10-5");
-	chunk->entities[0].transform.position = vec2(5.0f, 4.0f);
-	chunk->entities[0].transform.scale = vec2(10.0f, 8.0f);
-}
-
-inline void InitChunk_13_13()
-{
-	Chunk* chunk = &chunks[13][13];
-
-	chunk->entities.push_back(Entity());
-	Initialize(&chunk->entities[0]);
-	AddSprite(&chunk->entities[0], "heartPiece");
-	chunk->entities[0].transform.position = vec2(7.5, 4.5);
-}
-
-inline void InitChunks()
-{
-	/*InitChunk_0_0();
-	InitChunk_0_1();
-	InitChunk_0_2();
-	InitChunk_0_3();
-	InitChunk_0_4();
-	InitChunk_0_5();
-	InitChunk_0_6();
-	InitChunk_0_7();
-	InitChunk_0_8();
-	InitChunk_0_9();
-	InitChunk_0_10();
-	InitChunk_0_11();
-	InitChunk_0_12();
-
-	InitChunk_0_13();
-	InitChunk_1_13();
-	InitChunk_2_13();
-	InitChunk_3_13();
-	InitChunk_4_13();
-	InitChunk_5_13();
-	InitChunk_6_13();
-	InitChunk_7_13();
-	InitChunk_8_13();
-	InitChunk_9_13();
-	InitChunk_10_13();
-	InitChunk_11_13();
-	InitChunk_12_13();*/
-	InitChunk_10_5();
-	InitChunk_13_13();
-
-}
-
-
-
-void InitScene()
-{
-	SetWindowTitle("Oracle of Ages Clone");
-	SetClientWindowDimensions(vec2(600, 540));
-	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
-
-	Initialize(&guiPanel, "Assets/x60/Objects/guiPanel.bmp"); // NOTE: Just for visualization ATM
-
-	
-
-	
-	// NOTE: Should probably figure out what the actual optimal number is for this
-	Initialize(&spriteFiles, 60);
-	PopulateSpriteFiles(&spriteFiles, "Assets.txt");
-
-
-
-
-
-
-	camera.halfDim = vec2(5.0f, 4.0f)*2.0f;
-	camera.position = vec2(0.0f, -10.0f);
-	camera.rotationAngle = 0.0f;
-	camera.scale = 1.0f;
-
-
-
-
-
-
-	vec2 chunkPos = vec2(-(numberOfHorizontalChunks / 2.0f) * chunkWidth, -(numberOfVerticalChunks / 2.0f) * chunkHeight);
-	for (size_t y = 0; y < numberOfVerticalChunks; ++y)
+	GameObject()
 	{
-		for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
-		{
-			chunks[x][y].position = chunkPos;
-			chunkPos.x = chunkPos.x + chunkWidth;
-		}
-		chunkPos.x = -70.0f;
-		chunkPos.y = chunkPos.y + chunkHeight;
+		this->type = Null;
+		this->tags = 0;
+		this->transform = Transform();
+		this->sprite = NULL;
+		this->animator = NULL;
+		this->rigidbody = NULL;
+		this->collisionShape = NULL;
 	}
 
-	InitChunks();
+	void SetType(Type type);
+	Type GetType();
 
-	camera.position = vec2(35.0f, -12.0f);//chunks[13][13].position + vec2(chunkWidth / 2.0f, chunkHeight / 2.0f);
+	void AddTag(Tags tag);
+	void RemoveTag(Tags tag);
+	bool HasTag(Tags tag);
 
-	// Add all chunks to entities
-	for (size_t y = 0; y < numberOfVerticalChunks; ++y)
+	void AddSprite(const char * sprite);
+	void AddAnimator();
+	void AddRigidbody(F32 invmass = 0.0f, F32 dampingfactor = 0.0f, vec2 velocity = vec2(0.0f, 0.0f), vec2 force = vec2(0.0f));
+	template <typename S>
+	void AddCollisionShape(S shape);
+
+	void Update_PrePhysics(F32 dt);
+	void Update_PostPhysics(F32 dt);
+
+	static vector<GameObject*> gameObjects;
+	static vector<GameObject*> physicsGameObjects;
+	static vector<GameObject*> collisionGameObjects;
+
+};
+
+void GameObject::SetType(Type type)
+{
+	this->type = type;
+}
+
+GameObject::Type GameObject::GetType()
+{
+	Type result;
+
+	result = this->type;
+
+	return result;
+}
+
+void GameObject::AddTag(Tags tag)
+{
+	SetBit(&this->tags, (U8)tag, 1);
+}
+
+void GameObject::RemoveTag(Tags tag)
+{
+	SetBit(&tags, (U8)tag, 0);
+}
+
+bool GameObject::HasTag(Tags tag)
+{
+	bool result = IsBitSet(&tags, (U8)tag);
+	return result;
+}
+
+void GameObject::AddSprite(const char * sprite)
+{
+	this->sprite = new Sprite();
+	this->sprite->Initialize(sprite);
+}
+
+void GameObject::AddAnimator()
+{
+	this->animator = new AnimationController();
+	this->animator->Initialize();
+}
+
+void GameObject::AddRigidbody(F32 invmass, F32 dampingfactor, vec2 velocity, vec2 force)
+{
+	this->rigidbody = new RigidBody();
+	this->rigidbody->Initialize(this->transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 1.0f, 0.0f);
+	physicsGameObjects.push_back(this);
+}
+
+template <typename S>
+void GameObject::AddCollisionShape(S shape)
+{
+	S* collider = new S(shape);
+	this->collisionShape = collider;
+	collisionGameObjects.push_back(this);
+}
+
+void GameObject::Update_PrePhysics(F32 dt)
+{
+	switch (this->type)
 	{
-		for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
-		{
-			for (size_t i = 0; i < chunks[x][y].entities.size(); ++i)
-			{
-				Entity e = chunks[x][y].entities[i];
-				e.transform.position = chunks[x][y].position + vec2(e.transform.position.x, e.transform.position.y);
+	case PlayerCharacter:
+	{
+							if (GetKey(KeyCode_A))
+							{
+								this->rigidbody->ApplyImpulse(vec2(-1.0f, 0.0f), 100.0f * dt);
+							}
+							if (GetKey(KeyCode_D))
+							{
+								this->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 100.0f * dt);
+							}
+							if (GetKey(KeyCode_W))
+							{
+								this->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 100.0f * dt);
+							}
+							if (GetKey(KeyCode_S))
+							{
+								this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 100.0f * dt);
+							}
+	}
+	break;
 
-				entities.push_back(e);
+	default:
+	break;
+	}
+}
+
+void GameObject::Update_PostPhysics(F32 dt)
+{
+
+}
+
+vector<GameObject*> GameObject::gameObjects;
+vector<GameObject*> GameObject::physicsGameObjects;
+vector<GameObject*> GameObject::collisionGameObjects;
+
+
+
+/*
+ * Physics Updating
+ */
+/* NOTE: Probably include this in GameObject. */
+void IntegratePhysicsObjects(F32 dt)
+{
+	for (size_t i = 0; i < GameObject::physicsGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::physicsGameObjects[i];
+		go->rigidbody->SetPosition(go->transform.position);
+		go->rigidbody->Integrate(dt);
+		go->transform.position = go->rigidbody->position;
+	}
+}
+
+struct CollisionPair 
+{
+	GameObject* go1;
+	GameObject* go2;
+	CollisionInfo_2D info;
+
+	CollisionPair()
+	{
+		this->go1 = NULL;
+		this->go2 = NULL;
+		this->info = CollisionInfo_2D();
+	}
+
+	CollisionPair(GameObject* go1, GameObject* go2, CollisionInfo_2D info)
+	{
+		this->go1 = go1;
+		this->go2 = go2;
+		this->info = info;
+	}
+};
+
+vector<CollisionPair> GenerateContacts()
+{
+	vector<CollisionPair> result;
+
+	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
+	{
+		for (size_t j = i + 1; j < GameObject::collisionGameObjects.size(); ++j)
+		{
+			GameObject* go1 = GameObject::collisionGameObjects[i];
+			GameObject* go2 = GameObject::collisionGameObjects[j];
+
+			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
+			if (ci.collided)
+			{
+				// Resolve Interpenetration
+				//FixInterpenetration(go1, go2, ci);
+				result.push_back(CollisionPair(go1, go2, ci));
 			}
 		}
 	}
 
-	Entity te;
-	Initialize(&te);
-	te.transform.position = entities.back().transform.position - vec2(0.0f,1.0f);
-	AddAnimation(&te, "right", "link_Right", 2, 0.33f);
-	AddAnimation(&te, "left", "link_Left", 2, 0.33f);
-	AddAnimation(&te, "up", "link_Up", 2, 0.33f);
-	AddAnimation(&te, "down", "link_Down", 2, 0.33f);
-	AddAnimation(&te, "water", "water_Deep", 4, 4.0f);
-	StartAnimation(&te, "water", true, true);
-
-	RemoveAnimation(&te, "left");
-	entities.push_back(te);
-
-	// Initialize physics/ collision test game objects
-	////////////////////////////////////////////////////
-	// NOTE: 0 - 8 ARE TREES
-	////////////////////////////////////////////////////
-	Initialize(&physEnts[0]);
-	AddSprite(&physEnts[0], "tree_Generic");
-	physEnts[0].transform.position = vec2(30.0f, -8.0f);
-	physEnts[0].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[1]);
-	AddSprite(&physEnts[1], "tree_Generic");
-	physEnts[1].transform.position = vec2(32.0f, -8.0f);
-	physEnts[1].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[2]);
-	AddSprite(&physEnts[2], "tree_Generic");
-	physEnts[2].transform.position = vec2(39.0f, -8.0f);
-	physEnts[2].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[3]);
-	AddSprite(&physEnts[3], "tree_Generic");
-	physEnts[3].transform.position = vec2(30.0f, -10.0f);
-	physEnts[3].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[4]);
-	AddSprite(&physEnts[4], "tree_Generic");
-	physEnts[4].transform.position = vec2(39.0f, -10.0f);
-	physEnts[4].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[5]);
-	AddSprite(&physEnts[5], "tree_Generic");
-	physEnts[5].transform.position = vec2(30.0f, -12.0f);
-	physEnts[5].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[6]);
-	AddSprite(&physEnts[6], "tree_Generic");
-	physEnts[6].transform.position = vec2(39.0f, -12.0f);
-	physEnts[6].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[7]);
-	AddSprite(&physEnts[7], "tree_Generic");
-	physEnts[7].transform.position = vec2(30.0f, -14.0f);
-	physEnts[7].transform.scale = vec2(2.0f, 2.0f);
-
-	Initialize(&physEnts[8]);
-	AddSprite(&physEnts[8], "tree_Generic");
-	physEnts[8].transform.position = vec2(39.0f, -14.0f);
-	physEnts[8].transform.scale = vec2(2.0f, 2.0f);
-
-	// NOTE: This represents the lower wall
-	Initialize(&physEnts[9]);
-	physEnts[9].transform.position = vec2(35.5f, -16.0f);
-	physEnts[9].transform.scale = vec2(1.0f, 1.0f);
-
-	//////////////////////////////////////////////////////////////
-	// NOTE: 10 - 17 ARE WEEDS
-	//////////////////////////////////////////////////////////////
-	Initialize(&physEnts[10]);
-	AddSprite(&physEnts[10], "weed");
-	physEnts[10].transform.position = vec2(31.5f, -12.5f);
-
-	Initialize(&physEnts[11]);
-	AddSprite(&physEnts[11], "weed");
-	physEnts[11].transform.position = vec2(32.5f, -12.5f);
-
-	Initialize(&physEnts[12]);
-	AddSprite(&physEnts[12], "weed");
-	physEnts[12].transform.position = vec2(37.5f, -12.5f);
-
-	Initialize(&physEnts[13]);
-	AddSprite(&physEnts[13], "weed");
-	physEnts[13].transform.position = vec2(31.5f, -13.5f);
-
-	Initialize(&physEnts[14]);
-	AddSprite(&physEnts[14], "weed");
-	physEnts[14].transform.position = vec2(36.5f, -13.5f);
-
-	Initialize(&physEnts[15]);
-	AddSprite(&physEnts[15], "weed");
-	physEnts[15].transform.position = vec2(37.5f, -13.5f);
-
-	Initialize(&physEnts[16]);
-	AddSprite(&physEnts[16], "weed");
-	physEnts[16].transform.position = vec2(36.5f, -14.5f);
-
-	Initialize(&physEnts[17]);
-	AddSprite(&physEnts[17], "weed");
-	physEnts[17].transform.position = vec2(37.5f, -14.5f);
-
-
-
-
-	Initialize(&pm[0], physEnts[0].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 1.0f, 0.0f);
-	Initialize(&pm[1], physEnts[1].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[2], physEnts[2].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[3], physEnts[3].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[4], physEnts[4].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[5], physEnts[5].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[6], physEnts[6].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[7], physEnts[7].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[8], physEnts[8].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[9], physEnts[9].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[10], physEnts[10].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[11], physEnts[11].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[12], physEnts[12].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[13], physEnts[13].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[14], physEnts[14].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[15], physEnts[15].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[16], physEnts[16].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-	Initialize(&pm[17], physEnts[17].transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 0.0f, 0.0f);
-
-	cs[0].halfDim = vec2(0.5f, 0.5f);
-	cs[1].halfDim = vec2(0.5f, 0.5f);
-	cs[2].halfDim = vec2(0.5f, 0.5f);
-	cs[3].halfDim = vec2(0.5f, 0.5f);
-	cs[4].halfDim = vec2(0.5f, 0.5f);
-	cs[5].halfDim = vec2(0.5f, 0.5f);
-	cs[6].halfDim = vec2(0.5f, 0.5f);
-	cs[7].halfDim = vec2(0.5f, 0.5f);
-	cs[8].halfDim = vec2(0.5f, 0.5f);
-	cs[9].halfDim = vec2(8.5f, 1.0f);
-	cs[10].halfDim = vec2(0.5f, 0.5f);
-	cs[11].halfDim = vec2(0.5f, 0.5f);
-	cs[12].halfDim = vec2(0.5f, 0.5f);
-	cs[13].halfDim = vec2(0.5f, 0.5f);
-	cs[14].halfDim = vec2(0.5f, 0.5f);
-	cs[15].halfDim = vec2(0.5f, 0.5f);
-	cs[16].halfDim = vec2(0.5f, 0.5f);
-	cs[17].halfDim = vec2(0.5f, 0.5f);
+	return result;
 }
+
+bool ComparePenetrationDepth(CollisionPair a, CollisionPair b)
+{
+	bool result = false;
+
+	if (a.info.distance > b.info.distance)
+	{
+		result = true;
+	}
+
+	return result;
+}
+
+void FixInterpenetration(GameObject* go1, GameObject* go2, CollisionInfo_2D collisionInfo)
+{
+	// NOTE: inverseMass == 0 == infinite mass
+	if (go1->HasTag(GameObject::Environment))
+	{
+		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
+		go2->transform.position += displacement;
+	}
+	else if (go2->HasTag(GameObject::Environment))
+	{
+		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
+		go1->transform.position -= displacement;
+	}
+	else
+	{
+		// NOTE: There is only 1 movable game object in the scene to testing this atm will have to wait.
+		F32 pm1Mass = 1.0f;   // / pointMass1->inverseMass;
+		F32 pm2Mass = 1.0f;   // / pointMass2->inverseMass;
+		vec2 pm1Displacement = (pm2Mass / (pm1Mass + pm2Mass)) * collisionInfo.normal * collisionInfo.distance;
+		vec2 pm2Displacement = (pm1Mass / (pm1Mass + pm2Mass)) * -collisionInfo.normal * collisionInfo.distance;
+		go1->transform.position -= pm1Displacement;
+		go2->transform.position -= pm2Displacement;
+	}
+}
+
+void FixAllInterpenetrations()
+{
+	vector<CollisionPair> collisions = GenerateContacts();
+	size_t maxNumberOfIterations = collisions.size() * 5;
+	for (size_t i = 0; i < maxNumberOfIterations; ++i)
+	{
+		MergeSort(collisions._Myfirst, collisions.size(), ComparePenetrationDepth);
+		if (collisions.size() > 1)
+		{
+			Assert(collisions[0].info.distance >= collisions[1].info.distance);
+		}
+
+		if (collisions.size() == 0 || collisions[0].info.distance <= 0.0f)
+		{
+			break;
+		}
+
+		FixInterpenetration(collisions[0].go1, collisions[0].go2, collisions[0].info);
+
+		collisions.clear();
+		collisions = GenerateContacts();
+	}
+}
+
+
+
+/*
+ * Generate Prefab
+ */
+GameObject* CreateGameObject()
+{
+	GameObject* go = new GameObject();
+	GameObject::gameObjects.push_back(go);
+	return go;
+}
+
+GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+{
+	GameObject* hero = CreateGameObject();
+
+	hero->transform.position = position;
+	hero->SetType(GameObject::PlayerCharacter);
+	hero->AddTag(GameObject::Hero);
+	hero->AddAnimator();
+	hero->animator->AddAnimation("up", "link_Up", 2, 0.33f);
+	hero->animator->AddAnimation("down", "link_Down", 2, 0.33f);
+	hero->animator->AddAnimation("right", "link_Right", 2, 0.33f);
+	hero->animator->AddAnimation("left", "link_Left", 2, 0.33f);
+	hero->animator->StartAnimation("right");
+	hero->animator->PauseAnimation();
+	hero->AddRigidbody(1.0f, 0.0f, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f));
+	hero->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	hero->drawCollisionShapeOutline = debugDraw;
+
+	return hero;
+}
+
+GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+{
+	GameObject* tree = CreateGameObject();
+
+	tree->transform.position = position;
+	tree->transform.scale = vec2(2.0f, 2.0f);
+	tree->SetType(GameObject::StaticEnvironmentPiece);
+	tree->AddTag(GameObject::Environment);
+	tree->AddSprite("tree_Generic");
+	tree->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	tree->drawCollisionShapeOutline = debugDraw;
+
+	return tree;
+}
+
+GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+{
+	GameObject* df = CreateGameObject();
+
+	df->transform.position = position;
+	df->SetType(GameObject::StaticEnvironmentPiece);
+	df->AddTag(GameObject::Environment);
+	df->AddAnimator();
+	df->animator->AddAnimation("dance", "dancing_Flower", 4, 1.0f);
+	df->animator->StartAnimation("dance");
+
+	df->drawCollisionShapeOutline = debugDraw;
+
+	return df;
+}
+
+GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+{
+	GameObject* weed = CreateGameObject();
+
+	weed->transform.position = position;
+	weed->SetType(GameObject::PlayerCamera);
+	//weed->AddTag(GameObject::Environment);
+	weed->AddTag(GameObject::Cutable);
+	weed->AddTag(GameObject::Burnable);
+	weed->AddTag(GameObject::Lightweight);
+	weed->AddSprite("weed");
+	weed->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	weed->drawCollisionShapeOutline = debugDraw;
+
+	return weed;
+}
+
+GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+{
+	GameObject* spooky = CreateGameObject();
+
+	spooky->transform.position = position;
+	spooky->SetType(GameObject::StaticEnvironmentPiece);
+	spooky->AddTag(GameObject::Environment);
+	spooky->AddSprite("tree_Spooky");
+	spooky->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	spooky->drawCollisionShapeOutline = debugDraw;
+
+	return spooky;
+}
+
+
+
+/*
+ * Global Game State
+ */
+#define NUMGAMEOBJECTS 1
+GameObject* flowerGO;
+GameObject* treeGO;
+GameObject* heroGO;
+Camera camera;
 
 bool GameInitialize()
 {
 	// Initialize game sub systems.
 	InitializeRenderer();
 
+	SetWindowTitle("Oracle of Ages Clone");
+	SetClientWindowDimensions(vec2(600, 540));
+	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
 
+	spriteAssetFilepathTable.Initialize(60);
+	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
-#ifdef RUN_UNIT_TESTS
-	CollisionTestsRectRect2();
-#endif
-	
+	flowerGO = CreateDancingFlowers(vec2(-2.0f, 1.0f));
+	//treeGO = CreateTree(vec2(2.0f, -1.0f), false);
+	heroGO = CreateHero(vec2(-2.0f, 0.0f), true);
+	CreateTree(vec2(3.0f, 0.0f), true);
+	//CreateTree(vec2(0.0f, 1.0f), true);
+	CreateWeed(vec2(1.0f, 0.0f), true);
+	//CreateWeed(vec2(-3.0f, 1.0f));
 
-	// Dispatch applet type.
-#ifdef COLLISION2DAPPLET
-	InitializeCollisionDetection2DApplet();
-#elif GAME
-	InitScene();
-#endif
+	camera.halfDim = vec2(5.0f, 4.0f);
+	camera.position = vec2(0.0f, 0.0f);
+	camera.rotationAngle = 0.0f;
+	camera.scale = 1.0f;
 
 	return true;
 }
 
 
 
-F32 etime = 0.0f;
-void UpdateGamestate_PrePhysics(F32 dt)
+/*
+ * Rendering
+ */
+bool CompareYPosition(GameObject* a, GameObject* b)
 {
-	if (GetKeyDown(KeyCode_Left))
-	{
-		StartAnimation(&entities[2], "left");
-	}
-	if (GetKeyDown(KeyCode_Right))
-	{
-		StartAnimation(&entities[2], "right");
-	}
-	if (GetKeyDown(KeyCode_Down))
-	{
-		StartAnimation(&entities[2], "down");
-	}
-	if (GetKeyDown(KeyCode_Up))
-	{
-		StartAnimation(&entities[2], "up");
-	}
-	if (GetKeyDown(KeyCode_1))
-	{
-		StartAnimation(&entities[2]);
-	}
-	if (GetKeyDown(KeyCode_2))
-	{
-		PauseAnimation(&entities[2]);
-	}
-	if (GetKeyDown(KeyCode_3))
-	{
-		StopAnimation(&entities[2]);
-	}
-
-	if (GetKeyDown(KeyCode_Equal))
-	{
-		camera.halfDim /= 2.0f;
-	}
-	if (GetKeyDown(KeyCode_Minus))
-	{
-		camera.halfDim *= 2.0f;
-	}
-	if (GetKeyDown(KeyCode_A))
-	{
-		camera.position.x -= chunkWidth;
-	}
-	if (GetKeyDown(KeyCode_D))
-	{
-		camera.position.x += chunkWidth;
-	}
-	if (GetKeyDown(KeyCode_W))
-	{
-		camera.position.y += chunkHeight;
-	}
-	if (GetKeyDown(KeyCode_S))
-	{
-		camera.position.y -= chunkHeight;
-	}
-	camera.position.x = ClampRange_F32(camera.position.x, chunks[0][0].position.x + chunkWidth / 2.0f, chunks[13][0].position.x + chunkWidth / 2.0f);
-	camera.position.y = ClampRange_F32(camera.position.y, chunks[0][0].position.y + chunkHeight / 2.0f, chunks[0][13].position.y + chunkHeight / 2.0f);
-
-	// Update test physics/ collision objects
-	//ApplyForce(&pm[0], vec2(0, -1), 1.0f);
-	if (GetKey(KeyCode_J))
-	{
-		ApplyImpulse(&pm[0], vec2(-1.0f, 0.0f), 100.0f * dt);
-	}
-	if (GetKey(KeyCode_L))
-	{
-		ApplyImpulse(&pm[0], vec2(1.0f, 0.0f), 100.0f * dt);
-	}
-	if (GetKey(KeyCode_I))
-	{
-		ApplyImpulse(&pm[0], vec2(0.0f, 1.0f), 100.0f * dt);
-	}
-	if (GetKey(KeyCode_K))
-	{
-		ApplyImpulse(&pm[0], vec2(0.0f, -1.0f), 100.0f * dt);
-	}
-
-
-	Integrate(&pm[0], dt);
-	Integrate(&pm[1], dt);
-
-	physEnts[0].transform.position = pm[0].position;
-	physEnts[1].transform.position = pm[1].position;
-
-	CollisionInfo_2D ci = DetectCollision_2D(cs[0], physEnts[0].transform, cs[1], physEnts[1].transform);
-	if (ci.collided)
-	{
-		// Resolve Interpenetration
-		FixInterpenetration(&pm[0], &pm[1], ci);
-		physEnts[0].transform.position = pm[0].position;
-		physEnts[1].transform.position = pm[1].position;
-	}
-
-
-// 	if (etime > 16.8f)
-// 	{
-// 		etime = 600;
-// 	}
-// 	else
-// 	{
-// 		etime += dt;
-// 	}
+	bool result;
+	result = a->transform.position.y >= b->transform.position.y;
+	return result;
 }
 
-void UpdateGamestate_PostPhysics(F32 dt)
+void SortBinByYPosition(GameObject** bin, size_t count)
 {
-	SetViewport(vec2(0, 0), vec2(600, 480));
+	MergeSort(bin, count, CompareYPosition);
+}
 
-	// Draw entities with sprites
-	for (size_t i = 0; i < entities.size(); ++i)
+const vec4 debugCollisionColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+void DrawGameObject(GameObject* gameObject, F32 dt)
+{
+	bool hasAnimations = gameObject->animator != NULL && gameObject->animator->NumberOfAnimations();
+	bool hasSprite = gameObject->sprite != NULL;
+
+	if (hasAnimations)
 	{
-		bool hasSprite = entities[i].hasSprite;
-		if (hasSprite)
+		gameObject->animator->StepElapsedAnimationTime(dt);
+		TextureHandle animationFrame = gameObject->animator->GetCurrentAnimationFrame();
+		DrawSprite(animationFrame, vec2(0.0f, 0.0f), gameObject->transform, &camera);
+	}
+	else if (hasSprite)
+	{
+		DrawSprite(gameObject->sprite->texture, gameObject->sprite->offset, gameObject->transform, &camera);
+	}
+
+	if (gameObject->collisionShape != NULL && gameObject->drawCollisionShapeOutline)
+	{
+		const size_t rectangleHash = typeid(Rectangle_2D).hash_code();
+		const size_t circleHash = typeid(Circle_2D).hash_code();
+		const size_t triangleHash = typeid(Triangle_2D).hash_code();
+
+		size_t gameObjectHash = typeid(*(gameObject->collisionShape)).hash_code();
+		if (gameObjectHash == rectangleHash)
 		{
-			// NOTE: sort by x position
-			// NOTE: render higher x first
-			DrawSprite(GetTexture(entities[i].sprite), entities[i].spriteOffset, entities[i].transform, &camera);
+			Rectangle_2D* rect = (Rectangle_2D*)gameObject->collisionShape;
+			vec2 upperLeft = gameObject->transform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * gameObject->transform.scale);
+			vec2 dimensions = rect->halfDim * 2.0f * gameObject->transform.scale;
+			DrawRectangleOutline(upperLeft, dimensions, debugCollisionColor, &camera);
+		}
+		else if (gameObjectHash == circleHash)
+		{
+			// NOTE: Draw Circle
+		}
+		else if (gameObjectHash == triangleHash)
+		{
+			vec2 trianglePoints[3];
+			Triangle_2D* triangle = (Triangle_2D*)gameObject->collisionShape;
+			mat3 A = gameObject->transform.LocalToWorldTransform();
+			trianglePoints[0] = vec2(A * vec3(triangle->points[0].x, triangle->points[0].y, 1.0f));
+			trianglePoints[1] = vec2(A * vec3(triangle->points[1].x, triangle->points[1].y, 1.0f));
+			trianglePoints[2] = vec2(A * vec3(triangle->points[2].x, triangle->points[2].y, 1.0f));
+			DrawLine(trianglePoints[0], trianglePoints[1], debugCollisionColor, &camera);
+			DrawLine(trianglePoints[1], trianglePoints[2], debugCollisionColor, &camera);
+			DrawLine(trianglePoints[2], trianglePoints[0], debugCollisionColor, &camera);
 		}
 	}
 
+
+
+}
+
+void DrawGameObjects(F32 dt)
+{
+	// NOTE: Draw the game space.
+	SetViewport(vec2(0, 0), vec2(600, 480));
+
+	/*
+	 * Sort by tag
+	 *		Bins
+	 *		1 - Background
+	 *		2 - Environment
+	 *		3 - Everything else sans effects
+	 *		4 - Effects
+	 * 
+	 * Sort bins by position.y (Lowest -> Highest)
+	 *
+	 * Draw all objects in each bin starting with Bin 1.
+	 */
+	vector<GameObject*> bin_Background;
+	vector<GameObject*> bin_Environment;
+	vector<GameObject*> bin_Characters;
+	vector<GameObject*> bin_Effects;
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		bool hasTag_Background = go->HasTag(GameObject::Background);
+		bool hasTag_Environment = go->HasTag(GameObject::Environment);
+		bool hasTag_Effect = go->HasTag(GameObject::Effect);
+
+		if (hasTag_Background)
+		{
+			bin_Background.push_back(go);
+		}
+		if (hasTag_Environment)
+		{
+			bin_Environment.push_back(go);
+		}
+		if (hasTag_Effect)
+		{
+			bin_Effects.push_back(go);
+		}
+
+		if (!hasTag_Background && !hasTag_Environment && !hasTag_Effect)
+		{
+			bin_Characters.push_back(go);
+		}
+	}
+
+	SortBinByYPosition(bin_Background._Myfirst, bin_Background.size());
+	SortBinByYPosition(bin_Environment._Myfirst, bin_Environment.size());
+	SortBinByYPosition(bin_Characters._Myfirst, bin_Characters.size());
+	SortBinByYPosition(bin_Effects._Myfirst, bin_Effects.size());
+
+	// Draw Objects
+	for (size_t i = 0; i < bin_Background.size(); ++i)
+	{
+		GameObject* go = bin_Background[i];
+		DrawGameObject(go, dt);
+	}
+
+	for (size_t i = 0; i < bin_Environment.size(); ++i)
+	{
+		GameObject* go = bin_Environment[i];
+		DrawGameObject(go, dt);
+	}
+
+	for (size_t i = 0; i < bin_Characters.size(); ++i)
+	{
+		GameObject* go = bin_Characters[i];
+		DrawGameObject(go, dt);
+	}
+
+	for (size_t i = 0; i < bin_Effects.size(); ++i)
+	{
+		GameObject* go = bin_Effects[i];
+		DrawGameObject(go, dt);
+	}
+
+
 	// Draw chunk outlines
-	for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
+	/*for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
 	{
 		for (size_t y = 0; y < numberOfVerticalChunks; ++y)
 		{
 			DrawRectangleOutline(chunks[x][y].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(1, 0, 0, 1), &camera);
 		}
-	}
-
-	// NOTE: Draw inset chunk outline for test purposes
-	DrawRectangleOutline(chunks[1][13].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(0, 1, 0, 1), &camera, .1f);
-
+	}*/
 
 	// NOTE: Camera space grid, corresponding to tiles
-	F32 initialXPos = camera.position.x - chunkWidth / 2.0f;
+	/*F32 initialXPos = camera.position.x - chunkWidth / 2.0f;
 	F32 endXPos = initialXPos + chunkWidth;
 	F32 posY = camera.position.y + chunkHeight / 2.0f;
 	F32 negY = camera.position.y - chunkHeight / 2.0f;
@@ -2275,64 +1340,60 @@ void UpdateGamestate_PostPhysics(F32 dt)
 	for (F32 yPos = initialYPos; yPos <= endYPos; ++yPos)
 	{
 		DrawLine(vec2(posX, yPos), vec2(negX, yPos), gridLineColor, &camera);
-	}
-
-
-	// Draw entities with animations
-	for (size_t i = 0; i < entities.size(); ++i)
-	{
-		bool isAnimated = entities[i].isAnimated;
-		size_t numberOfAnimations = Length(&entities[i].animations);
-
-		if (isAnimated && numberOfAnimations > 0)
-		{
-			StepElapsedAnimationTime(&entities[i], dt);
-			TextureHandle animationFrame = GetCurrentAnimationFrame(&entities[i]);
-			DrawSprite(GetTexture(animationFrame), entities[i].spriteOffset, entities[i].transform, &camera);
-		}
-	}
+	}*/
 	
+	// NOTE: Draw UI
+	/*DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));*/
 
-	DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));
+}
 
-	// DRAW PHYSICS TEST OBJECTS
-	for (size_t i = 0; i < 18; ++i)
+void UpdateGameObjects_PrePhysics(F32 dt)
+{
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
 	{
-		bool hasSprite = physEnts[i].hasSprite;
-		if (hasSprite)
-		{
-			// NOTE: sort by x position
-			// NOTE: render higher x first
-			DrawSprite(GetTexture(physEnts[i].sprite), physEnts[i].spriteOffset, physEnts[i].transform, &camera);
-		}
-	}
-
-	for (size_t i = 0; i < 18; ++i)
-	{
-		DrawRectangleOutline(physEnts[i].transform.position + (vec2(-cs[i].halfDim.x, cs[i].halfDim.y) * physEnts[i].transform.scale), cs[i].halfDim * 2.0f * physEnts[i].transform.scale, vec4(1.0f, 0.0f, 0.0f, 1.0f), &camera);
+		GameObject::gameObjects[i]->Update_PrePhysics(dt);
 	}
 }
 
-void GameUpdate(F32 deltaTime)
+void UpdateGameObjects_PostPhysics(F32 dt)
 {
-#ifdef COLLISION2DAPPLET
-	UpdateCollisionDetection2DApplet(deltaTime);
-#elif GAME
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject::gameObjects[i]->Update_PostPhysics(dt);
+	}
+}
+
+void GameUpdate(F32 dt)
+{
+	vec2 deltaMovement = heroGO->transform.position;
+
 	Clear();
-	UpdateGamestate_PrePhysics(deltaTime);
-	// something something physics and collision detection
-	UpdateGamestate_PostPhysics(deltaTime);
-#endif
+	UpdateGameObjects_PrePhysics(dt);
+	IntegratePhysicsObjects(dt);
+	FixAllInterpenetrations();
+
+	// NOTE: Test for collision detection
+	/*CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, heroGO->transform, treeGO->collisionShape, treeGO->transform);
+	if (ci.collided)
+	{
+		FixInterpenetration(heroGO, treeGO, ci);
+	}*/
+
+	UpdateGameObjects_PostPhysics(dt);
+	DrawGameObjects(dt);
+
+	deltaMovement = heroGO->transform.position - deltaMovement;
+	//DebugPrintf(1024, "hero movement distance = %f\n", length(deltaMovement));
+	//DebugPrintf(1024, "hero movement = (%f, %f)\n", deltaMovement.x, deltaMovement.y);
+	//DebugPrintf(1024, "delta time = %f\n", dt);
+	F32 fps = 1.0f / dt;
+	vec2 normalizedMovement = deltaMovement * fps;
+	DebugPrintf(1024, "normalized hero movement = (%f, %f)\n", normalizedMovement.x, normalizedMovement.y);
 }
 
 bool GameShutdown()
 {
-#ifdef COLLISION2DAPPLET
-	ShutdownCollisionDetection2DApplet();
-#endif
-
-	//Destroy(&spriteFiles);
-
+	spriteAssetFilepathTable.Destroy();
 	ShutdownRenderer();
 	return true;
 }

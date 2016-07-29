@@ -10,8 +10,8 @@
  */
 void Assert(int expression);
 
-void DebugPrint(char* outputString);
-void DebugPrintf(U32 size, char* formatString, ...);
+void DebugPrint(const char* outputString);
+void DebugPrintf(U32 size, const char* formatString, ...);
 
 
 
@@ -21,28 +21,28 @@ void DebugPrintf(U32 size, char* formatString, ...);
 /*
  *  FILE API
  */
-bool CreateFile(char* filename, bool overwriteIfExists);
+bool CreateFile(const char* filename, bool overwriteIfExists);
 
 struct GetFileSizeReturnType
 {
 	size_t fileSize;
 	bool fileExists;
 };
-GetFileSizeReturnType GetFileSize(char* filename);
+GetFileSizeReturnType GetFileSize(const char* filename);
 
 struct ReadFileReturnType
 {
 	size_t numberOfBytesRead;
 	bool errorEncountered;
 };
-ReadFileReturnType ReadFile(char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition = 0);
+ReadFileReturnType ReadFile(const char* filename, char* fileBuffer, U64 numberOfBytesToRead, U64 readPosition = 0);
 
 struct WriteFileReturnType
 {
 	size_t numberOfBytesWritten;
 	bool errorEncountered;
 };
-WriteFileReturnType WriteFile(char* filename, char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition = 0);
+WriteFileReturnType WriteFile(const char* filename, const char* fileBuffer, U64 numberOfBytesToWrite, U64 writePosition = 0);
 
 
 
@@ -56,7 +56,7 @@ vec2 GetClientWindowDimensions();
 void SetClientWindowDimensions(vec2 dimensions);
 
 char* GetWindowTitle();
-void  SetWindowTitle(char* newTitle);
+void  SetWindowTitle(const char* newTitle);
 
 
 

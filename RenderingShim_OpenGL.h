@@ -93,7 +93,7 @@ struct Texture
 	Texture() : glTextureID(0), width(0), height(0) {};
 };
 
-inline void Initialize(Texture* texture, char* filename)
+inline void Initialize(Texture* texture, const char* filename)
 {
 	TextureData textureData = LoadTexture(filename);
 
@@ -398,7 +398,7 @@ struct LSPResult
 
 	LSPResult() : program(0), status() {};
 };
-LSPResult LoadShaderProgram(char* vertexShaderFilename, char* fragmentShaderFilename)
+LSPResult LoadShaderProgram(const char* vertexShaderFilename,const char* fragmentShaderFilename)
 {
 	LSPResult result;
 
@@ -476,7 +476,7 @@ struct BasicShaderProgram2D
 	BasicShaderProgram2D() : program(0), status(), location_PCM(), location_Color() {};
 };
 
-inline void Initialize(BasicShaderProgram2D* bsp, char* vertexShaderFilename, char* fragmentShaderFilename)
+inline void Initialize(BasicShaderProgram2D* bsp, const char* vertexShaderFilename, const char* fragmentShaderFilename)
 {
 	LSPResult loadResult = LoadShaderProgram(vertexShaderFilename, fragmentShaderFilename);
 	bsp->program = loadResult.program;
@@ -538,7 +538,7 @@ struct SpriteShaderProgram2D
 	SpriteShaderProgram2D() : program(0), status(), location_PCM(), location_SpriteSampler(), textureSampler_SpriteSampler() {};
 };
 
-inline void Initialize(SpriteShaderProgram2D* ssp, char* vertexShaderFilename, char* fragmentShaderFilename)
+inline void Initialize(SpriteShaderProgram2D* ssp, const char* vertexShaderFilename, const char* fragmentShaderFilename)
 {
 	LSPResult loadResult = LoadShaderProgram(vertexShaderFilename, fragmentShaderFilename);
 	ssp->program = loadResult.program;

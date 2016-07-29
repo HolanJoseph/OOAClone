@@ -51,11 +51,22 @@ inline bool Compare(const char* s1, const char* s2)
 
 inline bool Compare(const char* s1, size_t s1Length, const char* s2, size_t s2Length)
 {
-	bool match = false;
+	bool match = true;
 
 	if (s1Length == s2Length)
 	{
-		match = Compare(s1, s2);
+		for (size_t i = 0; i < s1Length; ++i)
+		{
+			if (s1[i] != s2[i])
+			{
+				match = false;
+				break;
+			}
+		}
+	}
+	else
+	{
+		match = false;
 	}
 
 	return match;
@@ -562,11 +573,8 @@ inline char* ToString(F32 f, U32 numberOfDecimals)
 }
 
 /*
- * THE SPLIT STRINGS ARE NOT ALLOCATED AGAIN.
- * IE: free(stringComponents[0]) will free all string components AND the origial string you were tring to split
- * 
- * ALSO you do need to call free(stringComponents) when you are done using the components to dealloc the pointers
- *	to the strings
+ * The user is responsible for freeing each string in the split result
+ * and the components and componentlengths part
  */
 struct SplitResult
 {
@@ -576,32 +584,44 @@ struct SplitResult
 	size_t numberOfComponents;
 
 	SplitResult() : components(NULL), componentLengths(NULL), numberOfComponents(0) {};
+
+	void Destroy()
+	{
+		for (size_t i = 0; i < this->numberOfComponents; ++i)
+		{
+			free(this->components[i]);
+		}
+		free(this->components);
+		free(this->componentLengths);
+		this->components = NULL;
+		this->componentLengths = NULL;
+		this->numberOfComponents = 0;
+	}
 };
 
 
-inline SplitResult Split(char* string, size_t stringLength, char splitCharacter)
+inline SplitResult Split(const char* string, size_t stringLength, char splitCharacter)
 {
 	SplitResult result;
 
 	char** stringComponents = (char**)malloc(sizeof(char*)* stringLength);
 	size_t* stringComponentLengths = (size_t*)malloc(sizeof(size_t)* stringLength);
 
-	char* stringFront = string;
+	const char* stringFront = string;
 	size_t numberOfSplits = 0;
 	for (U64 i = 0; i < stringLength; ++i)
 	{
 		if (string[i] == splitCharacter)
 		{
-			string[i] = '\0';
-			stringComponents[numberOfSplits] = stringFront;
-			stringComponentLengths[numberOfSplits] = (&(string[i]) - stringFront + 1) / sizeof(char);
+			stringComponents[numberOfSplits] = CopyAndTerminate(stringFront, &(string[i]) - stringFront);
+			stringComponentLengths[numberOfSplits] = Length(stringComponents[numberOfSplits]);
 			stringFront = &(string[i + 1]);
 			++numberOfSplits;
 		}
 	}
 
-	stringComponents[numberOfSplits] = stringFront;
-	stringComponentLengths[numberOfSplits] = (&(string[stringLength]) - stringFront) / sizeof(char);
+	stringComponents[numberOfSplits] = Copy(stringFront);
+	stringComponentLengths[numberOfSplits] = Length(stringComponents[numberOfSplits]);
 	++numberOfSplits;
 
 	stringComponents = (char**)realloc(stringComponents, sizeof(char*) * numberOfSplits);
@@ -613,40 +633,51 @@ inline SplitResult Split(char* string, size_t stringLength, char splitCharacter)
 	return result;
 }
 
-inline SplitResult Split(char* string, char splitCharacter)
+inline SplitResult Split(const char* string, char splitCharacter)
 {
 	size_t stringLength = Length(string);
 	SplitResult result = Split(string, stringLength, splitCharacter);
 	return result;
 }
 
-/*inline char** SplitStringOnCharacter(char* string, size_t stringLength, char splitCharacter, U64* out_numberOfSplits, U64** out_lineLengths)
+inline SplitResult Split(const char* string, size_t stringLength, const char* splitString, size_t splitStringLength)
 {
-char** stringComponents = (char**)malloc(sizeof(char*) * stringLength);
-U64* stringComponentLengths = (U64*)malloc(sizeof(U64) * stringLength);
+	splitStringLength -= 1;
+	SplitResult result;
 
-char* stringFront = string;
-size_t numberOfSplits = 0;
-for (U64 i = 0; i < stringLength; ++i)
-{
-if (string[i] == splitCharacter)
-{
-string[i] = '\0';
-stringComponents[numberOfSplits] = stringFront;
-stringComponentLengths[numberOfSplits] = (&(string[i]) - stringFront + 1) / sizeof(char);
-stringFront = &(string[i + 1]);
-++numberOfSplits;
+	char** stringComponents = (char**)malloc(sizeof(char*)* stringLength);
+	size_t* stringComponentLengths = (size_t*)malloc(sizeof(size_t)* stringLength);
+
+	const char* stringFront = string;
+	size_t numberOfSplits = 0;
+	for (U64 i = 0; i + splitStringLength < stringLength; ++i)
+	{
+		if (Compare(&string[i], splitStringLength, splitString, splitStringLength))
+		{
+			stringComponents[numberOfSplits] = CopyAndTerminate(stringFront, &(string[i]) - stringFront);
+			stringComponentLengths[numberOfSplits] = Length(stringComponents[numberOfSplits]);
+			stringFront = &(string[i + splitStringLength]);
+			++numberOfSplits;
+		}
+	}
+
+	stringComponents[numberOfSplits] = Copy(stringFront);
+	stringComponentLengths[numberOfSplits] = Length(stringComponents[numberOfSplits]);
+	++numberOfSplits;
+
+	stringComponents = (char**)realloc(stringComponents, sizeof(char*)* numberOfSplits);
+	stringComponentLengths = (size_t*)realloc(stringComponentLengths, sizeof(size_t)* numberOfSplits);
+
+	result.numberOfComponents = numberOfSplits;
+	result.componentLengths = stringComponentLengths;
+	result.components = stringComponents;
+	return result;
 }
+
+inline SplitResult Split(const char* string, const char* splitString)
+{
+	size_t stringLength = Length(string);
+	size_t splitStringLength = Length(splitString);
+	SplitResult result = Split(string, stringLength, splitString, splitStringLength);
+	return result;
 }
-
-stringComponents[numberOfSplits] = stringFront;
-stringComponentLengths[numberOfSplits] = (&(string[stringLength]) - stringFront) / sizeof(char);
-++numberOfSplits;
-
-stringComponents = (char**)realloc(stringComponents, sizeof(char*) * numberOfSplits);
-stringComponentLengths = (U64*)realloc(stringComponentLengths, sizeof(U64) * numberOfSplits);
-
-*out_numberOfSplits = numberOfSplits;
-*out_lineLengths = stringComponentLengths;
-return stringComponents;
-}*/

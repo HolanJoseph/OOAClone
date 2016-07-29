@@ -52,12 +52,12 @@ inline U32 ClampRange_U32(U32 val, U32 low, U32 high)
 	return result;
 }
 
-
-inline U32 String_HashFunction(char* key, U32 numberOfIndices)
+// NOTE: This should not cause issues with the string hash function but if there is weird hashing issues check this.
+inline U32 String_HashFunction(const char* key, U32 numberOfIndices)
 {
 	U32 hash = 0;
 
-	char* keyI = key;
+	const char* keyI = key;
 	while (*keyI)
 	{
 		++keyI;

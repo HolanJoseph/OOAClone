@@ -72,7 +72,7 @@ inline bool operator!=(const TextureHandle& lhs, const TextureHandle& rhs)
 
 struct ProcessedTexturesHashLink
 {
-	char* k;
+	const char* k;
 	TextureHandle v;
 
 	ProcessedTexturesHashLink* next;
@@ -101,13 +101,13 @@ inline void Initialize(ProcessedTexturesHash* pth, U32 numberOfIndices)
 	pth->length = 0;
 }
 
-inline U32 GetKeyIndex(ProcessedTexturesHash* pth, char* key)
+inline U32 GetKeyIndex(ProcessedTexturesHash* pth, const char* key)
 {
 	U32 i = (String_HashFunction(key, pth->numberOfIndices) & 0x7fffffff) % pth->numberOfIndices;
 	return i;
 }
 
-inline TextureHandle GetValue(ProcessedTexturesHash* pth, char* key)
+inline TextureHandle GetValue(ProcessedTexturesHash* pth, const char* key)
 {
 	TextureHandle result = TextureHandle();
 
@@ -128,9 +128,9 @@ inline TextureHandle GetValue(ProcessedTexturesHash* pth, char* key)
 	return result;
 }
 
-inline void AddKVPair(ProcessedTexturesHash* pth, char* key, TextureHandle val)
+inline void AddKVPair(ProcessedTexturesHash* pth, const char* key, TextureHandle val)
 {
-	char* keyCopy = Copy(key);
+	const char* keyCopy = Copy(key);
 
 	// If the KV pair is not already in the hash table
 	TextureHandle th = GetValue(pth, key);
@@ -162,7 +162,7 @@ inline void AddKVPair(ProcessedTexturesHash* pth, char* key, TextureHandle val)
 	}
 }
 
-inline void RemoveKVPair(ProcessedTexturesHash* pth, char* key)
+inline void RemoveKVPair(ProcessedTexturesHash* pth, const char* key)
 {
 	U32 i = GetKeyIndex(pth, key);
 	ProcessedTexturesHashLink* prev = NULL;
@@ -173,7 +173,7 @@ inline void RemoveKVPair(ProcessedTexturesHash* pth, char* key)
 		if (match)
 		{
 			--pth->length;
-			free(curr->k);
+			free((void*)curr->k);
 			
 			if (curr == pth->table[i])
 			{
@@ -212,7 +212,7 @@ inline void Destroy(ProcessedTexturesHash* pth)
 		ProcessedTexturesHashLink* next = curr;
 		while (curr != NULL)
 		{
-			free(curr->k);
+			free((void*)curr->k);
 			// NOTE: What about the texturehandle?
 				// Don't free it but how do we handle the texture in the pool?
 
@@ -334,7 +334,7 @@ inline bool IsValidTextureHandle(TextureHandle th)
 	return result;
 }
 
-inline TextureHandle AddToTexturePool(char* filepath)
+inline TextureHandle AddToTexturePool(const char* filepath)
 {
 	TextureHandle result;
 
@@ -640,11 +640,12 @@ inline void DrawUVRectangle(Texture* texture, Transform transform, Camera* camer
 	ClearShaderProgram();
 }
 
-inline void DrawSprite(Texture* texture, vec2 spriteOffset, Transform transform, Camera* camera)
+inline void DrawSprite(TextureHandle texture, vec2 spriteOffset, Transform transform, Camera* camera)
 {
+	Texture* t = GetTexture(texture);
 	transform.position += spriteOffset;
 	transform.scale /= 2.0f;
-	DrawUVRectangle(texture, transform, camera);
+	DrawUVRectangle(t, transform, camera);
 }
 
 // NOTE: starts from upper left corner
