@@ -384,11 +384,14 @@ struct GJKInfo_2D
 	bool collided;
 	U32 numberOfLoopsCompleted;
 	Simplex_2D simplex;
+
+	F32 distanceToOrigin_ForNoCollision;
 };
 
 inline GJKInfo_2D GJK_2D(Shape_2D* shapeA, Transform shapeATransform, Shape_2D* shapeB, Transform shapeBTransform, const U64 MAXITERATIONS = MAXGJKITERATIONS_2D)
 {
 	bool collisionDetected = false;
+	F32 distanceToOrigin_ForNoCollision = 0.0f;
 
 	vec2 s = Support(shapeA, shapeATransform, shapeB, shapeBTransform, vec2(1.0f, -1.0f));
 	if (s == vec2(0, 0))
@@ -416,6 +419,7 @@ inline GJKInfo_2D GJK_2D(Shape_2D* shapeA, Transform shapeATransform, Shape_2D* 
 		if (dot(A, d) < 0)
 		{
 			collisionDetected = false;
+			distanceToOrigin_ForNoCollision = length(d);
 			break;
 		}
 		simplex.AddSimplexPoint(A);
@@ -494,6 +498,7 @@ inline GJKInfo_2D GJK_2D(Shape_2D* shapeA, Transform shapeATransform, Shape_2D* 
 	result.collided = collisionDetected;
 	result.numberOfLoopsCompleted = loopCounter;
 	result.simplex = simplex;
+	result.distanceToOrigin_ForNoCollision = distanceToOrigin_ForNoCollision;
 
 	return result;
 }
@@ -704,6 +709,10 @@ inline CollisionInfo_2D DetectCollision_2D(Shape_2D* shapeA, Transform shapeATra
 		result.collided = true;
 		result.normal = epaInfo.normal;
 		result.distance = epaInfo.distance;
+	}
+	else
+	{
+		result.distance = gjkInfo.distanceToOrigin_ForNoCollision;
 	}
 
 	return result;

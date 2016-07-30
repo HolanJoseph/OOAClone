@@ -805,6 +805,7 @@ struct GameObject
 	static vector<GameObject*> gameObjects;
 	static vector<GameObject*> physicsGameObjects;
 	static vector<GameObject*> collisionGameObjects;
+	static vector<GameObject*> staticCollisionGameObjects;
 
 };
 
@@ -862,6 +863,14 @@ void GameObject::AddCollisionShape(S shape)
 {
 	S* collider = new S(shape);
 	this->collisionShape = collider;
+	//if (this->HasTag(Environment))
+	//{
+	//	staticCollisionGameObjects.push_back(this);
+	//}
+	//else
+	//{
+	//	collisionGameObjects.push_back(this);
+	//}
 	collisionGameObjects.push_back(this);
 }
 
@@ -903,6 +912,7 @@ void GameObject::Update_PostPhysics(F32 dt)
 vector<GameObject*> GameObject::gameObjects;
 vector<GameObject*> GameObject::physicsGameObjects;
 vector<GameObject*> GameObject::collisionGameObjects;
+vector<GameObject*> GameObject::staticCollisionGameObjects;
 
 
 
@@ -942,6 +952,7 @@ struct CollisionPair
 	}
 };
 
+#define PessimisticBias 0.125f
 vector<CollisionPair> GenerateContacts()
 {
 	vector<CollisionPair> result;
@@ -954,10 +965,8 @@ vector<CollisionPair> GenerateContacts()
 			GameObject* go2 = GameObject::collisionGameObjects[j];
 
 			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
-			if (ci.collided)
+			if (ci.collided || ci.distance <= PessimisticBias)
 			{
-				// Resolve Interpenetration
-				//FixInterpenetration(go1, go2, ci);
 				result.push_back(CollisionPair(go1, go2, ci));
 			}
 		}
@@ -1136,34 +1145,6 @@ GameObject* flowerGO;
 GameObject* treeGO;
 GameObject* heroGO;
 Camera camera;
-
-bool GameInitialize()
-{
-	// Initialize game sub systems.
-	InitializeRenderer();
-
-	SetWindowTitle("Oracle of Ages Clone");
-	SetClientWindowDimensions(vec2(600, 540));
-	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
-
-	spriteAssetFilepathTable.Initialize(60);
-	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
-
-	flowerGO = CreateDancingFlowers(vec2(-2.0f, 1.0f));
-	//treeGO = CreateTree(vec2(2.0f, -1.0f), false);
-	heroGO = CreateHero(vec2(-2.0f, 0.0f), true);
-	CreateTree(vec2(3.0f, 0.0f), true);
-	//CreateTree(vec2(0.0f, 1.0f), true);
-	CreateWeed(vec2(1.0f, 0.0f), true);
-	//CreateWeed(vec2(-3.0f, 1.0f));
-
-	camera.halfDim = vec2(5.0f, 4.0f);
-	camera.position = vec2(0.0f, 0.0f);
-	camera.rotationAngle = 0.0f;
-	camera.scale = 1.0f;
-
-	return true;
-}
 
 
 
@@ -1347,6 +1328,39 @@ void DrawGameObjects(F32 dt)
 
 }
 
+
+
+/*
+ * Core Game API Functions
+ */
+bool GameInitialize()
+{
+	// Initialize game sub systems.
+	InitializeRenderer();
+
+	SetWindowTitle("Oracle of Ages Clone");
+	SetClientWindowDimensions(vec2(600, 540));
+	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
+
+	spriteAssetFilepathTable.Initialize(60);
+	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
+
+	//flowerGO = CreateDancingFlowers(vec2(-2.0f, 1.0f));
+	//treeGO = CreateTree(vec2(2.0f, -1.0f), false);
+	heroGO = CreateHero(vec2(-0.55f, -0.5f), true);
+	treeGO = CreateTree(vec2(1.0f, 0.0f), true);
+	//CreateTree(vec2(0.0f, 1.0f), true);
+	//CreateWeed(vec2(1.0f, 0.0f), true);
+	//CreateWeed(vec2(-3.0f, 1.0f));
+
+	camera.halfDim = vec2(5.0f, 4.0f);
+	camera.position = vec2(0.0f, 0.0f);
+	camera.rotationAngle = 0.0f;
+	camera.scale = 1.0f;
+
+	return true;
+}
+
 void UpdateGameObjects_PrePhysics(F32 dt)
 {
 	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
@@ -1365,30 +1379,18 @@ void UpdateGameObjects_PostPhysics(F32 dt)
 
 void GameUpdate(F32 dt)
 {
-	vec2 deltaMovement = heroGO->transform.position;
-
 	Clear();
 	UpdateGameObjects_PrePhysics(dt);
 	IntegratePhysicsObjects(dt);
-	FixAllInterpenetrations();
+	//FixAllInterpenetrations();
 
-	// NOTE: Test for collision detection
-	/*CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, heroGO->transform, treeGO->collisionShape, treeGO->transform);
-	if (ci.collided)
-	{
-		FixInterpenetration(heroGO, treeGO, ci);
-	}*/
+	/*
+	 * Tests
+	 */
+	CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, heroGO->transform, treeGO->collisionShape, treeGO->transform);
 
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);
-
-	deltaMovement = heroGO->transform.position - deltaMovement;
-	//DebugPrintf(1024, "hero movement distance = %f\n", length(deltaMovement));
-	//DebugPrintf(1024, "hero movement = (%f, %f)\n", deltaMovement.x, deltaMovement.y);
-	//DebugPrintf(1024, "delta time = %f\n", dt);
-	F32 fps = 1.0f / dt;
-	vec2 normalizedMovement = deltaMovement * fps;
-	DebugPrintf(1024, "normalized hero movement = (%f, %f)\n", normalizedMovement.x, normalizedMovement.y);
 }
 
 bool GameShutdown()
