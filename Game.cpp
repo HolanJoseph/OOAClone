@@ -882,19 +882,19 @@ void GameObject::Update_PrePhysics(F32 dt)
 	{
 							if (GetKey(KeyCode_A))
 							{
-								this->rigidbody->ApplyImpulse(vec2(-1.0f, 0.0f), 100.0f * dt);
+								this->rigidbody->ApplyImpulse(vec2(-1.0f, 0.0f), 1.5f);
 							}
 							if (GetKey(KeyCode_D))
 							{
-								this->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 100.0f * dt);
+								this->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 1.5f);
 							}
 							if (GetKey(KeyCode_W))
 							{
-								this->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 100.0f * dt);
+								this->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
 							}
 							if (GetKey(KeyCode_S))
 							{
-								this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 100.0f * dt);
+								this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 1.5f);
 							}
 	}
 	break;
@@ -952,7 +952,6 @@ struct CollisionPair
 	}
 };
 
-#define PessimisticBias 0.125f
 vector<CollisionPair> GenerateContacts()
 {
 	vector<CollisionPair> result;
@@ -963,10 +962,21 @@ vector<CollisionPair> GenerateContacts()
 		{
 			GameObject* go1 = GameObject::collisionGameObjects[i];
 			GameObject* go2 = GameObject::collisionGameObjects[j];
-
-			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
-			if (ci.collided || ci.distance <= PessimisticBias)
+			
+			/*
+			 * NOTE: Still not sure the best way to handle pessimistic biases
+			 * ISSUES: ideally we would like to just subtract off the amount we added to the scale from 
+			 *				the distance returned on success instead of rerunning collision detection with
+			 *				the regular transform after successful detection with the bias
+			 *
+			 *		   Should we be adding to the scale or multiplying???
+			 */
+			Transform biasedTransform = go1->transform;
+			biasedTransform.scale += vec2(0.2f, 0.2f);
+			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
+			if (ci.collided)
 			{
+				ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
 				result.push_back(CollisionPair(go1, go2, ci));
 			}
 		}
@@ -987,18 +997,35 @@ bool ComparePenetrationDepth(CollisionPair a, CollisionPair b)
 	return result;
 }
 
-void FixInterpenetration(GameObject* go1, GameObject* go2, CollisionInfo_2D collisionInfo)
+struct Displacements 
 {
+	vec2 displacement1;
+	vec2 displacement2;
+
+	Displacements()
+	{
+		this->displacement1 = vec2(0.0f, 0.0f);
+		this->displacement2 = vec2(0.0f, 0.0f);
+	}
+};
+Displacements FixInterpenetration(GameObject* go1, GameObject* go2, CollisionInfo_2D collisionInfo)
+{
+	Displacements result;
+
 	// NOTE: inverseMass == 0 == infinite mass
 	if (go1->HasTag(GameObject::Environment))
 	{
 		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
 		go2->transform.position += displacement;
+
+		result.displacement2 = displacement;
 	}
 	else if (go2->HasTag(GameObject::Environment))
 	{
 		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
 		go1->transform.position -= displacement;
+
+		result.displacement1 = -displacement;
 	}
 	else
 	{
@@ -1009,30 +1036,78 @@ void FixInterpenetration(GameObject* go1, GameObject* go2, CollisionInfo_2D coll
 		vec2 pm2Displacement = (pm1Mass / (pm1Mass + pm2Mass)) * -collisionInfo.normal * collisionInfo.distance;
 		go1->transform.position -= pm1Displacement;
 		go2->transform.position -= pm2Displacement;
+
+		result.displacement1 = -pm1Displacement;
+		result.displacement2 = -pm2Displacement;
 	}
+
+	return result;
 }
 
 void FixAllInterpenetrations()
 {
 	vector<CollisionPair> collisions = GenerateContacts();
-	size_t maxNumberOfIterations = collisions.size() * 5;
-	for (size_t i = 0; i < maxNumberOfIterations; ++i)
+	size_t maxNumberOfIterations = collisions.size() * 10;
+	size_t i = 0;
+	while (i < maxNumberOfIterations)
 	{
-		MergeSort(collisions._Myfirst, collisions.size(), ComparePenetrationDepth);
-		if (collisions.size() > 1)
+		I32 index = -1;
+		F32 penetrationDepth = -1.0f;
+		for (size_t j = 0; j < collisions.size(); ++j)
 		{
-			Assert(collisions[0].info.distance >= collisions[1].info.distance);
+			if (collisions[j].info.collided && collisions[j].info.distance > penetrationDepth)
+			{
+				index = j;
+				penetrationDepth = collisions[j].info.distance;
+			}
 		}
 
-		if (collisions.size() == 0 || collisions[0].info.distance <= 0.0f)
+		if (index == -1 || penetrationDepth <= 0.0f)
 		{
+			// We have fixed all interpenetrations.
 			break;
 		}
 
-		FixInterpenetration(collisions[0].go1, collisions[0].go2, collisions[0].info);
+		Displacements d = FixInterpenetration(collisions[index].go1, collisions[index].go2, collisions[index].info);
+		//Assert(length(d.displacement1) + length(d.displacement2) == collisions[index].info.distance);
+		collisions[index].info.distance = 0.0f;
+		for (size_t k = 0; k < collisions.size(); k++)
+		{
+			if (k == index)
+			{
+				continue;
+			}
 
-		collisions.clear();
-		collisions = GenerateContacts();
+			GameObject* go1 = collisions[k].go1;
+			GameObject* go2 = collisions[k].go2;
+			
+			GameObject* t1 = collisions[index].go1;
+
+			// We must project the displacement for that object onto the normal and then add it to the distance
+			bool b1 = (go1 == collisions[index].go1);
+			bool b2 = (go2 == collisions[index].go1);
+			if (b1)
+			{
+				collisions[k].info.distance += dot(collisions[k].info.normal, d.displacement1);
+			}
+			if (b2)
+			{
+				collisions[k].info.distance -= dot(collisions[k].info.normal, d.displacement1);
+			}
+
+			bool b3 = (go1 == collisions[index].go2);
+			bool b4 = (go2 == collisions[index].go2);
+			if (b3)
+			{
+				collisions[k].info.distance += dot(collisions[k].info.normal, d.displacement2);
+			}
+			if (b4)
+			{
+				collisions[k].info.distance -= dot(collisions[k].info.normal, d.displacement2);
+			}
+		}
+
+		++i;
 	}
 }
 
@@ -1144,6 +1219,8 @@ GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = 
 GameObject* flowerGO;
 GameObject* treeGO;
 GameObject* heroGO;
+GameObject* weedGO1;
+GameObject* weedGO2;
 Camera camera;
 
 
@@ -1151,6 +1228,32 @@ Camera camera;
 /*
  * Rendering
  */
+void DrawCameraGrid()
+{
+	// NOTE: Camera space grid, corresponding to tiles
+	F32 initialXPos = camera.position.x - 10.0f / 2.0f;
+	F32 endXPos = initialXPos + 10.0f;
+	F32 posY = camera.position.y + 8.0f / 2.0f;
+	F32 negY = camera.position.y - 8.0f / 2.0f;
+	vec4 gridLineColor = vec4(.251f, .251f, .251f, 1.0f);
+	for (F32 xPos = initialXPos; xPos <= endXPos; ++xPos)
+	{
+		DrawLine(vec2(xPos, posY), vec2(xPos, negY), gridLineColor, &camera);
+	}
+
+	F32 initialYPos = camera.position.y - 8.0f / 2.0f;
+	F32 endYPos = initialYPos + 8.0f;
+	F32 posX = camera.position.x + 10.0f / 2.0f;
+	F32 negX = camera.position.x - 10.0f / 2.0f;
+	for (F32 yPos = initialYPos; yPos <= endYPos; ++yPos)
+	{
+		DrawLine(vec2(posX, yPos), vec2(negX, yPos), gridLineColor, &camera);
+	}
+
+	DrawLine(vec2(0.0f, posY), vec2(0.0f, negY), vec4(0.09f, 0.52f, 0.09f, 1.0f), &camera);
+	DrawLine(vec2(posX, 0.0f), vec2(negX, 0.0f), vec4(0.52f, 0.09f, 0.09f, 1.0f), &camera);
+}
+
 bool CompareYPosition(GameObject* a, GameObject* b)
 {
 	bool result;
@@ -1220,6 +1323,7 @@ void DrawGameObjects(F32 dt)
 {
 	// NOTE: Draw the game space.
 	SetViewport(vec2(0, 0), vec2(600, 480));
+	DrawCameraGrid();
 
 	/*
 	 * Sort by tag
@@ -1302,26 +1406,6 @@ void DrawGameObjects(F32 dt)
 			DrawRectangleOutline(chunks[x][y].position + vec2(0, chunkHeight), vec2(chunkWidth, chunkHeight), vec4(1, 0, 0, 1), &camera);
 		}
 	}*/
-
-	// NOTE: Camera space grid, corresponding to tiles
-	/*F32 initialXPos = camera.position.x - chunkWidth / 2.0f;
-	F32 endXPos = initialXPos + chunkWidth;
-	F32 posY = camera.position.y + chunkHeight / 2.0f;
-	F32 negY = camera.position.y - chunkHeight / 2.0f;
-	vec4 gridLineColor = vec4(0, 0, 0, 1);
-	for (F32 xPos = initialXPos; xPos <= endXPos; ++xPos)
-	{
-		DrawLine(vec2(xPos, posY), vec2(xPos, negY), gridLineColor, &camera);
-	}
-
-	F32 initialYPos = camera.position.y - chunkHeight / 2.0f;
-	F32 endYPos = initialYPos + chunkHeight;
-	F32 posX = camera.position.x + chunkWidth / 2.0f;
-	F32 negX = camera.position.x - chunkWidth / 2.0f;
-	for (F32 yPos = initialYPos; yPos <= endYPos; ++yPos)
-	{
-		DrawLine(vec2(posX, yPos), vec2(negX, yPos), gridLineColor, &camera);
-	}*/
 	
 	// NOTE: Draw UI
 	/*DrawUVRectangleScreenSpace(&guiPanel, vec2(0, 0), vec2(guiPanel.width, guiPanel.height));*/
@@ -1340,23 +1424,26 @@ bool GameInitialize()
 
 	SetWindowTitle("Oracle of Ages Clone");
 	SetClientWindowDimensions(vec2(600, 540));
-	SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
+	//SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
+	SetClearColor(vec4(0.2235f, 0.2235f, 0.2235f, 1.0f));
 
 	spriteAssetFilepathTable.Initialize(60);
 	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
 	//flowerGO = CreateDancingFlowers(vec2(-2.0f, 1.0f));
 	//treeGO = CreateTree(vec2(2.0f, -1.0f), false);
-	heroGO = CreateHero(vec2(-0.55f, -0.5f), true);
-	treeGO = CreateTree(vec2(1.0f, 0.0f), true);
+	heroGO = CreateHero(vec2(-0.5f, -1.0f), true);
+	//weedGO1 = CreateWeed(vec2(-1.0f, 0.0f), true);
+	weedGO2 = CreateWeed(vec2(0.0f, 0.0f), true);
+	//treeGO = CreateTree(vec2(1.5f, 0.0f), true);
 	//CreateTree(vec2(0.0f, 1.0f), true);
-	//CreateWeed(vec2(1.0f, 0.0f), true);
-	//CreateWeed(vec2(-3.0f, 1.0f));
 
 	camera.halfDim = vec2(5.0f, 4.0f);
 	camera.position = vec2(0.0f, 0.0f);
 	camera.rotationAngle = 0.0f;
 	camera.scale = 1.0f;
+
+	F32 val = dot(vec2(0.0f, 0.1f), vec2(0.2f, 0.2f));
 
 	return true;
 }
@@ -1377,20 +1464,59 @@ void UpdateGameObjects_PostPhysics(F32 dt)
 	}
 }
 
+F32 time = 0.0f;
+F32 skipThreshold = 0.5f;
 void GameUpdate(F32 dt)
 {
-	Clear();
+	if (dt > skipThreshold)
+	{
+		return;
+	}
+
+	//dt = 0.0166f;// *2.0f;
+	//if (heroGO->transform.position.y < 3.0f)
+	//{
+	//	time += dt;
+	//}
+	//else
+	//{
+	//	F32 i = 0;
+	//}
+
+	// NOTE: Get rid of this just for testing IP
+	//time += dt;
+	//if (heroGO->transform.position.y >= 2.0f)
+	//{
+	//	I32 g = 0;
+	//}
+
+
+	//DebugPrintf(512, "delta time = %f\n", dt);
+	heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
+ 	Clear();
 	UpdateGameObjects_PrePhysics(dt);
 	IntegratePhysicsObjects(dt);
-	//FixAllInterpenetrations();
+	FixAllInterpenetrations();
 
 	/*
 	 * Tests
 	 */
-	CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, heroGO->transform, treeGO->collisionShape, treeGO->transform);
+	//Transform biasedTransform = heroGO->transform;
+	//biasedTransform.scale *= 1.2f;
+	//CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, biasedTransform/*heroGO->transform*/, treeGO->collisionShape, treeGO->transform);
 
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);
+
+
+	/*
+	 * NOTE: Draw Biased collision bounds
+	 */
+	//Rectangle_2D* rect = (Rectangle_2D*)heroGO->collisionShape;
+	//vec2 upperLeft = biasedTransform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * biasedTransform.scale);
+	//vec2 dimensions = rect->halfDim * 2.0f * biasedTransform.scale;
+	//vec4 biasedCollisionColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+	//DrawRectangleOutline(upperLeft, dimensions, biasedCollisionColor, &camera);
 }
 
 bool GameShutdown()
