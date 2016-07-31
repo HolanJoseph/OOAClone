@@ -216,6 +216,18 @@ struct AnimationHash
 		return result;
 	}
 
+	char* GetKey(size_t i, size_t j)
+	{
+		char* result = NULL;
+
+		if (i < this->numberOfIndices && j < this->subListLength[i])
+		{
+			result = Copy(table[i][j].k);
+		}
+
+		return result;
+	}
+
 	Animation* GetValue(const char* key)
 	{
 		Animation* result = NULL;
@@ -352,6 +364,13 @@ struct AnimationController
 		this->activeAnimationKI_i = 0;
 		this->activeAnimationKI_j = 0;
 		this->elapsedTime = 0.0f;
+	}
+
+	/* NOTE: Should this chain be returning const char *???*/
+	char * ActiveAnimation()
+	{
+		char * result = this->animations.GetKey(this->activeAnimationKI_i, this->activeAnimationKI_j);
+		return result;
 	}
 
 	void AddAnimation(const char* referenceName, const char* assetName, U32 numberOfFrames, F32 animationTime)
@@ -1135,7 +1154,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->animator->AddAnimation("down", "link_Down", 2, 0.33f);
 	hero->animator->AddAnimation("right", "link_Right", 2, 0.33f);
 	hero->animator->AddAnimation("left", "link_Left", 2, 0.33f);
-	hero->animator->StartAnimation("right");
+	hero->animator->StartAnimation("down");
 	hero->animator->PauseAnimation();
 	hero->AddRigidbody(1.0f, 0.0f, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f));
 	hero->AddCollisionShape(Rectangle_2D(TileDimensions));
@@ -1143,6 +1162,18 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->drawCollisionShapeOutline = debugDraw;
 
 	return hero;
+}
+
+GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+{
+	GameObject* bg = CreateGameObject();
+	bg->SetType(GameObject::StaticEnvironmentPiece);
+	bg->AddTag(GameObject::Background);
+	bg->transform.position = position;
+	bg->transform.scale = vec2(10.0f, 8.0f);
+	bg->AddSprite(backgroundName);
+
+	return bg;
 }
 
 GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
@@ -1323,7 +1354,6 @@ void DrawGameObjects(F32 dt)
 {
 	// NOTE: Draw the game space.
 	SetViewport(vec2(0, 0), vec2(600, 480));
-	DrawCameraGrid();
 
 	/*
 	 * Sort by tag
@@ -1379,6 +1409,8 @@ void DrawGameObjects(F32 dt)
 		DrawGameObject(go, dt);
 	}
 
+	DrawCameraGrid();
+
 	for (size_t i = 0; i < bin_Environment.size(); ++i)
 	{
 		GameObject* go = bin_Environment[i];
@@ -1432,9 +1464,30 @@ bool GameInitialize()
 
 	//flowerGO = CreateDancingFlowers(vec2(-2.0f, 1.0f));
 	//treeGO = CreateTree(vec2(2.0f, -1.0f), false);
-	heroGO = CreateHero(vec2(-0.5f, -1.0f), true);
+	CreateBackground("background_10-5", vec2(0.0f, 0.0f));
+	CreateDancingFlowers(vec2(-0.5f, -1.5f));
+	CreateDancingFlowers(vec2(-2.5f,  1.5f));
+	CreateWeed(vec2(-2.5f, -0.5f)); // Left Group Start
+	CreateWeed(vec2(-3.5f, -0.5f));
+	CreateWeed(vec2(-3.5f, -1.5f));
+	CreateWeed(vec2( 2.5f, -0.5f)); // Right Group Start
+	CreateWeed(vec2( 1.5f, -1.5f));
+	CreateWeed(vec2( 2.5f, -1.5f));
+	CreateWeed(vec2( 1.5f, -2.5f));
+	CreateWeed(vec2( 2.5f, -2.5f));
+	CreateTree(vec2(-3.0f,  4.0f)); // Left Group Start
+	CreateTree(vec2(-5.0f,  4.0f));
+	CreateTree(vec2(-5.0f,  2.0f));
+	CreateTree(vec2(-5.0f,  0.0f));
+	CreateTree(vec2(-5.0f, -2.0f));
+	CreateTree(vec2( 4.0f,  4.0f)); // Right Group Start
+	CreateTree(vec2( 4.0f,  2.0f));
+	CreateTree(vec2( 4.0f,  0.0f));
+	CreateTree(vec2( 4.0f, -2.0f));
+
+	heroGO = CreateHero(vec2(-0.5f, 0.5f), true);
 	//weedGO1 = CreateWeed(vec2(-1.0f, 0.0f), true);
-	weedGO2 = CreateWeed(vec2(0.0f, 0.0f), true);
+	//weedGO2 = CreateWeed(vec2(0.0f, 0.0f), true);
 	//treeGO = CreateTree(vec2(1.5f, 0.0f), true);
 	//CreateTree(vec2(0.0f, 1.0f), true);
 
@@ -1442,8 +1495,6 @@ bool GameInitialize()
 	camera.position = vec2(0.0f, 0.0f);
 	camera.rotationAngle = 0.0f;
 	camera.scale = 1.0f;
-
-	F32 val = dot(vec2(0.0f, 0.1f), vec2(0.2f, 0.2f));
 
 	return true;
 }
@@ -1492,7 +1543,7 @@ void GameUpdate(F32 dt)
 
 
 	//DebugPrintf(512, "delta time = %f\n", dt);
-	heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
+	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
  	Clear();
 	UpdateGameObjects_PrePhysics(dt);
 	IntegratePhysicsObjects(dt);
@@ -1507,16 +1558,6 @@ void GameUpdate(F32 dt)
 
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);
-
-
-	/*
-	 * NOTE: Draw Biased collision bounds
-	 */
-	//Rectangle_2D* rect = (Rectangle_2D*)heroGO->collisionShape;
-	//vec2 upperLeft = biasedTransform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * biasedTransform.scale);
-	//vec2 dimensions = rect->halfDim * 2.0f * biasedTransform.scale;
-	//vec4 biasedCollisionColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
-	//DrawRectangleOutline(upperLeft, dimensions, biasedCollisionColor, &camera);
 }
 
 bool GameShutdown()

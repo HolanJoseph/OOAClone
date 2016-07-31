@@ -384,59 +384,61 @@ struct GJKInfo_2D
 	bool collided;
 	U32 numberOfLoopsCompleted;
 	Simplex_2D simplex;
-
-	F32 distanceToOrigin_ForNoCollision;
 };
 
 inline GJKInfo_2D GJK_2D(Shape_2D* shapeA, Transform shapeATransform, Shape_2D* shapeB, Transform shapeBTransform, const U64 MAXITERATIONS = MAXGJKITERATIONS_2D)
 {
 	bool collisionDetected = false;
-	F32 distanceToOrigin_ForNoCollision = 0.0f;
 
 	vec2 s = Support(shapeA, shapeATransform, shapeB, shapeBTransform, vec2(1.0f, -1.0f));
 	if (s == vec2(0, 0))
 	{
-		GJKInfo_2D result;
-		result.collided = true;
-		result.numberOfLoopsCompleted = 0;
-		result.simplex = Simplex_2D(s);
-		return result;
+		collisionDetected = true;
+
+		//GJKInfo_2D result;
+		//result.collided = true;
+		//result.numberOfLoopsCompleted = 0;
+		//result.simplex = Simplex_2D(s);
+		//return result;
 	}
 	Simplex_2D simplex = Simplex_2D(s);
 	vec2 d = -s;
 
+	
 	U32 loopCounter = 0;
-	for (; loopCounter < MAXITERATIONS;)
+	if (!collisionDetected)
 	{
-		++loopCounter;
-		vec2 A = Support(shapeA, shapeATransform, shapeB, shapeBTransform, d);
-		if (A == vec2(0, 0))
+		for (; loopCounter < MAXITERATIONS;)
 		{
-			collisionDetected = true;
+			++loopCounter;
+			vec2 A = Support(shapeA, shapeATransform, shapeB, shapeBTransform, d);
+			if (A == vec2(0, 0))
+			{
+				collisionDetected = true;
+				simplex.AddSimplexPoint(A);
+				break;
+			}
+			if (dot(A, d) < 0)
+			{
+				collisionDetected = false;
+				break;
+			}
 			simplex.AddSimplexPoint(A);
-			break;
+			DoSimplexResult_2D dsr = DoSimplex(simplex);
+			simplex = dsr.simplex;
+			d = dsr.direction;
+			if (dsr.containsGoal)
+			{
+				collisionDetected = true;
+				break;
+			}
 		}
-		if (dot(A, d) < 0)
-		{
-			collisionDetected = false;
-			distanceToOrigin_ForNoCollision = length(d);
-			break;
-		}
-		simplex.AddSimplexPoint(A);
-		DoSimplexResult_2D dsr = DoSimplex(simplex);
-		simplex = dsr.simplex;
-		d = dsr.direction;
-		if (dsr.containsGoal)
+
+		if (loopCounter == MAXITERATIONS)
 		{
 			collisionDetected = true;
-			break;
+			DebugPrint("GJK_2D: collision exceeded max number of iterations.\n");
 		}
-	}
-
-	if (loopCounter == MAXITERATIONS)
-	{
-		collisionDetected = true;
-		DebugPrint("GJK_2D: collision exceeded max number of iterations.\n");
 	}
 
 	if (collisionDetected)
@@ -445,8 +447,8 @@ inline GJKInfo_2D GJK_2D(Shape_2D* shapeA, Transform shapeATransform, Shape_2D* 
 		{
 		case Simplex_2D::Simplex_Point_2D:
 		{
-											 Assert(false);
-											 /*RandomNumberGenerator randomNumberGenerator;
+											 //Assert(false);
+											 RandomNumberGenerator randomNumberGenerator;
 											 Seed(&randomNumberGenerator, 1);
 
 											 vec2 newPoint = simplex.A;
@@ -467,7 +469,7 @@ inline GJKInfo_2D GJK_2D(Shape_2D* shapeA, Transform shapeATransform, Shape_2D* 
 												 vec2 randomDirection = vec2(randomX, randomY);
 												 newPoint = Support(shapeA, shapeATransform, shapeB, shapeBTransform, randomDirection);
 											 }
-											 simplex.AddSimplexPoint(newPoint);*/
+											 simplex.AddSimplexPoint(newPoint);
 		}
 		break;
 
@@ -498,7 +500,6 @@ inline GJKInfo_2D GJK_2D(Shape_2D* shapeA, Transform shapeATransform, Shape_2D* 
 	result.collided = collisionDetected;
 	result.numberOfLoopsCompleted = loopCounter;
 	result.simplex = simplex;
-	result.distanceToOrigin_ForNoCollision = distanceToOrigin_ForNoCollision;
 
 	return result;
 }
@@ -709,10 +710,6 @@ inline CollisionInfo_2D DetectCollision_2D(Shape_2D* shapeA, Transform shapeATra
 		result.collided = true;
 		result.normal = epaInfo.normal;
 		result.distance = epaInfo.distance;
-	}
-	else
-	{
-		result.distance = gjkInfo.distanceToOrigin_ForNoCollision;
 	}
 
 	return result;
