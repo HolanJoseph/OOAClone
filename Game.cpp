@@ -216,13 +216,13 @@ struct AnimationHash
 		return result;
 	}
 
-	char* GetKey(size_t i, size_t j)
+	const char* GetKey(size_t i, size_t j)
 	{
-		char* result = NULL;
+		const char* result = NULL;
 
 		if (i < this->numberOfIndices && j < this->subListLength[i])
 		{
-			result = Copy(table[i][j].k);
+			result = table[i][j].k;
 		}
 
 		return result;
@@ -367,9 +367,9 @@ struct AnimationController
 	}
 
 	/* NOTE: Should this chain be returning const char *???*/
-	char * ActiveAnimation()
+	const char * ActiveAnimation()
 	{
-		char * result = this->animations.GetKey(this->activeAnimationKI_i, this->activeAnimationKI_j);
+		const char * result = this->animations.GetKey(this->activeAnimationKI_i, this->activeAnimationKI_j);
 		return result;
 	}
 
@@ -465,6 +465,12 @@ struct AnimationController
 		}
 
 		return false;
+	}
+
+	bool IsPaused()
+	{
+		bool result = !this->isAnimationPlaying;
+		return result;
 	}
 
 	void PauseAnimation()
@@ -659,6 +665,7 @@ struct RigidBody
 		this->forceAccumulator += scaledForce;
 	}
 
+	// directions should be normalized
 	void ApplyImpulse(vec2 direction, F32 power)
 	{
 		vec2 scaledVelocity = direction * power;
@@ -794,6 +801,11 @@ struct GameObject
 	RigidBody* rigidbody;
 	Shape_2D* collisionShape;
 
+	// State
+	// NOTE: This needs to be dealt with.
+	vec2 facing;
+	bool moving;
+
 	GameObject()
 	{
 		this->type = Null;
@@ -899,22 +911,115 @@ void GameObject::Update_PrePhysics(F32 dt)
 	{
 	case PlayerCharacter:
 	{
-							if (GetKey(KeyCode_A))
+							bool getKey_A = GetKey(KeyCode_A);
+							bool getKey_D = GetKey(KeyCode_D);
+							bool getKey_W = GetKey(KeyCode_W);
+							bool getKey_S = GetKey(KeyCode_S);
+							bool getKeys_WD = getKey_W && getKey_D;
+							bool getKeys_SD = getKey_S && getKey_D;
+							bool getKeys_WA = getKey_W && getKey_A;
+							bool getKeys_SA = getKey_S && getKey_A;
+
+							if (getKeys_WD)
+							{
+								this->rigidbody->ApplyImpulse(normalize(vec2(1.0f, 1.0f)), 1.5f);
+							}
+							if (getKeys_SD)
+							{
+								this->rigidbody->ApplyImpulse(normalize(vec2(1.0f, -1.0f)), 1.5f);
+							}
+							if (getKeys_WA)
+							{
+								this->rigidbody->ApplyImpulse(normalize(vec2(-1.0f, 1.0f)), 1.5f);
+							}
+							if (getKeys_SA)
+							{
+								this->rigidbody->ApplyImpulse(normalize(vec2(-1.0f, -1.0f)), 1.5f);
+							}
+							if (!getKeys_WA && !getKeys_SA && getKey_A)
 							{
 								this->rigidbody->ApplyImpulse(vec2(-1.0f, 0.0f), 1.5f);
 							}
-							if (GetKey(KeyCode_D))
+							if (!getKeys_WD && !getKeys_SD && getKey_D)
 							{
 								this->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 1.5f);
 							}
-							if (GetKey(KeyCode_W))
+							if (!getKeys_WD && !getKeys_WA && getKey_W)
 							{
 								this->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
 							}
-							if (GetKey(KeyCode_S))
+							if (!getKeys_SD && !getKeys_SA && getKey_S)
 							{
 								this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 1.5f);
 							}
+							DebugPrintf(512, "velocity = (%f, %f)\n", this->rigidbody->velocity.x, this->rigidbody->velocity.y);
+
+							if (this->rigidbody->velocity == vec2(0.0f, 0.0f))
+							{
+								this->moving = false;
+								this->animator->StopAnimation();
+							}
+							else
+							{
+								this->moving = true;
+								this->animator->StartAnimation();
+							}
+							DebugPrintf(512, "is moving = %s\n", (this->moving ? "true" : "false"));
+
+							vec2 velocityDirection = this->moving ? normalize(this->rigidbody->velocity) : vec2(0.0f, 0.0f);
+							F32 facingDOTvelocityDirection = dot(this->facing, velocityDirection);
+
+							DebugPrintf(512, "facing = (%f, %f)\n", this->facing.x, this->facing.y);
+							DebugPrintf(512, "velocity direction = (%f, %f)\n", velocityDirection.x, velocityDirection.y);
+							DebugPrintf(512, "facing dot vel dir = %f\n", facingDOTvelocityDirection);
+
+							vec2 newFacing = this->facing;
+							if (facingDOTvelocityDirection > 0.0f || !this->moving)
+							{
+								// Keep the current facing direction.
+							}
+							else
+							{
+								vec2 rotatedFacing = vec2(RotationMatrix_2D(90.0f) * vec3(this->facing.x, this->facing.y, 0.0f));
+								rotatedFacing.x = round(rotatedFacing.x);
+								rotatedFacing.y = round(rotatedFacing.y);
+								F32 rotatedFacingDOTvelocityDirection = dot(rotatedFacing, velocityDirection);
+
+								if (rotatedFacingDOTvelocityDirection > 0.0f)
+								{
+									newFacing = rotatedFacing;
+								}
+								else if (rotatedFacingDOTvelocityDirection == 0.0f)
+								{
+									newFacing = -this->facing;
+								}
+								else
+								{
+									newFacing = -rotatedFacing;
+								}
+							}
+
+							if (this->moving && (newFacing != this->facing))
+							{
+								if (newFacing == vec2(1.0f, 0.0f))
+								{
+									this->animator->StartAnimation("right");
+								}
+								else if (newFacing == vec2(-1.0f, 0.0f))
+								{
+									this->animator->StartAnimation("left");
+								}
+								else if (newFacing == vec2(0.0f, 1.0f))
+								{
+									this->animator->StartAnimation("up");
+								}
+								else if (newFacing == vec2(0.0f, -1.0f))
+								{
+									this->animator->StartAnimation("down");
+								}
+							}
+							this->facing = newFacing;
+							
 	}
 	break;
 
@@ -1154,10 +1259,18 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->animator->AddAnimation("down", "link_Down", 2, 0.33f);
 	hero->animator->AddAnimation("right", "link_Right", 2, 0.33f);
 	hero->animator->AddAnimation("left", "link_Left", 2, 0.33f);
+	hero->animator->AddAnimation("pushUp", "link_PushUp", 2, 0.33f);
+	hero->animator->AddAnimation("pushDown", "link_PushDown", 2, 0.33f);
+	hero->animator->AddAnimation("pushRight", "link_PushRight", 2, 0.33f);
+	hero->animator->AddAnimation("pushLeft", "link_PushLeft", 2, 0.33f);
 	hero->animator->StartAnimation("down");
 	hero->animator->PauseAnimation();
 	hero->AddRigidbody(1.0f, 0.0f, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f));
 	hero->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	// State
+	hero->facing = vec2(0.0f, -1.0f);
+	hero->moving = false;
 
 	hero->drawCollisionShapeOutline = debugDraw;
 
@@ -1213,8 +1326,8 @@ GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	GameObject* weed = CreateGameObject();
 
 	weed->transform.position = position;
-	weed->SetType(GameObject::PlayerCamera);
-	//weed->AddTag(GameObject::Environment);
+	weed->SetType(GameObject::StaticEnvironmentPiece);
+	weed->AddTag(GameObject::Environment);
 	weed->AddTag(GameObject::Cutable);
 	weed->AddTag(GameObject::Burnable);
 	weed->AddTag(GameObject::Lightweight);
@@ -1542,7 +1655,7 @@ void GameUpdate(F32 dt)
 	//}
 
 
-	//DebugPrintf(512, "delta time = %f\n", dt);
+	DebugPrintf(512, "delta time = %f\n", dt);
 	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
  	Clear();
 	UpdateGameObjects_PrePhysics(dt);
