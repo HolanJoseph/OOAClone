@@ -1271,19 +1271,19 @@ void FixAllInterpenetrations()
 /*
  * Generate Prefab
  */
-GameObject* CreateGameObject()
+GameObject* CreateGameObject(GameObject::Type type)
 {
 	GameObject* go = new GameObject();
+	go->SetType(type);
 	GameObject::gameObjects.push_back(go);
 	return go;
 }
 
 GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 {
-	GameObject* hero = CreateGameObject();
+	GameObject* hero = CreateGameObject(GameObject::PlayerCharacter);
 
 	hero->transform.position = position;
-	hero->SetType(GameObject::PlayerCharacter);
 	hero->AddTag(GameObject::Hero);
 	hero->AddAnimator();
 	hero->animator->SetSpriteOffset(vec2(0.0f, 0.4375f)); 
@@ -1311,8 +1311,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 
 GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 {
-	GameObject* bg = CreateGameObject();
-	bg->SetType(GameObject::StaticEnvironmentPiece);
+	GameObject* bg = CreateGameObject(GameObject::StaticEnvironmentPiece);
 	bg->AddTag(GameObject::Background);
 	bg->transform.position = position;
 	bg->transform.scale = vec2(10.0f, 8.0f);
@@ -1323,11 +1322,10 @@ GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0
 
 GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 {
-	GameObject* tree = CreateGameObject();
+	GameObject* tree = CreateGameObject(GameObject::StaticEnvironmentPiece);
 
 	tree->transform.position = position;
 	tree->transform.scale = vec2(2.0f, 2.0f);
-	tree->SetType(GameObject::StaticEnvironmentPiece);
 	tree->AddTag(GameObject::Environment);
 	tree->AddSprite("tree_Generic");
 	tree->AddCollisionShape(Rectangle_2D(TileDimensions));
@@ -1339,10 +1337,9 @@ GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 
 GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 {
-	GameObject* df = CreateGameObject();
+	GameObject* df = CreateGameObject(GameObject::StaticEnvironmentPiece);
 
 	df->transform.position = position;
-	df->SetType(GameObject::StaticEnvironmentPiece);
 	df->AddTag(GameObject::Environment);
 	df->AddAnimator();
 	df->animator->AddAnimation("dance", "dancing_Flower", 4, 1.0f);
@@ -1355,10 +1352,9 @@ GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f), bool debugDra
 
 GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 {
-	GameObject* weed = CreateGameObject();
+	GameObject* weed = CreateGameObject(GameObject::StaticEnvironmentPiece);
 
 	weed->transform.position = position;
-	weed->SetType(GameObject::StaticEnvironmentPiece);
 	weed->AddTag(GameObject::Environment);
 	weed->AddTag(GameObject::Cutable);
 	weed->AddTag(GameObject::Burnable);
@@ -1373,10 +1369,9 @@ GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 
 GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 {
-	GameObject* spooky = CreateGameObject();
+	GameObject* spooky = CreateGameObject(GameObject::StaticEnvironmentPiece);
 
 	spooky->transform.position = position;
-	spooky->SetType(GameObject::StaticEnvironmentPiece);
 	spooky->AddTag(GameObject::Environment);
 	spooky->AddSprite("tree_Spooky");
 	spooky->AddCollisionShape(Rectangle_2D(TileDimensions));
