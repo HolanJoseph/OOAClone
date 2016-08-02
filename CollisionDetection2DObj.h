@@ -27,6 +27,8 @@ typedef std::vector<vec2> PointCloud;
 struct Shape_2D
 {
 	virtual vec2 Support(Transform transform, vec2 direction) = 0;
+	virtual vec2 GetOffset() = 0;
+	virtual void SetOffset(vec2 offset) = 0;
 	//virtual PointCloud Points(Transform transform) = 0;
 };
 
@@ -34,19 +36,23 @@ struct Shape_2D
 struct Rectangle_2D : public Shape_2D
 {
 	vec2 halfDim;
+	vec2 offset;
 
 	Rectangle_2D()
 	{
 		this->halfDim = vec2(1.0f, 1.0f);
+		this->offset = vec2(0.0f, 0.0f);
 	}
 
-	Rectangle_2D(vec2 halfDim)
+	Rectangle_2D(vec2 halfDim, vec2 offset = vec2(0.0f, 0.0f))
 	{
 		this->halfDim = halfDim;
+		this->offset = offset;
 	}
 
 	virtual vec2 Support(Transform transform, vec2 direction)
 	{
+		transform.position += this->offset;
 		vec2 direction_ALocal = vec2(transform.WorldToLocalTransform() * vec3(direction.x, direction.y, 0.0f));
 
 		vec2 AiPoints[4] = {
@@ -79,6 +85,18 @@ struct Rectangle_2D : public Shape_2D
 		return  maxA_World;
 	}
 
+	virtual vec2 GetOffset()
+	{
+		vec2 result;
+		result = this->offset;
+		return result;
+	}
+
+	virtual void SetOffset(vec2 offset)
+	{
+		this->offset = offset;
+	}
+
 	/*virtual PointCloud Points(Transform transform)
 	{
 		PointCloud result;
@@ -98,25 +116,41 @@ struct Rectangle_2D : public Shape_2D
 struct Circle_2D : public Shape_2D
 {
 	F32  radius;
+	vec2 offset;
 
 	Circle_2D()
 	{
 		this->radius = 1.0f;
+		this->offset = vec2(0.0f, 0.0f);
 	}
 
-	Circle_2D(F32 radius)
+	Circle_2D(F32 radius, vec2 offset = vec2(0.0f, 0.0f))
 	{
 		this->radius = radius;
+		this->offset = offset;
 	}
 
 	virtual vec2 Support(Transform transform, vec2 direction)
 	{
+		transform.position += this->offset;
 		vec2 direction_ALocal = normalize(vec2(transform.WorldToLocalTransform() * vec3(direction.x, direction.y, 0)));
 
 		vec2 maxA = this->radius * direction_ALocal;
 		vec2 maxA_World = vec2(transform.LocalToWorldTransform() * vec3(maxA.x, maxA.y, 1));
 
 		return maxA_World;
+	}
+
+	virtual vec2 GetOffset()
+	{
+		vec2 result;
+		result = this->offset;
+		return result;
+	}
+
+	virtual void SetOffset(vec2 offset)
+	{
+		this->offset = offset;
 	}
 };
 
@@ -125,24 +159,28 @@ struct Circle_2D : public Shape_2D
 struct Triangle_2D : public Shape_2D
 {
 	vec2 points[3];
+	vec2 offset;
 
 	Triangle_2D()
 	{
 		this->points[0] = vec2(-0.6f, -0.3f);
 		this->points[1] = vec2(0.6f, -0.3f);
 		this->points[2] = vec2(0.0f, 0.6f);
+		this->offset = vec2(0.0f, 0.0f);
 	}
 
 	/* NOTE: Must be wound counter clockwise. */
-	Triangle_2D(vec2 A, vec2 B, vec2 C)
+	Triangle_2D(vec2 A, vec2 B, vec2 C, vec2 offset = vec2(0.0f, 0.0f))
 	{
 		this->points[0] = A;
 		this->points[1] = B;
 		this->points[2] = C;
+		this->offset = offset;
 	}
 
 	virtual vec2 Support(Transform transform, vec2 direction)
 	{
+		transform.position += this->offset;
 		vec2 direction_ALocal = vec2(transform.WorldToLocalTransform() * vec3(direction.x, direction.y, 0));
 
 		// NOTE: AiPoints is unnecessary here, just for uniformity.
@@ -171,6 +209,18 @@ struct Triangle_2D : public Shape_2D
 		vec2 maxA_World = vec2(transform.LocalToWorldTransform() * vec3(maxA.x, maxA.y, 1));
 
 		return maxA_World;
+	}
+
+	virtual vec2 GetOffset()
+	{
+		vec2 result;
+		result = this->offset;
+		return result;
+	}
+
+	virtual void SetOffset(vec2 offset)
+	{
+		this->offset = offset;
 	}
 
 	/*virtual PointCloud Points(Transform transform)

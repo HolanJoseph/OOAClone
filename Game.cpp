@@ -1286,7 +1286,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->SetType(GameObject::PlayerCharacter);
 	hero->AddTag(GameObject::Hero);
 	hero->AddAnimator();
-	hero->animator->SetSpriteOffset(vec2(0.0f, 0.4375f/*0.15625f*/)); // NOTE: 2.5px not sure why this is accurate, need to investigate
+	hero->animator->SetSpriteOffset(vec2(0.0f, 0.4375f)); 
 	hero->animator->AddAnimation("up", "link_Up", 2, 0.33f);
 	hero->animator->AddAnimation("down", "link_Down", 2, 0.33f);
 	hero->animator->AddAnimation("right", "link_Right", 2, 0.33f);
@@ -1298,7 +1298,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->animator->StartAnimation("down");
 	hero->animator->PauseAnimation();
 	hero->AddRigidbody(1.0f, 0.0f, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f));
-	hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f)));
+	hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f), vec2(0.0f, 4.5f/16.0f)));
 
 	// State
 	hero->facing = vec2(0.0f, -1.0f);
@@ -1469,7 +1469,7 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 		if (gameObjectHash == rectangleHash)
 		{
 			Rectangle_2D* rect = (Rectangle_2D*)gameObject->collisionShape;
-			vec2 upperLeft = gameObject->transform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * gameObject->transform.scale);
+			vec2 upperLeft = gameObject->transform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * gameObject->transform.scale) + gameObject->collisionShape->GetOffset();
 			vec2 dimensions = rect->halfDim * 2.0f * gameObject->transform.scale;
 			DrawRectangleOutline(upperLeft, dimensions, debugCollisionColor, &camera);
 		}
