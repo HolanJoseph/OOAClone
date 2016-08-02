@@ -340,6 +340,7 @@ struct AnimationController
 	bool isAnimationLooped;
 	bool isAnimationReversed;
 	F32 elapsedTime;
+	vec2 spriteOffset;
 
 	AnimationController()
 	{
@@ -351,6 +352,7 @@ struct AnimationController
 		this->activeAnimationKI_i = 0;
 		this->activeAnimationKI_j = 0;
 		this->elapsedTime = 0.0f;
+		this->spriteOffset = vec2(0.0f, 0.0f);
 	}
 
 	void Initialize()
@@ -364,6 +366,7 @@ struct AnimationController
 		this->activeAnimationKI_i = 0;
 		this->activeAnimationKI_j = 0;
 		this->elapsedTime = 0.0f;
+		this->spriteOffset = vec2(0.0f, 0.0f);
 	}
 
 	/* NOTE: Should this chain be returning const char *???*/
@@ -575,6 +578,18 @@ struct AnimationController
 
 		return result;
 	};
+
+	void SetSpriteOffset(vec2 spriteOffset)
+	{
+		this->spriteOffset = spriteOffset;
+	}
+
+	vec2 GetSpriteOffset()
+	{
+		vec2 result;
+		result = this->spriteOffset;
+		return result;
+	}
 };
 
 /*
@@ -894,15 +909,15 @@ void GameObject::AddCollisionShape(S shape)
 {
 	S* collider = new S(shape);
 	this->collisionShape = collider;
-	//if (this->HasTag(Environment))
-	//{
-	//	staticCollisionGameObjects.push_back(this);
-	//}
-	//else
-	//{
-	//	collisionGameObjects.push_back(this);
-	//}
-	collisionGameObjects.push_back(this);
+	if (this->HasTag(Environment))
+	{
+		staticCollisionGameObjects.push_back(this);
+	}
+	else
+	{
+		collisionGameObjects.push_back(this);
+	}
+	//collisionGameObjects.push_back(this);
 }
 
 void GameObject::Update_PrePhysics(F32 dt)
@@ -1255,6 +1270,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->SetType(GameObject::PlayerCharacter);
 	hero->AddTag(GameObject::Hero);
 	hero->AddAnimator();
+	hero->animator->SetSpriteOffset(vec2(0.0f, 0.15625f)); // NOTE: 2.5px not sure why this is accurate, need to investigate
 	hero->animator->AddAnimation("up", "link_Up", 2, 0.33f);
 	hero->animator->AddAnimation("down", "link_Down", 2, 0.33f);
 	hero->animator->AddAnimation("right", "link_Right", 2, 0.33f);
@@ -1266,7 +1282,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->animator->StartAnimation("down");
 	hero->animator->PauseAnimation();
 	hero->AddRigidbody(1.0f, 0.0f, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f));
-	hero->AddCollisionShape(Rectangle_2D(TileDimensions));
+	hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f)));
 
 	// State
 	hero->facing = vec2(0.0f, -1.0f);
@@ -1420,7 +1436,7 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 	{
 		gameObject->animator->StepElapsedAnimationTime(dt);
 		TextureHandle animationFrame = gameObject->animator->GetCurrentAnimationFrame();
-		DrawSprite(animationFrame, vec2(0.0f, 0.0f), gameObject->transform, &camera);
+		DrawSprite(animationFrame, gameObject->animator->GetSpriteOffset(), gameObject->transform, &camera);
 	}
 	else if (hasSprite)
 	{
