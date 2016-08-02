@@ -967,7 +967,6 @@ void GameObject::Update_PrePhysics(F32 dt)
 							{
 								this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 1.5f);
 							}
-							DebugPrintf(512, "velocity = (%f, %f)\n", this->rigidbody->velocity.x, this->rigidbody->velocity.y);
 
 							if (this->rigidbody->velocity == vec2(0.0f, 0.0f))
 							{
@@ -979,15 +978,9 @@ void GameObject::Update_PrePhysics(F32 dt)
 								this->moving = true;
 								this->animator->StartAnimation();
 							}
-							DebugPrintf(512, "is moving = %s\n", (this->moving ? "true" : "false"));
 
 							vec2 velocityDirection = this->moving ? normalize(this->rigidbody->velocity) : vec2(0.0f, 0.0f);
 							F32 facingDOTvelocityDirection = dot(this->facing, velocityDirection);
-
-							DebugPrintf(512, "facing = (%f, %f)\n", this->facing.x, this->facing.y);
-							DebugPrintf(512, "velocity direction = (%f, %f)\n", velocityDirection.x, velocityDirection.y);
-							DebugPrintf(512, "facing dot vel dir = %f\n", facingDOTvelocityDirection);
-
 							vec2 newFacing = this->facing;
 							if (facingDOTvelocityDirection > 0.0f || !this->moving)
 							{
@@ -1110,6 +1103,29 @@ vector<CollisionPair> GenerateContacts()
 			 *
 			 *		   Should we be adding to the scale or multiplying???
 			 */
+			Transform biasedTransform = go1->transform;
+			biasedTransform.scale += vec2(0.2f, 0.2f);
+			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
+			if (ci.collided)
+			{
+				ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
+				result.push_back(CollisionPair(go1, go2, ci));
+			}
+		}
+
+		for (size_t j = 0; j < GameObject::staticCollisionGameObjects.size(); ++j)
+		{
+			GameObject* go1 = GameObject::collisionGameObjects[i];
+			GameObject* go2 = GameObject::staticCollisionGameObjects[j];
+
+			/*
+			* NOTE: Still not sure the best way to handle pessimistic biases
+			* ISSUES: ideally we would like to just subtract off the amount we added to the scale from
+			*				the distance returned on success instead of rerunning collision detection with
+			*				the regular transform after successful detection with the bias
+			*
+			*		   Should we be adding to the scale or multiplying???
+			*/
 			Transform biasedTransform = go1->transform;
 			biasedTransform.scale += vec2(0.2f, 0.2f);
 			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
@@ -1270,7 +1286,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->SetType(GameObject::PlayerCharacter);
 	hero->AddTag(GameObject::Hero);
 	hero->AddAnimator();
-	hero->animator->SetSpriteOffset(vec2(0.0f, 0.15625f)); // NOTE: 2.5px not sure why this is accurate, need to investigate
+	hero->animator->SetSpriteOffset(vec2(0.0f, 0.4375f/*0.15625f*/)); // NOTE: 2.5px not sure why this is accurate, need to investigate
 	hero->animator->AddAnimation("up", "link_Up", 2, 0.33f);
 	hero->animator->AddAnimation("down", "link_Down", 2, 0.33f);
 	hero->animator->AddAnimation("right", "link_Right", 2, 0.33f);
@@ -1473,6 +1489,11 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 			DrawLine(trianglePoints[1], trianglePoints[2], debugCollisionColor, &camera);
 			DrawLine(trianglePoints[2], trianglePoints[0], debugCollisionColor, &camera);
 		}
+	}
+
+	if (gameObject->drawCollisionShapeOutline)
+	{
+		DrawPoint(gameObject->transform.position, 4, vec4(0.0f, 0.0f, 1.0f, 1.0f), &camera);
 	}
 
 
