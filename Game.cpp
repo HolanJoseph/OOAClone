@@ -691,6 +691,166 @@ struct RigidBody
 
 
 /*
+ * Events
+ */
+enum ArgumentType
+{
+	AT_NULL,
+
+	AT_Pointer,
+	AT_I32,
+	AT_U32,
+	AT_F32,
+	AT_Bool,
+	AT_Vec2,
+
+	AT_COUNT
+};
+
+struct EventArgument
+{
+	ArgumentType type;
+	union 
+	{
+		void* asPointer;
+		I32 asI32;
+		U32 asU32;
+		F32 asF32;
+		bool asBool;
+		F32 asVec2[2];
+	};
+
+	EventArgument()
+	{
+		this->type = AT_NULL;
+	}
+
+	EventArgument(void* pointer)
+	{
+		this->type = AT_Pointer;
+		this->asPointer = pointer;
+	}
+
+	EventArgument(I32 i32)
+	{
+		this->type = AT_I32;
+		this->asI32 = i32;
+	}
+
+	EventArgument(U32 u32)
+	{
+		this->type = AT_U32;
+		this->asU32 = u32;
+	}
+
+	EventArgument(F32 f32)
+	{
+		this->type = AT_F32;
+		this->asF32 = f32;
+	}
+
+	EventArgument(bool b)
+	{
+		this->type = AT_Bool;
+		this->asBool = b;
+	}
+
+	EventArgument(vec2 vec)
+	{
+		this->type = AT_Vec2;
+		this->asVec2[0] = vec.x;
+		this->asVec2[1] = vec.y;
+	}
+
+	ArgumentType GetType()
+	{
+		ArgumentType result;
+		result = this->type;
+		return result;
+	}
+
+	void* AsPointer()
+	{
+		void* result;
+		result = this->asPointer;
+		return result;
+	}
+
+	I32 AsI32()
+	{
+		I32 result;
+		result = this->asI32;
+		return result;
+	}
+
+	U32 AsU32()
+	{
+		U32 result;
+		result = this->asU32;
+		return result;
+	}
+
+	F32 AsF32()
+	{
+		F32 result;
+		result = this->asF32;
+		return result;
+	}
+
+	bool AsBool()
+	{
+		bool result;
+		result = this->asBool;
+		return result;
+	}
+
+	vec2 AsVec2()
+	{
+		vec2 result;
+		result.x = this->asVec2[0];
+		result.y = this->asVec2[1];
+		return result;
+	}
+};
+
+enum EventType
+{
+	ET_NULL,
+
+	ET_OnCollisionEnter,
+	ET_OnCollision,
+	ET_OnCollisionExit,
+
+	ET_COUNT
+};
+
+struct Event
+{
+	EventType type;
+	static const size_t MAXARGUMENTCOUNT = 8;
+	EventArgument arguments[MAXARGUMENTCOUNT];
+
+	Event()
+	{
+		this->type = ET_NULL;
+	}
+
+	EventType GetType()
+	{
+		EventType result;
+		result = this->type;
+		return result;
+	}
+
+	void SetType(EventType type)
+	{
+		this->type = type;
+	}
+};
+
+
+
+/*
  * GameObject
  */
 struct GameObject
@@ -805,7 +965,7 @@ struct GameObject
 	};
 
 	// Debug Variables
-	bool drawCollisionShapeOutline;
+	bool debugDraw;
 
 	Type type;
 	U64  tags;
@@ -847,6 +1007,8 @@ struct GameObject
 
 	void Update_PrePhysics(F32 dt);
 	void Update_PostPhysics(F32 dt);
+
+	void HandleEvent(Event* e);
 
 	static vector<GameObject*> gameObjects;
 	static vector<GameObject*> physicsGameObjects;
@@ -1041,6 +1203,57 @@ void GameObject::Update_PostPhysics(F32 dt)
 
 }
 
+void GameObject::HandleEvent(Event* e)
+{
+	Assert(e->GetType() != ET_NULL && e->GetType() != ET_COUNT);
+
+	switch (this->type)
+	{
+	case PlayerCharacter:
+	{
+							switch (e->GetType())
+							{
+							case ET_OnCollisionEnter:
+							{
+														DebugPrintf(512, "PC   OnCollisionEnter\n");
+							}
+							break;
+
+							case ET_OnCollision:
+							{
+														DebugPrintf(512, "PC   OnCollision\n");
+							}
+							break;
+
+							case ET_OnCollisionExit:
+							{
+													   DebugPrintf(512, "PC   OnCollisionExit\n");
+							}
+							break;
+
+							default:
+							break;
+							}
+	}
+	break;
+
+	case StaticEnvironmentPiece:
+	{
+
+	}
+	break;
+
+	case PlayerCamera:
+	{
+
+	}
+	break;
+
+	default:
+	break;
+	}
+}
+
 vector<GameObject*> GameObject::gameObjects;
 vector<GameObject*> GameObject::physicsGameObjects;
 vector<GameObject*> GameObject::collisionGameObjects;
@@ -1199,8 +1412,45 @@ Displacements FixInterpenetration(GameObject* go1, GameObject* go2, CollisionInf
 	return result;
 }
 
+struct CollisionEventPair
+{
+	GameObject* go1;
+	GameObject* go2;
+
+	CollisionEventPair(GameObject* go1, GameObject* go2)
+	{
+		this->go1 = go1;
+		this->go2 = go2;
+	}
+
+};
+bool operator==(const CollisionEventPair& lhs, const CollisionEventPair& rhs)
+{
+	bool result = true;
+
+	if (lhs.go1 != rhs.go1)
+	{
+		result = false;
+	}
+	else if (lhs.go2 != rhs.go2)
+	{
+		result = false;
+	}
+
+	return result;
+}
+bool operator!=(const CollisionEventPair& lhs, const CollisionEventPair& rhs)
+{
+	bool result;
+	result = !(lhs == rhs);
+	return result;
+}
+
+vector<CollisionEventPair> interpenetrationsFixedLastFrame = vector<CollisionEventPair>();
 void FixAllInterpenetrations()
 {
+	vector<CollisionEventPair> interpenetrationsFixed;
+
 	vector<CollisionPair> collisions = GenerateContacts();
 	size_t maxNumberOfIterations = collisions.size() * 10;
 	size_t i = 0;
@@ -1223,6 +1473,7 @@ void FixAllInterpenetrations()
 			break;
 		}
 
+		interpenetrationsFixed.push_back(CollisionEventPair(collisions[index].go1, collisions[index].go2));
 		Displacements d = FixInterpenetration(collisions[index].go1, collisions[index].go2, collisions[index].info);
 		//Assert(length(d.displacement1) + length(d.displacement2) == collisions[index].info.distance);
 		collisions[index].info.distance = 0.0f;
@@ -1264,6 +1515,80 @@ void FixAllInterpenetrations()
 
 		++i;
 	}
+
+	for (size_t i = 0; i < interpenetrationsFixed.size(); ++i)
+	{
+		bool processedLastFrame = false;
+		for (size_t j = 0; j < interpenetrationsFixedLastFrame.size(); ++j)
+		{
+			if (interpenetrationsFixed[i] == interpenetrationsFixedLastFrame[j])
+			{
+				processedLastFrame = true;
+				interpenetrationsFixedLastFrame.erase(interpenetrationsFixedLastFrame.begin() + j);
+				break;
+			}
+		}
+		if (!processedLastFrame)
+		{
+			GameObject* go1 = interpenetrationsFixed[i].go1;
+			GameObject* go2 = interpenetrationsFixed[i].go2;
+			// Send GameObjects OnCollisionEnter Event
+			Event event1;
+			event1.SetType(ET_OnCollisionEnter);
+			event1.arguments[0] = EventArgument((void*)go1);
+			event1.arguments[1] = EventArgument((void*)go2);
+			go1->HandleEvent(&event1);
+
+			Event event2;
+			event2.SetType(ET_OnCollisionEnter);
+			event2.arguments[0] = EventArgument((void*)go2);
+			event2.arguments[1] = EventArgument((void*)go1);
+			go2->HandleEvent(&event2);
+		}
+
+		// Send GameObjects OnCollision Event regardless(this should be received along with OnCollisionEnter on the first frame of a collision)
+		GameObject* go1 = interpenetrationsFixed[i].go1;
+		GameObject* go2 = interpenetrationsFixed[i].go2;
+		// Send GameObjects OnCollisionEnter Event
+		Event event1;
+		event1.SetType(ET_OnCollision);
+		event1.arguments[0] = EventArgument((void*)go1);
+		event1.arguments[1] = EventArgument((void*)go2);
+		go1->HandleEvent(&event1);
+
+		Event event2;
+		event2.SetType(ET_OnCollision);
+		event2.arguments[0] = EventArgument((void*)go2);
+		event2.arguments[1] = EventArgument((void*)go1);
+		go2->HandleEvent(&event2);
+
+
+		CollisionEventPair collision = interpenetrationsFixed[i];
+		//DebugPrintf(1024, "collision processed (%i, %i)\n", collision.go1->type, collision.go2->type);
+	}
+
+	// Because we removed all of the interpenetrations that were fixed this frame too, this
+	//	 list only contains interpenetrations that didn't happen this frame
+	for (size_t i = 0; i < interpenetrationsFixedLastFrame.size(); ++i)
+	{
+		// Send GameObjects OnCollisionExit Event
+		GameObject* go1 = interpenetrationsFixedLastFrame[i].go1;
+		GameObject* go2 = interpenetrationsFixedLastFrame[i].go2;
+		// Send GameObjects OnCollisionEnter Event
+		Event event1;
+		event1.SetType(ET_OnCollisionExit);
+		event1.arguments[0] = EventArgument((void*)go1);
+		event1.arguments[1] = EventArgument((void*)go2);
+		go1->HandleEvent(&event1);
+
+		Event event2;
+		event2.SetType(ET_OnCollisionExit);
+		event2.arguments[0] = EventArgument((void*)go2);
+		event2.arguments[1] = EventArgument((void*)go1);
+		go2->HandleEvent(&event2);
+	}
+
+	interpenetrationsFixedLastFrame = interpenetrationsFixed;
 }
 
 
@@ -1304,7 +1629,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->facing = vec2(0.0f, -1.0f);
 	hero->moving = false;
 
-	hero->drawCollisionShapeOutline = debugDraw;
+	hero->debugDraw = debugDraw;
 
 	return hero;
 }
@@ -1330,7 +1655,7 @@ GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	tree->AddSprite("tree_Generic");
 	tree->AddCollisionShape(Rectangle_2D(TileDimensions));
 
-	tree->drawCollisionShapeOutline = debugDraw;
+	tree->debugDraw = debugDraw;
 
 	return tree;
 }
@@ -1345,7 +1670,7 @@ GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f), bool debugDra
 	df->animator->AddAnimation("dance", "dancing_Flower", 4, 1.0f);
 	df->animator->StartAnimation("dance");
 
-	df->drawCollisionShapeOutline = debugDraw;
+	df->debugDraw = debugDraw;
 
 	return df;
 }
@@ -1362,7 +1687,7 @@ GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	weed->AddSprite("weed");
 	weed->AddCollisionShape(Rectangle_2D(TileDimensions));
 
-	weed->drawCollisionShapeOutline = debugDraw;
+	weed->debugDraw = debugDraw;
 
 	return weed;
 }
@@ -1376,7 +1701,7 @@ GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = 
 	spooky->AddSprite("tree_Spooky");
 	spooky->AddCollisionShape(Rectangle_2D(TileDimensions));
 
-	spooky->drawCollisionShapeOutline = debugDraw;
+	spooky->debugDraw = debugDraw;
 
 	return spooky;
 }
@@ -1454,7 +1779,7 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 		DrawSprite(gameObject->sprite->texture, gameObject->sprite->offset, gameObject->transform, &camera);
 	}
 
-	if (gameObject->collisionShape != NULL && gameObject->drawCollisionShapeOutline)
+	if (gameObject->collisionShape != NULL && gameObject->debugDraw)
 	{
 		const size_t rectangleHash = typeid(Rectangle_2D).hash_code();
 		const size_t circleHash = typeid(Circle_2D).hash_code();
@@ -1486,7 +1811,7 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 		}
 	}
 
-	if (gameObject->drawCollisionShapeOutline)
+	if (gameObject->debugDraw)
 	{
 		DrawPoint(gameObject->transform.position, 4, vec4(0.0f, 0.0f, 1.0f, 1.0f), &camera);
 	}
@@ -1687,7 +2012,7 @@ void GameUpdate(F32 dt)
 	//}
 
 
-	DebugPrintf(512, "delta time = %f\n", dt);
+	//DebugPrintf(512, "delta time = %f\n", dt);
 	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
  	Clear();
 	UpdateGameObjects_PrePhysics(dt);
