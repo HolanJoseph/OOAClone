@@ -31,7 +31,20 @@ using std::vector;
 //#define COLLISION2DAPPLET 1
 #define GAME 1
 
+
+
 const vec2 TileDimensions = vec2(0.5f, 0.5f);
+
+
+
+/*
+ * Forward Declarations
+ */
+void DebugDrawPoint(vec2 p, F32 pointSize, vec4 color);
+void DebugDrawLine(vec2 a, vec2 b, vec4 color);
+void DebugDrawRectangle(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset = 0.0f);
+
+
 
 
 StringStringHashTable spriteAssetFilepathTable;
@@ -435,9 +448,14 @@ struct AnimationController
 		}
 	}
 
-	bool StartAnimation(const char* referenceName, bool loopAnimation = true, bool playInReverse = false, F32 startTime = 0.0f)
+	bool StartAnimation(const char* referenceName, bool restartAnimation = true, bool loopAnimation = true, bool playInReverse = false, F32 startTime = 0.0f)
 	{
 		AnimationHash::GetKeyIndexResult ki = this->animations.GetKeyIndex(referenceName);
+		if (restartAnimation == false && this->IsPaused() == false && ki.i == this->activeAnimationKI_i && ki.j == this->activeAnimationKI_j)
+		{
+			return true;
+		}
+
 		if (ki.present)
 		{
 			this->activeAnimationKI_i = ki.i;
@@ -605,6 +623,8 @@ struct RigidBody
 	F32 inverseMass; // Kg
 	F32 dampingFactor;
 
+	vec2 frameVelocity; // m/s // NOTE: This velocity is the velocity for the object for this frame, used to query velocity after integration.
+
 	RigidBody()
 	{
 		this->position = vec2(0.0f, 0.0f);
@@ -612,6 +632,8 @@ struct RigidBody
 		this->forceAccumulator = vec2(0.0f, 0.0f);
 		this->inverseMass = 0.0f;
 		this->dampingFactor = DEFAULT_DAMPING_FACTOR;
+
+		this->frameVelocity = vec2(0.0f, 0.0f);
 	}
 
 	void Initialize(
@@ -627,6 +649,8 @@ struct RigidBody
 
 		this->inverseMass = inverseMass;
 		this->dampingFactor = dampingFactor;
+
+		this->frameVelocity = vec2(0.0f, 0.0f);
 	};
 
 	void Destroy()
@@ -637,6 +661,8 @@ struct RigidBody
 
 		this->inverseMass = 0.0f;
 		this->dampingFactor = DEFAULT_DAMPING_FACTOR;
+
+		this->frameVelocity = vec2(0.0f, 0.0f);
 	};
 
 	F32 GetMass()
@@ -655,6 +681,13 @@ struct RigidBody
 		return result;
 	}
 
+	vec2 GetVelocityForFrame()
+	{
+		vec2 result;
+		result = this->frameVelocity;
+		return result;
+	}
+
 	vec2 GetAcceleration()
 	{
 		vec2 result = this->inverseMass * this->forceAccumulator;
@@ -669,7 +702,8 @@ struct RigidBody
 	void Integrate(F32 deltaTime)
 	{
 		vec2 acceleration = this->GetAcceleration();
-		this->position = this->position + (this->velocity * deltaTime);
+		this->frameVelocity = this->velocity * deltaTime; // NOTE: Honestly not sure if this is accurate. Though it should be because of the next line.
+		this->position = this->position + this->frameVelocity; /*(this->velocity * deltaTime);*/
 		this->velocity = (this->velocity * pow(this->dampingFactor, deltaTime)) + (acceleration * deltaTime);
 		this->forceAccumulator = vec2(0.0f, 0.0f);
 	}
@@ -981,6 +1015,12 @@ struct GameObject
 	vec2 facing;
 	bool moving;
 
+	vec2 leftTestPointOffset;
+	vec2 rightTestPointOffset;
+	vec2 topTestPointOffset;
+	vec2 bottomTestPointOffset;
+	bool pushingForward;
+
 	GameObject()
 	{
 		this->type = Null;
@@ -1009,6 +1049,8 @@ struct GameObject
 	void Update_PostPhysics(F32 dt);
 
 	void HandleEvent(Event* e);
+
+	void DebugDraw();
 
 	static vector<GameObject*> gameObjects;
 	static vector<GameObject*> physicsGameObjects;
@@ -1084,7 +1126,7 @@ void GameObject::AddCollisionShape(S shape)
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
-	switch (this->type)
+	switch (this->GetType())
 	{
 	case PlayerCharacter:
 	{
@@ -1200,14 +1242,23 @@ void GameObject::Update_PrePhysics(F32 dt)
 
 void GameObject::Update_PostPhysics(F32 dt)
 {
+	switch (this->GetType())
+	{
+	case PlayerCharacter:
+	{
+	}
+	break;
 
+	default:
+	break;
+	}
 }
 
 void GameObject::HandleEvent(Event* e)
 {
 	Assert(e->GetType() != ET_NULL && e->GetType() != ET_COUNT);
 
-	switch (this->type)
+	switch (this->GetType())
 	{
 	case PlayerCharacter:
 	{
@@ -1215,19 +1266,57 @@ void GameObject::HandleEvent(Event* e)
 							{
 							case ET_OnCollisionEnter:
 							{
-														DebugPrintf(512, "PC   OnCollisionEnter\n");
+														//DebugPrintf(512, "PC   OnCollisionEnter\n");
 							}
 							break;
 
 							case ET_OnCollision:
 							{
-														DebugPrintf(512, "PC   OnCollision\n");
+												   GameObject* collidedWith = (GameObject*)e->arguments[1].AsPointer();
+												   if (facing == vec2(1.0f, 0.0f))
+												   {
+													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->rightTestPointOffset));
+													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
+													   if (facingDOTcollisionDirection > 0.0f)
+													   {
+														   this->pushingForward;
+													   }
+												   }
+												   else if (facing == vec2(-1.0f, 0.0f))
+												   {
+													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->leftTestPointOffset));
+													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
+													   if (facingDOTcollisionDirection > 0.0f)
+													   {
+														   this->pushingForward;
+													   }
+												   }
+												   else if (facing == vec2(0.0f, 1.0f))
+												   {
+													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->topTestPointOffset));
+													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
+													   if (facingDOTcollisionDirection > 0.0f)
+													   {
+														   this->pushingForward;
+													   }
+												   }
+												   else if (facing == vec2(0.0f, -1.0f))
+												   {
+													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->bottomTestPointOffset));
+													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
+													   if (facingDOTcollisionDirection > 0.0f)
+													   {
+														   this->pushingForward;
+													   }
+												   }
+
+														//DebugPrintf(512, "PC   OnCollision\n");
 							}
 							break;
 
 							case ET_OnCollisionExit:
 							{
-													   DebugPrintf(512, "PC   OnCollisionExit\n");
+													   //DebugPrintf(512, "PC   OnCollisionExit\n");
 							}
 							break;
 
@@ -1246,6 +1335,24 @@ void GameObject::HandleEvent(Event* e)
 	case PlayerCamera:
 	{
 
+	}
+	break;
+
+	default:
+	break;
+	}
+}
+
+void GameObject::DebugDraw()
+{
+	switch (this->GetType())
+	{
+	case PlayerCharacter:
+	{
+							DebugDrawPoint(this->transform.position + this->topTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
+							DebugDrawPoint(this->transform.position + this->bottomTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
+							DebugDrawPoint(this->transform.position + this->leftTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
+							DebugDrawPoint(this->transform.position + this->rightTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
 	}
 	break;
 
@@ -1629,6 +1736,13 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->facing = vec2(0.0f, -1.0f);
 	hero->moving = false;
 
+	Rectangle_2D* cs = (Rectangle_2D*)hero->collisionShape;
+	hero->leftTestPointOffset = vec2(-cs->halfDim.x, cs->halfDim.y);
+	hero->rightTestPointOffset = vec2(cs->halfDim.x, cs->halfDim.y);
+	hero->topTestPointOffset = vec2(0.0f, cs->halfDim.y * 2.0f);
+	hero->bottomTestPointOffset = vec2(0.0f, 0.0f);
+	hero->pushingForward = false;
+
 	hero->debugDraw = debugDraw;
 
 	return hero;
@@ -1750,6 +1864,23 @@ void DrawCameraGrid()
 	DrawLine(vec2(posX, 0.0f), vec2(negX, 0.0f), vec4(0.52f, 0.09f, 0.09f, 1.0f), &camera);
 }
 
+// NOTE: DebugDraw functions are shell functions that draw into the world without needing to supply the rendering camera.
+//	the default rendering view is assumed
+void DebugDrawPoint(vec2 p, F32 pointSize, vec4 color)
+{
+	DrawPoint(p, pointSize, color, &camera);
+}
+
+void DebugDrawLine(vec2 a, vec2 b, vec4 color)
+{
+	DrawLine(a, b, color, &camera);
+}
+
+void DebugDrawRectangle(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset)
+{
+	DrawRectangleOutline(upperLeft, dimensions, color, &camera, offset);
+}
+
 bool CompareYPosition(GameObject* a, GameObject* b)
 {
 	bool result;
@@ -1815,9 +1946,6 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 	{
 		DrawPoint(gameObject->transform.position, 4, vec4(0.0f, 0.0f, 1.0f, 1.0f), &camera);
 	}
-
-
-
 }
 
 void DrawGameObjects(F32 dt)
@@ -1985,6 +2113,14 @@ void UpdateGameObjects_PostPhysics(F32 dt)
 	}
 }
 
+void DebugDrawGameObjects()
+{
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject::gameObjects[i]->DebugDraw();
+	}
+}
+
 F32 time = 0.0f;
 F32 skipThreshold = 0.5f;
 void GameUpdate(F32 dt)
@@ -2028,6 +2164,7 @@ void GameUpdate(F32 dt)
 
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);
+	DebugDrawGameObjects();
 }
 
 bool GameShutdown()
