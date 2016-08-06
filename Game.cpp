@@ -1180,7 +1180,7 @@ void GameObject::Update_PrePhysics(F32 dt)
 							else
 							{
 								this->moving = true;
-								this->animator->StartAnimation();
+								//this->animator->StartAnimation();
 							}
 
 							vec2 velocityDirection = this->moving ? normalize(this->rigidbody->velocity) : vec2(0.0f, 0.0f);
@@ -1211,27 +1211,30 @@ void GameObject::Update_PrePhysics(F32 dt)
 								}
 							}
 
-							if (this->moving && (newFacing != this->facing))
-							{
-								if (newFacing == vec2(1.0f, 0.0f))
-								{
-									this->animator->StartAnimation("right");
-								}
-								else if (newFacing == vec2(-1.0f, 0.0f))
-								{
-									this->animator->StartAnimation("left");
-								}
-								else if (newFacing == vec2(0.0f, 1.0f))
-								{
-									this->animator->StartAnimation("up");
-								}
-								else if (newFacing == vec2(0.0f, -1.0f))
-								{
-									this->animator->StartAnimation("down");
-								}
-							}
+							// NOTE: The next 21 lines are the the implementation that works for successfully starting the correct animation for facing directions
+							//if (this->moving && (newFacing != this->facing))
+							//{
+							//	if (newFacing == vec2(1.0f, 0.0f))
+							//	{
+							//		this->animator->StartAnimation("right");
+							//	}
+							//	else if (newFacing == vec2(-1.0f, 0.0f))
+							//	{
+							//		this->animator->StartAnimation("left");
+							//	}
+							//	else if (newFacing == vec2(0.0f, 1.0f))
+							//	{
+							//		this->animator->StartAnimation("up");
+							//	}
+							//	else if (newFacing == vec2(0.0f, -1.0f))
+							//	{
+							//		this->animator->StartAnimation("down");
+							//	}
+							//}
+							//this->facing = newFacing;
+							//this->pushingForward = false;
 							this->facing = newFacing;
-							
+							this->pushingForward = false;
 	}
 	break;
 
@@ -1246,6 +1249,72 @@ void GameObject::Update_PostPhysics(F32 dt)
 	{
 	case PlayerCharacter:
 	{
+							if (this->moving)
+							{
+								if (this->pushingForward)
+								{
+									if (this->facing == vec2(1.0f, 0.0f))
+									{
+										this->animator->StartAnimation("pushRight", false);
+									}
+									else if (this->facing == vec2(-1.0f, 0.0f))
+									{
+										this->animator->StartAnimation("pushLeft", false);
+									}
+									else if (this->facing == vec2(0.0f, 1.0f))
+									{
+										this->animator->StartAnimation("pushUp", false);
+									}
+									else if (this->facing == vec2(0.0f, -1.0f))
+									{
+										this->animator->StartAnimation("pushDown", false);
+									}
+								}
+								else
+								{
+									if (this->facing == vec2(1.0f, 0.0f))
+									{
+										this->animator->StartAnimation("right", false);
+									}
+									else if (this->facing == vec2(-1.0f, 0.0f))
+									{
+										this->animator->StartAnimation("left", false);
+									}
+									else if (this->facing == vec2(0.0f, 1.0f))
+									{
+										this->animator->StartAnimation("up", false);
+									}
+									else if (this->facing == vec2(0.0f, -1.0f))
+									{
+										this->animator->StartAnimation("down", false);
+									}
+								}
+							}
+							else
+							{
+								if (this->facing == vec2(1.0f, 0.0f))
+								{
+									this->animator->StartAnimation("right", false);
+								}
+								else if (this->facing == vec2(-1.0f, 0.0f))
+								{
+									this->animator->StartAnimation("left", false);
+								}
+								else if (this->facing == vec2(0.0f, 1.0f))
+								{
+									this->animator->StartAnimation("up", false);
+								}
+								else if (this->facing == vec2(0.0f, -1.0f))
+								{
+									this->animator->StartAnimation("down", false);
+								}
+								this->animator->StopAnimation();
+							}
+
+							DebugPrintf(512, "Player Facing: (%f, %f)\n", this->facing.x, this->facing.y);
+							DebugPrintf(512, "Pushing forward: %s\n", (this->pushingForward ? "true" : "false"));
+
+
 	}
 	break;
 
@@ -1273,40 +1342,40 @@ void GameObject::HandleEvent(Event* e)
 							case ET_OnCollision:
 							{
 												   GameObject* collidedWith = (GameObject*)e->arguments[1].AsPointer();
-												   if (facing == vec2(1.0f, 0.0f))
+												   if (this->facing == vec2(1.0f, 0.0f))
 												   {
 													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->rightTestPointOffset));
 													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
 													   if (facingDOTcollisionDirection > 0.0f)
 													   {
-														   this->pushingForward;
+														   this->pushingForward = true;
 													   }
 												   }
-												   else if (facing == vec2(-1.0f, 0.0f))
+												   else if (this->facing == vec2(-1.0f, 0.0f))
 												   {
 													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->leftTestPointOffset));
 													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
 													   if (facingDOTcollisionDirection > 0.0f)
 													   {
-														   this->pushingForward;
+														   this->pushingForward = true;
 													   }
 												   }
-												   else if (facing == vec2(0.0f, 1.0f))
+												   else if (this->facing == vec2(0.0f, 1.0f))
 												   {
 													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->topTestPointOffset));
 													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
 													   if (facingDOTcollisionDirection > 0.0f)
 													   {
-														   this->pushingForward;
+														   this->pushingForward = true;
 													   }
 												   }
-												   else if (facing == vec2(0.0f, -1.0f))
+												   else if (this->facing == vec2(0.0f, -1.0f))
 												   {
 													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->bottomTestPointOffset));
 													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
 													   if (facingDOTcollisionDirection > 0.0f)
 													   {
-														   this->pushingForward;
+														   this->pushingForward = true;
 													   }
 												   }
 
@@ -2083,7 +2152,7 @@ bool GameInitialize()
 	CreateTree(vec2( 4.0f,  0.0f));
 	CreateTree(vec2( 4.0f, -2.0f));
 
-	heroGO = CreateHero(vec2(-0.5f, 0.5f), true);
+	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), true);
 	//weedGO1 = CreateWeed(vec2(-1.0f, 0.0f), true);
 	//weedGO2 = CreateWeed(vec2(0.0f, 0.0f), true);
 	//treeGO = CreateTree(vec2(1.5f, 0.0f), true);
@@ -2149,7 +2218,7 @@ void GameUpdate(F32 dt)
 
 
 	//DebugPrintf(512, "delta time = %f\n", dt);
-	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
+	//heroGO->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 1.5f);
  	Clear();
 	UpdateGameObjects_PrePhysics(dt);
 	IntegratePhysicsObjects(dt);
