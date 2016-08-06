@@ -1014,11 +1014,6 @@ struct GameObject
 	// NOTE: This needs to be dealt with.
 	vec2 facing;
 	bool moving;
-
-	vec2 leftTestPointOffset;
-	vec2 rightTestPointOffset;
-	vec2 topTestPointOffset;
-	vec2 bottomTestPointOffset;
 	bool pushingForward;
 
 	GameObject()
@@ -1311,8 +1306,8 @@ void GameObject::Update_PostPhysics(F32 dt)
 								this->animator->StopAnimation();
 							}
 
-							DebugPrintf(512, "Player Facing: (%f, %f)\n", this->facing.x, this->facing.y);
-							DebugPrintf(512, "Pushing forward: %s\n", (this->pushingForward ? "true" : "false"));
+							//DebugPrintf(512, "Player Facing: (%f, %f)\n", this->facing.x, this->facing.y);
+							//DebugPrintf(512, "Pushing forward: %s\n", (this->pushingForward ? "true" : "false"));
 
 
 	}
@@ -1342,6 +1337,17 @@ void GameObject::HandleEvent(Event* e)
 							case ET_OnCollision:
 							{
 												   GameObject* collidedWith = (GameObject*)e->arguments[1].AsPointer();
+												   vec2 collisionNormal = e->arguments[2].AsVec2();
+
+												   DebugPrintf(512, "Collision Normal = (%f, %f)\n", collisionNormal.x, collisionNormal.y);
+												   DebugPrintf(512, "Player Facing = (%f, %f)\n", this->facing.x, this->facing.y);
+
+												   if (collisionNormal == this->facing)
+												   {
+													   this->pushingForward = true;
+												   }
+
+												   /*
 												   if (this->facing == vec2(1.0f, 0.0f))
 												   {
 													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->rightTestPointOffset));
@@ -1378,8 +1384,10 @@ void GameObject::HandleEvent(Event* e)
 														   this->pushingForward = true;
 													   }
 												   }
+												   
 
-														//DebugPrintf(512, "PC   OnCollision\n");
+												   DebugPrintf(512, "Collision Normal = (%f, %f)\n", collisionNormal.x, collisionNormal.y);
+												   */
 							}
 							break;
 
@@ -1418,10 +1426,7 @@ void GameObject::DebugDraw()
 	{
 	case PlayerCharacter:
 	{
-							DebugDrawPoint(this->transform.position + this->topTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
-							DebugDrawPoint(this->transform.position + this->bottomTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
-							DebugDrawPoint(this->transform.position + this->leftTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
-							DebugDrawPoint(this->transform.position + this->rightTestPointOffset, 2, vec4(0.0f, 1.0f, 1.0f, 1.0f));
+							
 	}
 	break;
 
@@ -1592,11 +1597,13 @@ struct CollisionEventPair
 {
 	GameObject* go1;
 	GameObject* go2;
+	vec2 collisionNormal; // This is WRT go1
 
-	CollisionEventPair(GameObject* go1, GameObject* go2)
+	CollisionEventPair(GameObject* go1, GameObject* go2, vec2 collisionNormal)
 	{
 		this->go1 = go1;
 		this->go2 = go2;
+		this->collisionNormal = collisionNormal;
 	}
 
 };
@@ -1609,6 +1616,10 @@ bool operator==(const CollisionEventPair& lhs, const CollisionEventPair& rhs)
 		result = false;
 	}
 	else if (lhs.go2 != rhs.go2)
+	{
+		result = false;
+	}
+	else if (lhs.collisionNormal != rhs.collisionNormal)
 	{
 		result = false;
 	}
@@ -1649,7 +1660,7 @@ void FixAllInterpenetrations()
 			break;
 		}
 
-		interpenetrationsFixed.push_back(CollisionEventPair(collisions[index].go1, collisions[index].go2));
+		interpenetrationsFixed.push_back(CollisionEventPair(collisions[index].go1, collisions[index].go2, collisions[index].info.normal));
 		Displacements d = FixInterpenetration(collisions[index].go1, collisions[index].go2, collisions[index].info);
 		//Assert(length(d.displacement1) + length(d.displacement2) == collisions[index].info.distance);
 		collisions[index].info.distance = 0.0f;
@@ -1692,6 +1703,10 @@ void FixAllInterpenetrations()
 		++i;
 	}
 
+
+	/*
+	 * Send collision events
+	 */
 	for (size_t i = 0; i < interpenetrationsFixed.size(); ++i)
 	{
 		bool processedLastFrame = false;
@@ -1708,34 +1723,40 @@ void FixAllInterpenetrations()
 		{
 			GameObject* go1 = interpenetrationsFixed[i].go1;
 			GameObject* go2 = interpenetrationsFixed[i].go2;
+			vec2 normal = interpenetrationsFixed[i].collisionNormal;
 			// Send GameObjects OnCollisionEnter Event
 			Event event1;
 			event1.SetType(ET_OnCollisionEnter);
 			event1.arguments[0] = EventArgument((void*)go1);
 			event1.arguments[1] = EventArgument((void*)go2);
+			event1.arguments[2] = EventArgument(normal);
 			go1->HandleEvent(&event1);
 
 			Event event2;
 			event2.SetType(ET_OnCollisionEnter);
 			event2.arguments[0] = EventArgument((void*)go2);
 			event2.arguments[1] = EventArgument((void*)go1);
+			event2.arguments[2] = EventArgument(-normal);
 			go2->HandleEvent(&event2);
 		}
 
 		// Send GameObjects OnCollision Event regardless(this should be received along with OnCollisionEnter on the first frame of a collision)
 		GameObject* go1 = interpenetrationsFixed[i].go1;
 		GameObject* go2 = interpenetrationsFixed[i].go2;
+		vec2 normal = interpenetrationsFixed[i].collisionNormal;
 		// Send GameObjects OnCollisionEnter Event
 		Event event1;
 		event1.SetType(ET_OnCollision);
 		event1.arguments[0] = EventArgument((void*)go1);
 		event1.arguments[1] = EventArgument((void*)go2);
+		event1.arguments[2] = EventArgument(normal);
 		go1->HandleEvent(&event1);
 
 		Event event2;
 		event2.SetType(ET_OnCollision);
 		event2.arguments[0] = EventArgument((void*)go2);
 		event2.arguments[1] = EventArgument((void*)go1);
+		event2.arguments[2] = EventArgument(-normal);
 		go2->HandleEvent(&event2);
 
 
@@ -1750,17 +1771,20 @@ void FixAllInterpenetrations()
 		// Send GameObjects OnCollisionExit Event
 		GameObject* go1 = interpenetrationsFixedLastFrame[i].go1;
 		GameObject* go2 = interpenetrationsFixedLastFrame[i].go2;
+		vec2 normal = interpenetrationsFixedLastFrame[i].collisionNormal;
 		// Send GameObjects OnCollisionEnter Event
 		Event event1;
 		event1.SetType(ET_OnCollisionExit);
 		event1.arguments[0] = EventArgument((void*)go1);
 		event1.arguments[1] = EventArgument((void*)go2);
+		event1.arguments[2] = EventArgument(normal);
 		go1->HandleEvent(&event1);
 
 		Event event2;
 		event2.SetType(ET_OnCollisionExit);
 		event2.arguments[0] = EventArgument((void*)go2);
 		event2.arguments[1] = EventArgument((void*)go1);
+		event2.arguments[2] = EventArgument(-normal);
 		go2->HandleEvent(&event2);
 	}
 
@@ -1804,12 +1828,6 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	// State
 	hero->facing = vec2(0.0f, -1.0f);
 	hero->moving = false;
-
-	Rectangle_2D* cs = (Rectangle_2D*)hero->collisionShape;
-	hero->leftTestPointOffset = vec2(-cs->halfDim.x, cs->halfDim.y);
-	hero->rightTestPointOffset = vec2(cs->halfDim.x, cs->halfDim.y);
-	hero->topTestPointOffset = vec2(0.0f, cs->halfDim.y * 2.0f);
-	hero->bottomTestPointOffset = vec2(0.0f, 0.0f);
 	hero->pushingForward = false;
 
 	hero->debugDraw = debugDraw;
