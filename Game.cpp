@@ -42,8 +42,8 @@ const vec2 TileDimensions = vec2(0.5f, 0.5f);
  */
 void DebugDrawPoint(vec2 p, F32 pointSize, vec4 color);
 void DebugDrawLine(vec2 a, vec2 b, vec4 color);
-void DebugDrawRectangle(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset = 0.0f);
-
+void DebugDrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset = 0.0f);
+void DebugDrawRectangleSolidColor(vec2 halfDim, Transform transform, vec4 color);
 
 
 
@@ -1319,11 +1319,16 @@ void GameObject::Update_PostPhysics(F32 dt)
 							//DebugPrintf(512, "Player Facing: (%f, %f)\n", this->facing.x, this->facing.y);
 							//DebugPrintf(512, "Pushing forward: %s\n", (this->pushingForward ? "true" : "false"));
 
-							vector<GameObject*> infront = RaycastAll_Line_2D(this->transform.position, this->facing, 1000.0f);
-							for (size_t i = 0; i < infront.size(); ++i)
+							//vector<GameObject*> infront = RaycastAll_Line_2D(this->transform.position, this->facing, 1000.0f);
+							//for (size_t i = 0; i < infront.size(); ++i)
+							//{
+							//	GameObject* go = infront[i];
+							//	go->SetDebugState(true);
+							//}
+							GameObject* infront = RaycastFirst_Line_2D(this->transform.position, this->facing, 1000.0f);
+							if (infront != NULL)
 							{
-								GameObject* go = infront[i];
-								go->SetDebugState(true);
+								infront->SetDebugState(true);
 							}
 	}
 	break;
@@ -1428,6 +1433,12 @@ void GameObject::DebugDraw()
 	case PlayerCharacter:
 	{
 							
+	}
+	break;
+
+	case Button:
+	{
+				   DebugDrawRectangleSolidColor(((Rectangle_2D*)this->collisionShape)->halfDim, this->transform, vec4(0.0f, 0.0f, 1.0f, 0.3f));
 	}
 	break;
 
@@ -1854,7 +1865,7 @@ GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance)
 		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
 		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
 		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
-		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance)
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
 		{
 			resultDistance = goOriginDOTdirection;
 			result = go;
@@ -1897,6 +1908,8 @@ vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distan
 
 	return result;
 }
+
+
 
 /*
  * Generate Prefab
@@ -2044,6 +2057,7 @@ GameObject* CreateButton(vec2 position, bool debugDraw = true)
  * Global Game State
  */
 bool globalDebugDraw = false;
+bool resetDebugStatePerFrame = true;
 Camera camera;
 
 #define NUMGAMEOBJECTS 1 // NOTE: LUL
@@ -2052,6 +2066,7 @@ GameObject* treeGO;
 GameObject* heroGO;
 GameObject* weedGO1;
 GameObject* weedGO2;
+GameObject* buttonGO;
 
 
 
@@ -2096,9 +2111,14 @@ void DebugDrawLine(vec2 a, vec2 b, vec4 color)
 	DrawLine(a, b, color, &camera);
 }
 
-void DebugDrawRectangle(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset)
+void DebugDrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset)
 {
 	DrawRectangleOutline(upperLeft, dimensions, color, &camera, offset);
+}
+
+void DebugDrawRectangleSolidColor(vec2 halfDim, Transform transform, vec4 color)
+{
+	DrawRectangle(halfDim, transform, color, &camera);
 }
 
 bool CompareYPosition(GameObject* a, GameObject* b)
@@ -2225,6 +2245,7 @@ void DrawGameObjects(F32 dt)
 	{
 		GameObject* go = bin_Background[i];
 		DrawGameObject(go, dt);
+		go->DebugDraw();
 	}
 
 	if (globalDebugDraw)
@@ -2236,18 +2257,21 @@ void DrawGameObjects(F32 dt)
 	{
 		GameObject* go = bin_Environment[i];
 		DrawGameObject(go, dt);
+		go->DebugDraw();
 	}
 
 	for (size_t i = 0; i < bin_Characters.size(); ++i)
 	{
 		GameObject* go = bin_Characters[i];
 		DrawGameObject(go, dt);
+		go->DebugDraw();
 	}
 
 	for (size_t i = 0; i < bin_Effects.size(); ++i)
 	{
 		GameObject* go = bin_Effects[i];
 		DrawGameObject(go, dt);
+		go->DebugDraw();
 	}
 
 
@@ -2308,7 +2332,7 @@ bool GameInitialize()
 
 	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), debugDraw);
 
-	CreateButton(vec2(1.5f, 1.5f), debugDraw);
+	buttonGO = CreateButton(vec2(1.5f, 1.5f), debugDraw);
 
 	
 	camera.halfDim = vec2(5.0f, 4.0f);
@@ -2358,8 +2382,13 @@ void GameUpdate(F32 dt)
 		for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
 		{
 			GameObject* go = GameObject::gameObjects[i];
-			go->ToggleDebugState();
+			go->SetDebugState(globalDebugDraw);
 		}
+	}
+
+	if (GetKeyDown(KeyCode_2))
+	{
+		resetDebugStatePerFrame = !resetDebugStatePerFrame;
 	}
 
 	//dt = 0.0166f;// *2.0f;
@@ -2401,15 +2430,16 @@ void GameUpdate(F32 dt)
 
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);
-	DebugDrawGameObjects();
 
 
 	// NOTE: For ray testing
-
-	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	if (resetDebugStatePerFrame)
 	{
-		GameObject* go = GameObject::gameObjects[i];
-		go->SetDebugState(false);
+		for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+		{
+			GameObject* go = GameObject::gameObjects[i];
+			go->SetDebugState(false);
+		}
 	}
 }
 
