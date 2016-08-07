@@ -896,6 +896,7 @@ struct GameObject
 		PlayerCharacter,
 		StaticEnvironmentPiece,
 		PlayerCamera,
+		Fire,
 		Button,
 		/*// Player Character
 		Link,
@@ -1017,6 +1018,8 @@ struct GameObject
 	bool moving;
 	bool pushingForward;
 
+	F32 lifetime;
+
 	GameObject()
 	{
 		this->type = Null;
@@ -1033,6 +1036,7 @@ struct GameObject
 
 	void AddTag(Tags tag);
 	void RemoveTag(Tags tag);
+	void ClearAllTags();
 	bool HasTag(Tags tag);
 
 	void AddSprite(const char * sprite);
@@ -1040,6 +1044,11 @@ struct GameObject
 	void AddRigidbody(F32 invmass = 0.0f, F32 dampingfactor = 0.0f, vec2 velocity = vec2(0.0f, 0.0f), vec2 force = vec2(0.0f));
 	template <typename S>
 	void AddCollisionShape(S shape);
+
+	void RemoveSprite();
+	void RemoveAnimator();
+	void RemoveRigidbody();
+	void RemoveCollisionShape();
 
 	void Update_PrePhysics(F32 dt);
 	void Update_PostPhysics(F32 dt);
@@ -1051,6 +1060,7 @@ struct GameObject
 	void ToggleDebugState();
 
 	static vector<GameObject*> gameObjects;
+	static vector<GameObject*> gameObjectDestructionQueue;
 	static vector<GameObject*> physicsGameObjects;
 	static vector<GameObject*> collisionGameObjects;
 	static vector<GameObject*> staticCollisionGameObjects;
@@ -1079,6 +1089,11 @@ void GameObject::AddTag(Tags tag)
 void GameObject::RemoveTag(Tags tag)
 {
 	SetBit(&tags, (U8)tag, 0);
+}
+
+void GameObject::ClearAllTags()
+{
+	this->tags = 0;
 }
 
 bool GameObject::HasTag(Tags tag)
@@ -1122,11 +1137,58 @@ void GameObject::AddCollisionShape(S shape)
 	//collisionGameObjects.push_back(this);
 }
 
+void GameObject::RemoveSprite()
+{
+	delete this->sprite;
+}
 
+void GameObject::RemoveAnimator()
+{
+	delete this->animator;
+}
+
+void GameObject::RemoveRigidbody()
+{
+	for (size_t i = 0; i < physicsGameObjects.size(); ++i)
+	{
+		GameObject* go = physicsGameObjects[i];
+		if (this == go)
+		{
+			physicsGameObjects.erase(physicsGameObjects.begin() + i);
+			break;
+		}
+	}
+	delete this->rigidbody;
+}
+
+void GameObject::RemoveCollisionShape()
+{
+	vector<GameObject*>* gos = NULL;
+	if (this->HasTag(Environment))
+	{
+		gos = &staticCollisionGameObjects;
+	}
+	else
+	{
+		gos = &collisionGameObjects;
+	}
+	for (size_t i = 0; i < gos->size(); ++i)
+	{
+		GameObject* go = (*gos)[i];
+		if (this == go)
+		{
+			gos->erase(gos->begin() + i);
+			break;
+		}
+	}
+
+	delete this->collisionShape;
+}
 
 /*
  * Forward declarations for the update functions
  */
+void DestroyGameObject(GameObject* gameObject);
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
 
@@ -1333,6 +1395,19 @@ void GameObject::Update_PostPhysics(F32 dt)
 	}
 	break;
 
+	case Fire:
+	{
+				 this->lifetime += dt;
+				 if (this->lifetime >= 3.0f)
+				 {
+					 // Do a rectangle cast the size of our collision shape
+					 // Destroy every burnable GameObject returned by the cast.
+
+					 DestroyGameObject(this);
+				 }
+	}
+	break;
+
 	default:
 	break;
 	}
@@ -1438,7 +1513,7 @@ void GameObject::DebugDraw()
 
 	case Button:
 	{
-				   DebugDrawRectangleSolidColor(((Rectangle_2D*)this->collisionShape)->halfDim, this->transform, vec4(0.0f, 0.0f, 1.0f, 0.3f));
+				   //DebugDrawRectangleSolidColor(((Rectangle_2D*)this->collisionShape)->halfDim, this->transform, vec4(0.0f, 0.0f, 1.0f, 0.3f));
 	}
 	break;
 
@@ -1465,6 +1540,7 @@ void GameObject::ToggleDebugState()
 }
 
 vector<GameObject*> GameObject::gameObjects;
+vector<GameObject*> GameObject::gameObjectDestructionQueue;
 vector<GameObject*> GameObject::physicsGameObjects;
 vector<GameObject*> GameObject::collisionGameObjects;
 vector<GameObject*> GameObject::staticCollisionGameObjects;
@@ -1922,6 +1998,57 @@ GameObject* CreateGameObject(GameObject::Type type)
 	return go;
 }
 
+void DestroyQueuedGameObject(GameObject* gameObject)
+{
+	gameObject->SetType(GameObject::Null);
+	gameObject->ClearAllTags();
+
+	if (gameObject->sprite != NULL)
+	{
+		gameObject->RemoveSprite();
+	}
+	if (gameObject->animator != NULL)
+	{
+		gameObject->RemoveAnimator();
+	}
+	if (gameObject->rigidbody != NULL)
+	{
+		gameObject->RemoveRigidbody();
+	}
+	if (gameObject->collisionShape != NULL)
+	{
+		gameObject->RemoveCollisionShape();
+	}
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		if (gameObject == go)
+		{
+			GameObject::gameObjects.erase(GameObject::gameObjects.begin() + i);
+			break;
+		}
+	}
+	delete gameObject;
+}
+
+void ClearDestructionQueue()
+{
+	for (size_t i = 0; i < GameObject::gameObjectDestructionQueue.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjectDestructionQueue[i];
+		DestroyQueuedGameObject(go);
+	}
+
+	GameObject::gameObjectDestructionQueue.clear();
+}
+
+// This only queues the GameObject for destruction.
+void DestroyGameObject(GameObject* gameObject)
+{
+	GameObject::gameObjectDestructionQueue.push_back(gameObject);
+}
+
 GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 {
 	GameObject* hero = CreateGameObject(GameObject::PlayerCharacter);
@@ -2053,6 +2180,22 @@ GameObject* CreateButton(vec2 position, bool debugDraw = true)
 	return button;
 }
 
+GameObject* CreateFire(vec2 position, bool debugDraw = true)
+{
+	GameObject* fire = CreateGameObject(GameObject::Fire);
+	fire->AddTag(GameObject::Effect);
+	fire->transform.position = position;
+	fire->AddAnimator();
+	fire->animator->AddAnimation("fire", "fire_Effect", 3, 0.33f);
+	fire->animator->StartAnimation("fire");
+	fire->AddCollisionShape(Rectangle_2D(TileDimensions, vec2(0.0f, 0.0f), true));
+	fire->SetDebugState(debugDraw);
+
+	fire->lifetime = 0.0f;
+
+	return fire;
+}
+
 /*
  * Global Game State
  */
@@ -2160,6 +2303,10 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 		if (gameObjectHash == rectangleHash)
 		{
 			Rectangle_2D* rect = (Rectangle_2D*)gameObject->collisionShape;
+			if (rect->IsPhantom())
+			{
+				DrawRectangle(rect->halfDim, gameObject->transform, vec4(0.0f, 0.0f, 1.0f, 0.3f), &camera);
+			}
 			vec2 upperLeft = gameObject->transform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * gameObject->transform.scale) + gameObject->collisionShape->GetOffset();
 			vec2 dimensions = rect->halfDim * 2.0f * gameObject->transform.scale;
 			DrawRectangleOutline(upperLeft, dimensions, debugCollisionColor, &camera);
@@ -2182,6 +2329,7 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 		}
 	}
 
+	// Draw Position
 	if (gameObject->debugDraw)
 	{
 		DrawPoint(gameObject->transform.position, 4, vec4(0.0f, 0.0f, 1.0f, 1.0f), &camera);
@@ -2332,7 +2480,7 @@ bool GameInitialize()
 
 	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), debugDraw);
 
-	buttonGO = CreateButton(vec2(1.5f, 1.5f), debugDraw);
+	buttonGO = CreateFire(vec2(1.5f, 1.5f), debugDraw);
 
 	
 	camera.halfDim = vec2(5.0f, 4.0f);
@@ -2431,7 +2579,8 @@ void GameUpdate(F32 dt)
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);
 
-
+	ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
+	
 	// NOTE: For ray testing
 	if (resetDebugStatePerFrame)
 	{
