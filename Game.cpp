@@ -1122,6 +1122,14 @@ void GameObject::AddCollisionShape(S shape)
 	//collisionGameObjects.push_back(this);
 }
 
+
+
+/*
+ * Forward declarations for the update functions
+ */
+GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
+vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
+
 void GameObject::Update_PrePhysics(F32 dt)
 {
 	switch (this->GetType())
@@ -1308,11 +1316,15 @@ void GameObject::Update_PostPhysics(F32 dt)
 								}
 								this->animator->StopAnimation();
 							}
-
 							//DebugPrintf(512, "Player Facing: (%f, %f)\n", this->facing.x, this->facing.y);
 							//DebugPrintf(512, "Pushing forward: %s\n", (this->pushingForward ? "true" : "false"));
 
-
+							vector<GameObject*> infront = RaycastAll_Line_2D(this->transform.position, this->facing, 1000.0f);
+							for (size_t i = 0; i < infront.size(); ++i)
+							{
+								GameObject* go = infront[i];
+								go->SetDebugState(true);
+							}
 	}
 	break;
 
@@ -1814,7 +1826,77 @@ void FixAllInterpenetrations()
 	interpenetrationsFixedLastFrame = interpenetrationsFixed;
 }
 
+GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance)
+{
+	GameObject* result = NULL;
+	F32 resultDistance = distance;
 
+	vec2 rayPerp = Perpendicular_2D(direction);
+	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::collisionGameObjects[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+		{
+			resultDistance = goOriginDOTdirection;
+			result = go;
+		}
+	}
+	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::staticCollisionGameObjects[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance)
+		{
+			resultDistance = goOriginDOTdirection;
+			result = go;
+		}
+	}
+
+
+	return result;
+}
+
+vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance)
+{
+	vector<GameObject*> result;
+
+	vec2 rayPerp = Perpendicular_2D(direction);
+	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::collisionGameObjects[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+		{
+			result.push_back(go);
+		}
+	}
+	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::staticCollisionGameObjects[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
 
 /*
  * Generate Prefab
@@ -1961,7 +2043,7 @@ GameObject* CreateButton(vec2 position, bool debugDraw = true)
 /*
  * Global Game State
  */
-bool globalDebugDraw = true;
+bool globalDebugDraw = false;
 Camera camera;
 
 #define NUMGAMEOBJECTS 1 // NOTE: LUL
@@ -2313,9 +2395,22 @@ void GameUpdate(F32 dt)
 	//CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, biasedTransform/*heroGO->transform*/, treeGO->collisionShape, treeGO->transform);
 	//vec2 perp = Perpendicular_2D(vec2(0.0f, 1.0f));
 
+
+	
+
+
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);
 	DebugDrawGameObjects();
+
+
+	// NOTE: For ray testing
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		go->SetDebugState(false);
+	}
 }
 
 bool GameShutdown()
