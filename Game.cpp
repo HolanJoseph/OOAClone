@@ -896,6 +896,7 @@ struct GameObject
 		PlayerCharacter,
 		StaticEnvironmentPiece,
 		PlayerCamera,
+		Button,
 		/*// Player Character
 		Link,
 
@@ -1042,10 +1043,12 @@ struct GameObject
 
 	void Update_PrePhysics(F32 dt);
 	void Update_PostPhysics(F32 dt);
-
 	void HandleEvent(Event* e);
-
 	void DebugDraw();
+
+	bool GetDebugState();
+	void SetDebugState(bool debugState);
+	void ToggleDebugState();
 
 	static vector<GameObject*> gameObjects;
 	static vector<GameObject*> physicsGameObjects;
@@ -1339,55 +1342,13 @@ void GameObject::HandleEvent(Event* e)
 												   GameObject* collidedWith = (GameObject*)e->arguments[1].AsPointer();
 												   vec2 collisionNormal = e->arguments[2].AsVec2();
 
-												   DebugPrintf(512, "Collision Normal = (%f, %f)\n", collisionNormal.x, collisionNormal.y);
-												   DebugPrintf(512, "Player Facing = (%f, %f)\n", this->facing.x, this->facing.y);
+												   //DebugPrintf(512, "Collision Normal = (%f, %f)\n", collisionNormal.x, collisionNormal.y);
+												   //DebugPrintf(512, "Player Facing = (%f, %f)\n", this->facing.x, this->facing.y);
 
-												   if (collisionNormal == this->facing)
+												   if (!collidedWith->collisionShape->IsPhantom() && collisionNormal == this->facing)
 												   {
 													   this->pushingForward = true;
 												   }
-
-												   /*
-												   if (this->facing == vec2(1.0f, 0.0f))
-												   {
-													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->rightTestPointOffset));
-													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
-													   if (facingDOTcollisionDirection > 0.0f)
-													   {
-														   this->pushingForward = true;
-													   }
-												   }
-												   else if (this->facing == vec2(-1.0f, 0.0f))
-												   {
-													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->leftTestPointOffset));
-													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
-													   if (facingDOTcollisionDirection > 0.0f)
-													   {
-														   this->pushingForward = true;
-													   }
-												   }
-												   else if (this->facing == vec2(0.0f, 1.0f))
-												   {
-													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->topTestPointOffset));
-													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
-													   if (facingDOTcollisionDirection > 0.0f)
-													   {
-														   this->pushingForward = true;
-													   }
-												   }
-												   else if (this->facing == vec2(0.0f, -1.0f))
-												   {
-													   vec2 collisionDirection = normalize(collidedWith->transform.position - (this->transform.position + this->bottomTestPointOffset));
-													   F32 facingDOTcollisionDirection = dot(this->facing, collisionDirection);
-													   if (facingDOTcollisionDirection > 0.0f)
-													   {
-														   this->pushingForward = true;
-													   }
-												   }
-												   
-
-												   DebugPrintf(512, "Collision Normal = (%f, %f)\n", collisionNormal.x, collisionNormal.y);
-												   */
 							}
 							break;
 
@@ -1415,6 +1376,34 @@ void GameObject::HandleEvent(Event* e)
 	}
 	break;
 
+	case Button:
+	{
+				   switch (e->GetType())
+				   {
+				   case ET_OnCollisionEnter:
+				   {
+											   DebugPrintf(512, "Button   OnCollisionEnter\n");
+				   }
+				   break;
+
+				   case ET_OnCollision:
+				   {
+										  DebugPrintf(512, "Button   OnCollision\n");
+				   }
+				   break;
+
+				   case ET_OnCollisionExit:
+				   {
+											  DebugPrintf(512, "Button   OnCollisionExit\n");
+				   }
+				   break;
+
+				   default:
+				   break;
+				   }
+	}
+	break;
+
 	default:
 	break;
 	}
@@ -1433,6 +1422,23 @@ void GameObject::DebugDraw()
 	default:
 	break;
 	}
+}
+
+bool GameObject::GetDebugState()
+{
+	bool result;
+	result = this->debugDraw;
+	return result;
+}
+
+void GameObject::SetDebugState(bool debugState)
+{
+	this->debugDraw = debugState;
+}
+
+void GameObject::ToggleDebugState()
+{
+	this->debugDraw = !this->debugDraw;
 }
 
 vector<GameObject*> GameObject::gameObjects;
@@ -1619,10 +1625,12 @@ bool operator==(const CollisionEventPair& lhs, const CollisionEventPair& rhs)
 	{
 		result = false;
 	}
-	else if (lhs.collisionNormal != rhs.collisionNormal)
-	{
-		result = false;
-	}
+	// NOTE: Not sure this is a good check. If the collision normal were to change while an object is
+	//			grinding around the outside of another object it could cause false negatives.
+	//else if (lhs.collisionNormal != rhs.collisionNormal)
+	//{
+	//	result = false;
+	//}
 
 	return result;
 }
@@ -1639,6 +1647,21 @@ void FixAllInterpenetrations()
 	vector<CollisionEventPair> interpenetrationsFixed;
 
 	vector<CollisionPair> collisions = GenerateContacts();
+
+	// Remove all phantoms from the contacts list because we
+	//	don't want to push objects out of them we just want to know what is inside of them.
+	for (size_t i = 0; i < collisions.size(); ++i)
+	{
+		GameObject* go1 = collisions[i].go1;
+		GameObject* go2 = collisions[i].go2;
+		if (go1->collisionShape->IsPhantom() || go2->collisionShape->IsPhantom())
+		{
+			interpenetrationsFixed.push_back(CollisionEventPair(collisions[i].go1, collisions[i].go2, collisions[i].info.normal));
+			collisions.erase(collisions.begin() + i);
+		}
+	}
+
+
 	size_t maxNumberOfIterations = collisions.size() * 10;
 	size_t i = 0;
 	while (i < maxNumberOfIterations)
@@ -1830,7 +1853,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->moving = false;
 	hero->pushingForward = false;
 
-	hero->debugDraw = debugDraw;
+	hero->SetDebugState(debugDraw);
 
 	return hero;
 }
@@ -1842,6 +1865,8 @@ GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0
 	bg->transform.position = position;
 	bg->transform.scale = vec2(10.0f, 8.0f);
 	bg->AddSprite(backgroundName);
+
+	bg->SetDebugState(debugDraw);
 
 	return bg;
 }
@@ -1856,7 +1881,7 @@ GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	tree->AddSprite("tree_Generic");
 	tree->AddCollisionShape(Rectangle_2D(TileDimensions));
 
-	tree->debugDraw = debugDraw;
+	tree->SetDebugState(debugDraw);
 
 	return tree;
 }
@@ -1871,7 +1896,7 @@ GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f), bool debugDra
 	df->animator->AddAnimation("dance", "dancing_Flower", 4, 1.0f);
 	df->animator->StartAnimation("dance");
 
-	df->debugDraw = debugDraw;
+	df->SetDebugState(debugDraw);
 
 	return df;
 }
@@ -1888,7 +1913,7 @@ GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	weed->AddSprite("weed");
 	weed->AddCollisionShape(Rectangle_2D(TileDimensions));
 
-	weed->debugDraw = debugDraw;
+	weed->SetDebugState(debugDraw);
 
 	return weed;
 }
@@ -1902,23 +1927,49 @@ GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = 
 	spooky->AddSprite("tree_Spooky");
 	spooky->AddCollisionShape(Rectangle_2D(TileDimensions));
 
-	spooky->debugDraw = debugDraw;
+	spooky->SetDebugState(debugDraw);
 
 	return spooky;
 }
 
+GameObject* CreateBlocker(vec2 position = vec2(0.0f, 0.0f), vec2 scale = vec2(1.0f, 1.0f), bool debugDraw = true)
+{
+	GameObject* blocker = CreateGameObject(GameObject::StaticEnvironmentPiece);
+	blocker->transform.position = position;
+	blocker->transform.scale = scale;
+	blocker->AddTag(GameObject::Environment);
+	blocker->AddCollisionShape(Rectangle_2D(TileDimensions));
 
+	blocker->SetDebugState(debugDraw);
+
+	return blocker;
+}
+
+GameObject* CreateButton(vec2 position, bool debugDraw = true)
+{
+	GameObject* button = CreateGameObject(GameObject::Button);
+
+	button->AddTag(GameObject::Environment);
+	button->transform.position = position;
+	button->AddCollisionShape(Rectangle_2D(TileDimensions, vec2(0.0f, 0.0f), true));
+
+	button->SetDebugState(debugDraw);
+
+	return button;
+}
 
 /*
  * Global Game State
  */
-#define NUMGAMEOBJECTS 1
+bool globalDebugDraw = true;
+Camera camera;
+
+#define NUMGAMEOBJECTS 1 // NOTE: LUL
 GameObject* flowerGO;
 GameObject* treeGO;
 GameObject* heroGO;
 GameObject* weedGO1;
 GameObject* weedGO2;
-Camera camera;
 
 
 
@@ -2094,7 +2145,10 @@ void DrawGameObjects(F32 dt)
 		DrawGameObject(go, dt);
 	}
 
-	DrawCameraGrid();
+	if (globalDebugDraw)
+	{
+		DrawCameraGrid();
+	}
 
 	for (size_t i = 0; i < bin_Environment.size(); ++i)
 	{
@@ -2147,35 +2201,34 @@ bool GameInitialize()
 	spriteAssetFilepathTable.Initialize(60);
 	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
-	//flowerGO = CreateDancingFlowers(vec2(-2.0f, 1.0f));
-	//treeGO = CreateTree(vec2(2.0f, -1.0f), false);
-	CreateBackground("background_10-5", vec2(0.0f, 0.0f));
-	CreateDancingFlowers(vec2(-0.5f, -1.5f));
-	CreateDancingFlowers(vec2(-2.5f,  1.5f));
-	CreateWeed(vec2(-2.5f, -0.5f)); // Left Group Start
-	CreateWeed(vec2(-3.5f, -0.5f));
-	CreateWeed(vec2(-3.5f, -1.5f));
-	CreateWeed(vec2( 2.5f, -0.5f)); // Right Group Start
-	CreateWeed(vec2( 1.5f, -1.5f));
-	CreateWeed(vec2( 2.5f, -1.5f));
-	CreateWeed(vec2( 1.5f, -2.5f));
-	CreateWeed(vec2( 2.5f, -2.5f));
-	CreateTree(vec2(-3.0f,  4.0f)); // Left Group Start
-	CreateTree(vec2(-5.0f,  4.0f));
-	CreateTree(vec2(-5.0f,  2.0f));
-	CreateTree(vec2(-5.0f,  0.0f));
-	CreateTree(vec2(-5.0f, -2.0f));
-	CreateTree(vec2( 4.0f,  4.0f)); // Right Group Start
-	CreateTree(vec2( 4.0f,  2.0f));
-	CreateTree(vec2( 4.0f,  0.0f));
-	CreateTree(vec2( 4.0f, -2.0f));
+	bool debugDraw = globalDebugDraw;
+	CreateBackground("background_10-5", vec2(0.0f, 0.0f), debugDraw);
+	CreateDancingFlowers(vec2(-0.5f, -1.5f), debugDraw);
+	CreateDancingFlowers(vec2(-2.5f, 1.5f), debugDraw);
+	CreateWeed(vec2(-2.5f, -0.5f), debugDraw); // Left Group Start
+	CreateWeed(vec2(-3.5f, -0.5f), debugDraw);
+	CreateWeed(vec2(-3.5f, -1.5f), debugDraw);
+	CreateWeed(vec2( 2.5f, -0.5f), debugDraw); // Right Group Start
+	CreateWeed(vec2( 1.5f, -1.5f), debugDraw);
+	CreateWeed(vec2( 2.5f, -1.5f), debugDraw);
+	CreateWeed(vec2( 1.5f, -2.5f), debugDraw);
+	CreateWeed(vec2( 2.5f, -2.5f), debugDraw);
+	CreateTree(vec2(-3.0f,  4.0f), debugDraw); // Left Group Start
+	CreateTree(vec2(-5.0f,  4.0f), debugDraw);
+	CreateTree(vec2(-5.0f,  2.0f), debugDraw);
+	CreateTree(vec2(-5.0f,  0.0f), debugDraw);
+	CreateTree(vec2(-5.0f, -2.0f), debugDraw);
+	CreateTree(vec2( 4.0f,  4.0f), debugDraw); // Right Group Start
+	CreateTree(vec2( 4.0f,  2.0f), debugDraw);
+	CreateTree(vec2( 4.0f,  0.0f), debugDraw);
+	CreateTree(vec2( 4.0f, -2.0f), debugDraw);
+	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
 
-	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), true);
-	//weedGO1 = CreateWeed(vec2(-1.0f, 0.0f), true);
-	//weedGO2 = CreateWeed(vec2(0.0f, 0.0f), true);
-	//treeGO = CreateTree(vec2(1.5f, 0.0f), true);
-	//CreateTree(vec2(0.0f, 1.0f), true);
+	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), debugDraw);
 
+	CreateButton(vec2(1.5f, 1.5f), debugDraw);
+
+	
 	camera.halfDim = vec2(5.0f, 4.0f);
 	camera.position = vec2(0.0f, 0.0f);
 	camera.rotationAngle = 0.0f;
@@ -2217,6 +2270,16 @@ void GameUpdate(F32 dt)
 		return;
 	}
 
+	if (GetKeyDown(KeyCode_1))
+	{
+		globalDebugDraw = !globalDebugDraw;
+		for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+		{
+			GameObject* go = GameObject::gameObjects[i];
+			go->ToggleDebugState();
+		}
+	}
+
 	//dt = 0.0166f;// *2.0f;
 	//if (heroGO->transform.position.y < 3.0f)
 	//{
@@ -2248,6 +2311,7 @@ void GameUpdate(F32 dt)
 	//Transform biasedTransform = heroGO->transform;
 	//biasedTransform.scale *= 1.2f;
 	//CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, biasedTransform/*heroGO->transform*/, treeGO->collisionShape, treeGO->transform);
+	//vec2 perp = Perpendicular_2D(vec2(0.0f, 1.0f));
 
 	UpdateGameObjects_PostPhysics(dt);
 	DrawGameObjects(dt);

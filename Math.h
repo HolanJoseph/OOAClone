@@ -28,6 +28,9 @@ inline F32 DegreesToRadians(F32 angleInDegrees)
 	return result;
 }
 
+/*
+ * NOTE: GLM Matrices are specified as column matrices
+ */
 inline mat3 TranslationMatrix(vec2 translation)
 {
 	mat3 result = mat3(1, 0, 0, 0, 1, 0, translation.x, translation.y, 1);
@@ -84,5 +87,15 @@ inline mat2 RotationMatrix2x2_2D(F32 angleInDegrees)
 {
 	F32 anglueInRadians = DegreesToRadians(angleInDegrees);
 	mat2 result = mat2(cos(anglueInRadians), sin(anglueInRadians), -sin(anglueInRadians), cos(anglueInRadians));
+	return result;
+}
+
+inline vec2 Perpendicular_2D(vec2 v)
+{
+	vec2 result;
+
+	// NOTE: This matrix is a 2D rotation by -90 degrees
+	result = mat2(0.0f, -1.0f, 1.0f, 0.0f) * v;
+
 	return result;
 }

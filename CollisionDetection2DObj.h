@@ -7,7 +7,6 @@
 
 #include "Transform.h"
 
-// NOTE: ????WHY????
 #include "RandomNumberGenerator.h"
 #include <vector> 
 
@@ -29,6 +28,9 @@ struct Shape_2D
 	virtual vec2 Support(Transform transform, vec2 direction) = 0;
 	virtual vec2 GetOffset() = 0;
 	virtual void SetOffset(vec2 offset) = 0;
+	virtual bool IsPhantom() = 0;
+	virtual void SetPhantomState(bool phantomState) = 0;
+	virtual void TogglePhantomState() = 0;
 	//virtual PointCloud Points(Transform transform) = 0;
 };
 
@@ -37,17 +39,20 @@ struct Rectangle_2D : public Shape_2D
 {
 	vec2 halfDim;
 	vec2 offset;
+	bool isPhantom;
 
 	Rectangle_2D()
 	{
 		this->halfDim = vec2(1.0f, 1.0f);
 		this->offset = vec2(0.0f, 0.0f);
+		this->isPhantom = false;
 	}
 
-	Rectangle_2D(vec2 halfDim, vec2 offset = vec2(0.0f, 0.0f))
+	Rectangle_2D(vec2 halfDim, vec2 offset = vec2(0.0f, 0.0f), bool isPhantom = false)
 	{
 		this->halfDim = halfDim;
 		this->offset = offset;
+		this->isPhantom = isPhantom;
 	}
 
 	virtual vec2 Support(Transform transform, vec2 direction)
@@ -97,6 +102,25 @@ struct Rectangle_2D : public Shape_2D
 		this->offset = offset;
 	}
 
+	virtual bool IsPhantom()
+	{
+		bool result;
+		
+		result = this->isPhantom;
+
+		return result;
+	}
+
+	virtual void SetPhantomState(bool phantomState)
+	{
+		this->isPhantom = phantomState;
+	}
+
+	virtual void TogglePhantomState()
+	{
+		this->isPhantom = !this->isPhantom;
+	}
+
 	/*virtual PointCloud Points(Transform transform)
 	{
 		PointCloud result;
@@ -117,17 +141,20 @@ struct Circle_2D : public Shape_2D
 {
 	F32  radius;
 	vec2 offset;
+	bool isPhantom;
 
 	Circle_2D()
 	{
 		this->radius = 1.0f;
 		this->offset = vec2(0.0f, 0.0f);
+		this->isPhantom = false;
 	}
 
-	Circle_2D(F32 radius, vec2 offset = vec2(0.0f, 0.0f))
+	Circle_2D(F32 radius, vec2 offset = vec2(0.0f, 0.0f), bool isPhantom = false)
 	{
 		this->radius = radius;
 		this->offset = offset;
+		this->isPhantom = isPhantom;
 	}
 
 	virtual vec2 Support(Transform transform, vec2 direction)
@@ -152,6 +179,25 @@ struct Circle_2D : public Shape_2D
 	{
 		this->offset = offset;
 	}
+
+	virtual bool IsPhantom()
+	{
+		bool result;
+
+		result = this->isPhantom;
+
+		return result;
+	}
+
+	virtual void SetPhantomState(bool phantomState)
+	{
+		this->isPhantom = phantomState;
+	}
+
+	virtual void TogglePhantomState()
+	{
+		this->isPhantom = !this->isPhantom;
+	}
 };
 
 
@@ -160,6 +206,7 @@ struct Triangle_2D : public Shape_2D
 {
 	vec2 points[3];
 	vec2 offset;
+	bool isPhantom;
 
 	Triangle_2D()
 	{
@@ -167,15 +214,17 @@ struct Triangle_2D : public Shape_2D
 		this->points[1] = vec2(0.6f, -0.3f);
 		this->points[2] = vec2(0.0f, 0.6f);
 		this->offset = vec2(0.0f, 0.0f);
+		this->isPhantom = false;
 	}
 
 	/* NOTE: Must be wound counter clockwise. */
-	Triangle_2D(vec2 A, vec2 B, vec2 C, vec2 offset = vec2(0.0f, 0.0f))
+	Triangle_2D(vec2 A, vec2 B, vec2 C, vec2 offset = vec2(0.0f, 0.0f), bool isPhantom = false)
 	{
 		this->points[0] = A;
 		this->points[1] = B;
 		this->points[2] = C;
 		this->offset = offset;
+		this->isPhantom = isPhantom;
 	}
 
 	virtual vec2 Support(Transform transform, vec2 direction)
@@ -221,6 +270,25 @@ struct Triangle_2D : public Shape_2D
 	virtual void SetOffset(vec2 offset)
 	{
 		this->offset = offset;
+	}
+
+	virtual bool IsPhantom()
+	{
+		bool result;
+
+		result = this->isPhantom;
+
+		return result;
+	}
+
+	virtual void SetPhantomState(bool phantomState)
+	{
+		this->isPhantom = phantomState;
+	}
+
+	virtual void TogglePhantomState()
+	{
+		this->isPhantom = !this->isPhantom;
 	}
 
 	/*virtual PointCloud Points(Transform transform)
