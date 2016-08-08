@@ -1140,11 +1140,13 @@ void GameObject::AddCollisionShape(S shape)
 void GameObject::RemoveSprite()
 {
 	delete this->sprite;
+	this->sprite = NULL;
 }
 
 void GameObject::RemoveAnimator()
 {
 	delete this->animator;
+	this->animator = NULL;
 }
 
 void GameObject::RemoveRigidbody()
@@ -1159,6 +1161,7 @@ void GameObject::RemoveRigidbody()
 		}
 	}
 	delete this->rigidbody;
+	this->rigidbody = NULL;
 }
 
 void GameObject::RemoveCollisionShape()
@@ -1183,6 +1186,7 @@ void GameObject::RemoveCollisionShape()
 	}
 
 	delete this->collisionShape;
+	this->collisionShape = NULL;
 }
 
 /*
@@ -1191,6 +1195,7 @@ void GameObject::RemoveCollisionShape()
 void DestroyGameObject(GameObject* gameObject);
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
+vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle);
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
@@ -1402,6 +1407,15 @@ void GameObject::Update_PostPhysics(F32 dt)
 				 {
 					 // Do a rectangle cast the size of our collision shape
 					 // Destroy every burnable GameObject returned by the cast.
+					 vector<GameObject*> inMe = RaycastAll_Rectangle_2D(this->transform.position, ((Rectangle_2D*)this->collisionShape)->halfDim, this->transform.rotationAngle);
+					 for (size_t i = 0; i < inMe.size(); ++i)
+					 {
+						 GameObject* go = inMe[i];
+						 if (go->HasTag(Burnable))
+						 {
+							 DestroyGameObject(go);
+						 }
+					 }
 
 					 DestroyGameObject(this);
 				 }
@@ -1749,6 +1763,7 @@ void FixAllInterpenetrations()
 
 	// Remove all phantoms from the contacts list because we
 	//	don't want to push objects out of them we just want to know what is inside of them.
+	vector<size_t> erasePositions;
 	for (size_t i = 0; i < collisions.size(); ++i)
 	{
 		GameObject* go1 = collisions[i].go1;
@@ -1756,9 +1771,15 @@ void FixAllInterpenetrations()
 		if (go1->collisionShape->IsPhantom() || go2->collisionShape->IsPhantom())
 		{
 			interpenetrationsFixed.push_back(CollisionEventPair(collisions[i].go1, collisions[i].go2, collisions[i].info.normal));
-			collisions.erase(collisions.begin() + i);
+			erasePositions.push_back(i);
 		}
 	}
+	for (I32 i = erasePositions.size() - 1; i >= 0; --i)
+	{
+		size_t index = erasePositions[i];
+		collisions.erase(collisions.begin() + i);
+	}
+	erasePositions.clear();
 
 
 	size_t maxNumberOfIterations = collisions.size() * 10;
@@ -1985,6 +2006,38 @@ vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distan
 	return result;
 }
 
+vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle)
+{
+	vector<GameObject*> result;
+
+	Rectangle_2D collisionRect = Rectangle_2D(halfDim);
+
+	Transform collisionRectTransform;
+	collisionRectTransform.position = position;
+	collisionRectTransform.rotationAngle = rotationAngle;
+
+	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::collisionGameObjects[i];
+		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+		if (ci.collided)
+		{
+			result.push_back(go);
+		}
+	}
+
+	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::staticCollisionGameObjects[i];
+		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+		if (ci.collided)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
 
 
 /*
@@ -2000,9 +2053,6 @@ GameObject* CreateGameObject(GameObject::Type type)
 
 void DestroyQueuedGameObject(GameObject* gameObject)
 {
-	gameObject->SetType(GameObject::Null);
-	gameObject->ClearAllTags();
-
 	if (gameObject->sprite != NULL)
 	{
 		gameObject->RemoveSprite();
@@ -2029,6 +2079,10 @@ void DestroyQueuedGameObject(GameObject* gameObject)
 			break;
 		}
 	}
+
+	gameObject->SetType(GameObject::Null);
+	gameObject->ClearAllTags();
+
 	delete gameObject;
 }
 
@@ -2131,7 +2185,6 @@ GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	weed->AddTag(GameObject::Environment);
 	weed->AddTag(GameObject::Cutable);
 	weed->AddTag(GameObject::Burnable);
-	weed->AddTag(GameObject::Lightweight);
 	weed->AddSprite("weed");
 	weed->AddCollisionShape(Rectangle_2D(TileDimensions));
 
@@ -2186,7 +2239,7 @@ GameObject* CreateFire(vec2 position, bool debugDraw = true)
 	fire->AddTag(GameObject::Effect);
 	fire->transform.position = position;
 	fire->AddAnimator();
-	fire->animator->AddAnimation("fire", "fire_Effect", 3, 0.33f);
+	fire->animator->AddAnimation("fire", "fire_Effect", 3, 0.30f);
 	fire->animator->StartAnimation("fire");
 	fire->AddCollisionShape(Rectangle_2D(TileDimensions, vec2(0.0f, 0.0f), true));
 	fire->SetDebugState(debugDraw);
@@ -2199,8 +2252,8 @@ GameObject* CreateFire(vec2 position, bool debugDraw = true)
 /*
  * Global Game State
  */
-bool globalDebugDraw = false;
-bool resetDebugStatePerFrame = true;
+bool globalDebugDraw = true;
+bool resetDebugStatePerFrame = false;
 Camera camera;
 
 #define NUMGAMEOBJECTS 1 // NOTE: LUL
@@ -2480,7 +2533,7 @@ bool GameInitialize()
 
 	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), debugDraw);
 
-	buttonGO = CreateFire(vec2(1.5f, 1.5f), debugDraw);
+	buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 
 	
 	camera.halfDim = vec2(5.0f, 4.0f);
