@@ -1017,6 +1017,7 @@ struct GameObject
 	vec2 facing;
 	bool moving;
 	bool pushingForward;
+	bool showRay;
 
 	F32 lifetime;
 
@@ -1192,7 +1193,18 @@ void GameObject::RemoveCollisionShape()
 /*
  * Forward declarations for the update functions
  */
+GameObject* CreateGameObject(GameObject::Type type);
 void DestroyGameObject(GameObject* gameObject);
+GameObject* CreateHero(vec2 position, bool debugDraw);
+GameObject* CreateBackground(const char * backgroundName, vec2 position, bool debugDraw);
+GameObject* CreateTree(vec2 position, bool debugDraw);
+GameObject* CreateDancingFlowers(vec2 position, bool debugDraw);
+GameObject* CreateWeed(vec2 position, bool debugDraw);
+GameObject* CreateSpookyTree(vec2 position, bool debugDraw);
+GameObject* CreateBlocker(vec2 position, vec2 scale, bool debugDraw);
+GameObject* CreateButton(vec2 position, bool debugDraw);
+GameObject* CreateFire(vec2 position, bool debugDraw);
+
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle);
@@ -1393,9 +1405,14 @@ void GameObject::Update_PostPhysics(F32 dt)
 							//	go->SetDebugState(true);
 							//}
 							GameObject* infront = RaycastFirst_Line_2D(this->transform.position, this->facing, 1000.0f);
-							if (infront != NULL)
+							if (infront != NULL && this->showRay)
 							{
 								infront->SetDebugState(true);
+							}
+
+							if (GetKeyDown(KeyCode_Spacebar))
+							{
+								CreateFire(this->transform.position + this->facing, false);
 							}
 	}
 	break;
@@ -2128,6 +2145,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->facing = vec2(0.0f, -1.0f);
 	hero->moving = false;
 	hero->pushingForward = false;
+	hero->showRay = debugDraw;
 
 	hero->SetDebugState(debugDraw);
 
@@ -2252,7 +2270,7 @@ GameObject* CreateFire(vec2 position, bool debugDraw = true)
 /*
  * Global Game State
  */
-bool globalDebugDraw = true;
+bool globalDebugDraw = false;
 bool resetDebugStatePerFrame = false;
 Camera camera;
 
@@ -2533,7 +2551,7 @@ bool GameInitialize()
 
 	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), debugDraw);
 
-	buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
+	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 
 	
 	camera.halfDim = vec2(5.0f, 4.0f);
@@ -2590,6 +2608,11 @@ void GameUpdate(F32 dt)
 	if (GetKeyDown(KeyCode_2))
 	{
 		resetDebugStatePerFrame = !resetDebugStatePerFrame;
+	}
+
+	if (GetKeyDown(KeyCode_3))
+	{
+		heroGO->showRay = !heroGO->showRay;
 	}
 
 	//dt = 0.0166f;// *2.0f;
