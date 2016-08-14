@@ -99,6 +99,10 @@ struct Sprite
 	void Initialize(const char* assetName, vec2 offset = vec2(0.0f, 0.0f))
 	{
 		const char* filePath = AssetNameToFilepath(assetName);
+		if (filePath == NULL)
+		{
+			filePath = AssetNameToFilepath("missing_Texture");
+		}
 		this->texture = AddToTexturePool(filePath);
 		this->offset = offset;
 	}
@@ -2249,6 +2253,7 @@ GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = 
 	GameObject* spooky = CreateGameObject(GameObject::StaticEnvironmentPiece);
 
 	spooky->transform.position = position;
+	spooky->transform.scale = vec2(2.0f, 2.0f);
 	spooky->AddTag(GameObject::Environment);
 	spooky->AddSprite("tree_Spooky");
 	spooky->AddCollisionShape(Rectangle_2D(TileDimensions));
@@ -2582,6 +2587,26 @@ bool GameInitialize()
 	CreateTree(vec2( 4.0f, -2.0f), debugDraw);
 	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
 
+	CreateBackground("background_10-6", vec2(0.0f, 8.0f), debugDraw);
+	CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
+	CreateDancingFlowers(vec2(1.5f, 10.5f), debugDraw);
+	CreateWeed(vec2(-2.5f, 5.5f), debugDraw); // Left Group Start
+	CreateWeed(vec2(-2.5f, 6.5f), debugDraw);
+	CreateWeed(vec2(-2.5f, 7.5f), debugDraw);
+	CreateTree(vec2(-4.0f, 8.0f), debugDraw); // Left Group Start
+	CreateTree(vec2(-4.0f, 10.0f), debugDraw);
+	CreateTree(vec2(-3.0f, 12.0f), debugDraw);
+	CreateTree(vec2(-5.0f, 12.0f), debugDraw);
+	CreateTree(vec2(-4.0f, 8.0f), debugDraw);
+	CreateTree(vec2(4.0f, 6.0f), debugDraw); // Right Group Start
+	CreateTree(vec2(4.0f, 8.0f), debugDraw);
+	CreateSpookyTree(vec2(4.0f, 10.0f), debugDraw); // Right Group Start
+	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);
+
+	CreateBackground("background_11-6", vec2(10.0f, 8.0f), debugDraw);
+	CreateBackground("background_11-7", vec2(10.0f, 16.0f), debugDraw);
+	CreateBackground("background_10-7", vec2(0.0f, 16.0f), debugDraw);
+
 	heroGO = CreateHero(/*vec2(0.75f, -2.0f)*/vec2(-0.5f, 0.5f), debugDraw);
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
@@ -2628,25 +2653,59 @@ void GameUpdate(F32 dt)
 		return;
 	}
 
-	if (GetKeyDown(KeyCode_1))
+	/*
+	 * Camera Controls
+	 *
+	 * - zoom camera out  2x
+	 * + zoom camera in 2x
+	 *
+	 * WASD Move camera to the next screen
+	 */
+	if (GetKeyDown(KeyCode_Minus))
 	{
-		globalDebugDraw = !globalDebugDraw;
-		for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
-		{
-			GameObject* go = GameObject::gameObjects[i];
-			go->SetDebugState(globalDebugDraw);
-		}
+		camera.halfDim *= 2.0f;
+	}
+	if (GetKeyDown(KeyCode_Equal))
+	{
+		camera.halfDim /= 2.0f;
+	}
+	if (GetKeyDown(KeyCode_Up))
+	{
+		camera.position.y += 8.0f;
+	}
+	if (GetKeyDown(KeyCode_Down))
+	{
+		camera.position.y -= 8.0f;
+	}
+	if (GetKeyDown(KeyCode_Right))
+	{
+		camera.position.x += 10.0f;
+	}
+	if (GetKeyDown(KeyCode_Left))
+	{
+		camera.position.x -= 10.0f;
 	}
 
-	if (GetKeyDown(KeyCode_2))
-	{
-		resetDebugStatePerFrame = !resetDebugStatePerFrame;
-	}
-
-	if (GetKeyDown(KeyCode_3))
-	{
-		heroGO->showRay = !heroGO->showRay;
-	}
+	// NOTE: Debug drawing toggle grids, clearing, ray casting
+	//if (GetKeyDown(KeyCode_1))
+	//{
+	//	globalDebugDraw = !globalDebugDraw;
+	//	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	//	{
+	//		GameObject* go = GameObject::gameObjects[i];
+	//		go->SetDebugState(globalDebugDraw);
+	//	}
+	//}
+	//
+	//if (GetKeyDown(KeyCode_2))
+	//{
+	//	resetDebugStatePerFrame = !resetDebugStatePerFrame;
+	//}
+	//
+	//if (GetKeyDown(KeyCode_3))
+	//{
+	//	heroGO->showRay = !heroGO->showRay;
+	//}
 
 	//dt = 0.0166f;// *2.0f;
 	//if (heroGO->transform.position.y < 3.0f)
