@@ -1215,47 +1215,80 @@ void GameObject::Update_PrePhysics(F32 dt)
 	{
 	case PlayerCharacter:
 	{
+							// NOTE: This method seems to be more stable WHY???
+							// NOTE: If pressing A and D and then pressing W or S we move up/ down with 1.5 speed
+							//			this is because both of the diagonal forces are being applied
+							//bool getKey_A = GetKey(KeyCode_A);
+							//bool getKey_D = GetKey(KeyCode_D);
+							//bool getKey_W = GetKey(KeyCode_W);
+							//bool getKey_S = GetKey(KeyCode_S);
+							//bool getKeys_WD = getKey_W && getKey_D;
+							//bool getKeys_SD = getKey_S && getKey_D;
+							//bool getKeys_WA = getKey_W && getKey_A;
+							//bool getKeys_SA = getKey_S && getKey_A;
+							//
+							//if (getKeys_WD)
+							//{
+							//	this->rigidbody->ApplyImpulse(normalize(vec2(1.0f, 1.0f)), 1.5f);
+							//}
+							//if (getKeys_SD)
+							//{
+							//	this->rigidbody->ApplyImpulse(normalize(vec2(1.0f, -1.0f)), 1.5f);
+							//}
+							//if (getKeys_WA)
+							//{
+							//	this->rigidbody->ApplyImpulse(normalize(vec2(-1.0f, 1.0f)), 1.5f);
+							//}
+							//if (getKeys_SA)
+							//{
+							//	this->rigidbody->ApplyImpulse(normalize(vec2(-1.0f, -1.0f)), 1.5f);
+							//}
+							//if (!getKeys_WA && !getKeys_SA && getKey_A)
+							//{
+							//	this->rigidbody->ApplyImpulse(vec2(-1.0f, 0.0f), 1.5f);
+							//}
+							//if (!getKeys_WD && !getKeys_SD && getKey_D)
+							//{
+							//	this->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 1.5f);
+							//}
+							//if (!getKeys_WD && !getKeys_WA && getKey_W)
+							//{
+							//	this->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
+							//}
+							//if (!getKeys_SD && !getKeys_SA && getKey_S)
+							//{
+							//	this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 1.5f);
+							//}
+
+
+							vec2 forceDirection = vec2(0.0f, 0.0f);
 							bool getKey_A = GetKey(KeyCode_A);
 							bool getKey_D = GetKey(KeyCode_D);
 							bool getKey_W = GetKey(KeyCode_W);
 							bool getKey_S = GetKey(KeyCode_S);
-							bool getKeys_WD = getKey_W && getKey_D;
-							bool getKeys_SD = getKey_S && getKey_D;
-							bool getKeys_WA = getKey_W && getKey_A;
-							bool getKeys_SA = getKey_S && getKey_A;
+							if (getKey_W)
+							{
+								forceDirection += vec2(0.0f, 1.0f);
+							}
+							if (getKey_S)
+							{
+								forceDirection += vec2(0.0f, -1.0f);
+							}
+							if (getKey_D)
+							{
+								forceDirection += vec2(1.0f, 0.0f);
+							}
+							if (getKey_A)
+							{
+								forceDirection += vec2(-1.0f, 0.0f);
+							}
+							//DebugPrintf(512, "force direction = (%f, %f)\n", forceDirection.x, forceDirection.y);
+							if (forceDirection != vec2(0.0f, 0.0f))
+							{
+								forceDirection = normalize(forceDirection);
+								this->rigidbody->ApplyImpulse(forceDirection, 1.5f);
+							}
 
-							if (getKeys_WD)
-							{
-								this->rigidbody->ApplyImpulse(normalize(vec2(1.0f, 1.0f)), 1.5f);
-							}
-							if (getKeys_SD)
-							{
-								this->rigidbody->ApplyImpulse(normalize(vec2(1.0f, -1.0f)), 1.5f);
-							}
-							if (getKeys_WA)
-							{
-								this->rigidbody->ApplyImpulse(normalize(vec2(-1.0f, 1.0f)), 1.5f);
-							}
-							if (getKeys_SA)
-							{
-								this->rigidbody->ApplyImpulse(normalize(vec2(-1.0f, -1.0f)), 1.5f);
-							}
-							if (!getKeys_WA && !getKeys_SA && getKey_A)
-							{
-								this->rigidbody->ApplyImpulse(vec2(-1.0f, 0.0f), 1.5f);
-							}
-							if (!getKeys_WD && !getKeys_SD && getKey_D)
-							{
-								this->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 1.5f);
-							}
-							if (!getKeys_WD && !getKeys_WA && getKey_W)
-							{
-								this->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
-							}
-							if (!getKeys_SD && !getKeys_SA && getKey_S)
-							{
-								this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 1.5f);
-							}
 
 							if (this->rigidbody->velocity == vec2(0.0f, 0.0f))
 							{
@@ -1412,7 +1445,7 @@ void GameObject::Update_PostPhysics(F32 dt)
 
 							if (GetKeyDown(KeyCode_Spacebar))
 							{
-								CreateFire(this->transform.position + this->facing, false);
+								CreateFire(this->transform.position + this->facing, true);
 							}
 	}
 	break;
@@ -1791,10 +1824,10 @@ void FixAllInterpenetrations()
 			erasePositions.push_back(i);
 		}
 	}
-	for (I32 i = erasePositions.size() - 1; i >= 0; --i)
+	for (I32 ep = erasePositions.size() - 1; ep >= 0; --ep)
 	{
-		size_t index = erasePositions[i];
-		collisions.erase(collisions.begin() + i);
+		size_t index = erasePositions[ep];
+		collisions.erase(collisions.begin() + index);
 	}
 	erasePositions.clear();
 
@@ -2270,7 +2303,7 @@ GameObject* CreateFire(vec2 position, bool debugDraw = true)
 /*
  * Global Game State
  */
-bool globalDebugDraw = false;
+bool globalDebugDraw = true;
 bool resetDebugStatePerFrame = false;
 Camera camera;
 
@@ -2549,7 +2582,7 @@ bool GameInitialize()
 	CreateTree(vec2( 4.0f, -2.0f), debugDraw);
 	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
 
-	heroGO = CreateHero(/*vec2(0.75f, -1.68f)*/vec2(-0.5f, 0.5f), debugDraw);
+	heroGO = CreateHero(/*vec2(0.75f, -2.0f)*/vec2(-0.5f, 0.5f), debugDraw);
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 
