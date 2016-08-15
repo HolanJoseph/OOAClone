@@ -901,6 +901,7 @@ struct GameObject
 		StaticEnvironmentPiece,
 		PlayerCamera,
 		Fire,
+		TransitionBar,
 		Button,
 		/*// Player Character
 		Link,
@@ -1020,6 +1021,9 @@ struct GameObject
 	// NOTE: This needs to be dealt with.
 	vec2 facing;
 	bool moving;
+	F32 movementSpeed;
+	F32 slowPercentage;
+	bool isSlowed;
 	bool pushingForward;
 	bool showRay;
 
@@ -1290,7 +1294,12 @@ void GameObject::Update_PrePhysics(F32 dt)
 							if (forceDirection != vec2(0.0f, 0.0f))
 							{
 								forceDirection = normalize(forceDirection);
-								this->rigidbody->ApplyImpulse(forceDirection, 1.5f);
+								F32 movementSpeed = this->movementSpeed;
+								if (this->isSlowed)
+								{
+									movementSpeed *= this->slowPercentage;
+								}
+								this->rigidbody->ApplyImpulse(forceDirection, movementSpeed);
 							}
 
 
@@ -1491,11 +1500,6 @@ void GameObject::HandleEvent(Event* e)
 	{
 							switch (e->GetType())
 							{
-							case ET_OnCollisionEnter:
-							{
-														//DebugPrintf(512, "PC   OnCollisionEnter\n");
-							}
-							break;
 
 							case ET_OnCollision:
 							{
@@ -1509,12 +1513,6 @@ void GameObject::HandleEvent(Event* e)
 												   {
 													   this->pushingForward = true;
 												   }
-							}
-							break;
-
-							case ET_OnCollisionExit:
-							{
-													   //DebugPrintf(512, "PC   OnCollisionExit\n");
 							}
 							break;
 
@@ -1536,25 +1534,31 @@ void GameObject::HandleEvent(Event* e)
 	}
 	break;
 
-	case Button:
+	case TransitionBar:
 	{
 				   switch (e->GetType())
 				   {
 				   case ET_OnCollisionEnter:
 				   {
-											   DebugPrintf(512, "Button   OnCollisionEnter\n");
-				   }
-				   break;
+											   GameObject* go = (GameObject*)e->arguments[1].AsPointer();
+											   vec2 collisionNormal = e->arguments[2].AsVec2();
 
-				   case ET_OnCollision:
-				   {
-										  DebugPrintf(512, "Button   OnCollision\n");
-				   }
-				   break;
+											   if (go->GetType() == PlayerCharacter)
+											   {
+												   DebugPrintf(512, "character entered\n");
 
-				   case ET_OnCollisionExit:
-				   {
-											  DebugPrintf(512, "Button   OnCollisionExit\n");
+												   vec2 ep = floor(this->transform.position - (collisionNormal * 0.1f)) + TileDimensions;
+												   if (collisionNormal.x != 0.0f)
+												   {
+													   go->transform.position.x = ep.x;
+												   }
+												   if (collisionNormal.y != 0.0f)
+												   {
+													   go->transform.position.y = ep.y;
+												   }
+
+												   //go->transform.position -= collisionNormal * 0.8f;
+											   }
 				   }
 				   break;
 
@@ -1698,6 +1702,8 @@ vector<CollisionPair> GenerateContacts()
 			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
 			if (ci.collided)
 			{
+				GameObject::Type go1T = go1->GetType();
+				GameObject::Type go2T = go2->GetType();
 				ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
 				result.push_back(CollisionPair(go1, go2, ci));
 			}
@@ -1815,6 +1821,8 @@ void FixAllInterpenetrations()
 
 	vector<CollisionPair> collisions = GenerateContacts();
 
+	// NOTE: This is all really janky
+	// NOTE: Any weird behavior wrt phantoms is likely caused by this chunk of code
 	// Remove all phantoms from the contacts list because we
 	//	don't want to push objects out of them we just want to know what is inside of them.
 	vector<size_t> erasePositions;
@@ -1822,7 +1830,8 @@ void FixAllInterpenetrations()
 	{
 		GameObject* go1 = collisions[i].go1;
 		GameObject* go2 = collisions[i].go2;
-		if (go1->collisionShape->IsPhantom() || go2->collisionShape->IsPhantom())
+		CollisionInfo_2D ci = collisions[i].info;
+		if ((go1->collisionShape->IsPhantom() || go2->collisionShape->IsPhantom()) && ci.collided)
 		{
 			interpenetrationsFixed.push_back(CollisionEventPair(collisions[i].go1, collisions[i].go2, collisions[i].info.normal));
 			erasePositions.push_back(i);
@@ -2164,23 +2173,29 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->transform.position = position;
 	hero->AddTag(GameObject::Hero);
 	hero->AddAnimator();
-	hero->animator->SetSpriteOffset(vec2(0.0f, 0.4375f)); 
-	hero->animator->AddAnimation("up", "link_Up", 2, 0.33f);
-	hero->animator->AddAnimation("down", "link_Down", 2, 0.33f);
-	hero->animator->AddAnimation("right", "link_Right", 2, 0.33f);
-	hero->animator->AddAnimation("left", "link_Left", 2, 0.33f);
-	hero->animator->AddAnimation("pushUp", "link_PushUp", 2, 0.33f);
-	hero->animator->AddAnimation("pushDown", "link_PushDown", 2, 0.33f);
-	hero->animator->AddAnimation("pushRight", "link_PushRight", 2, 0.33f);
-	hero->animator->AddAnimation("pushLeft", "link_PushLeft", 2, 0.33f);
+	F32 movementAnimationsSpeed = 0.2f; //0.2475f; // 0.33f; // NOTE: This is NOT a measured speed
+	hero->animator->AddAnimation("up", "link_Up", 2, movementAnimationsSpeed);
+	hero->animator->AddAnimation("down", "link_Down", 2, movementAnimationsSpeed);
+	hero->animator->AddAnimation("right", "link_Right", 2, movementAnimationsSpeed);
+	hero->animator->AddAnimation("left", "link_Left", 2, movementAnimationsSpeed);
+	hero->animator->AddAnimation("pushUp", "link_PushUp", 2, movementAnimationsSpeed);
+	hero->animator->AddAnimation("pushDown", "link_PushDown", 2, movementAnimationsSpeed);
+	hero->animator->AddAnimation("pushRight", "link_PushRight", 2, movementAnimationsSpeed);
+	hero->animator->AddAnimation("pushLeft", "link_PushLeft", 2, movementAnimationsSpeed);
 	hero->animator->StartAnimation("down");
 	hero->animator->PauseAnimation();
 	hero->AddRigidbody(1.0f, 0.0f, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f));
-	hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f), vec2(0.0f, 4.5f/16.0f)));
+	// NOTE: hero position as bottom of feet
+	//hero->animator->SetSpriteOffset(vec2(0.0f, 0.4375f)); 
+	//hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f), vec2(0.0f, 4.5f/16.0f)));
+	hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f), vec2(0.0f, -2.5f / 16.0f)));
 
 	// State
 	hero->facing = vec2(0.0f, -1.0f);
 	hero->moving = false;
+	hero->movementSpeed = 2.5f;
+	hero->slowPercentage = 0.5f;
+	hero->isSlowed = false;
 	hero->pushingForward = false;
 	hero->showRay = debugDraw;
 
@@ -2305,6 +2320,32 @@ GameObject* CreateFire(vec2 position, bool debugDraw = true)
 	return fire;
 }
 
+GameObject* CreateHorizontalTransitionBar(vec2 position, bool debugDraw = true)
+{
+	GameObject* ctb = CreateGameObject(GameObject::TransitionBar);
+
+	ctb->transform.position = position;
+	ctb->transform.scale = vec2(1.0f, 1.0f); // vec2(10.0f, 0.5f);
+	ctb->AddTag(GameObject::Environment);
+	ctb->AddCollisionShape(Rectangle_2D(vec2(5.0f, 0.125f), vec2(0.0f, -0.125f), true));
+	ctb->SetDebugState(debugDraw);
+
+	return ctb;
+}
+
+GameObject* CreateVerticalTransitionBar(vec2 position, bool debugDraw = true)
+{
+	GameObject* ctb = CreateGameObject(GameObject::TransitionBar);
+
+	ctb->transform.position = position;
+	ctb->transform.scale = vec2(1.0f, 1.0f); // vec2(10.0f, 0.5f);
+	ctb->AddTag(GameObject::Environment);
+	ctb->AddCollisionShape(Rectangle_2D(vec2(0.125f, 4.0f), vec2(0.0f, 0.0f), true));
+	ctb->SetDebugState(debugDraw);
+
+	return ctb;
+}
+
 /*
  * Global Game State
  */
@@ -2312,7 +2353,7 @@ bool globalDebugDraw = true;
 bool resetDebugStatePerFrame = false;
 Camera camera;
 
-#define NUMGAMEOBJECTS 1 // NOTE: LUL
+//#define NUMGAMEOBJECTS 1 // NOTE: LUL
 GameObject* flowerGO;
 GameObject* treeGO;
 GameObject* heroGO;
@@ -2393,9 +2434,9 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 
 	if (hasAnimations)
 	{
-		gameObject->animator->StepElapsedAnimationTime(dt);
 		TextureHandle animationFrame = gameObject->animator->GetCurrentAnimationFrame();
-		DrawSprite(animationFrame, gameObject->animator->GetSpriteOffset(), gameObject->transform, &camera);
+		vec2 spriteOffset = gameObject->animator->GetSpriteOffset();
+		DrawSprite(animationFrame, spriteOffset, gameObject->transform, &camera);
 	}
 	else if (hasSprite)
 	{
@@ -2414,7 +2455,9 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 			Rectangle_2D* rect = (Rectangle_2D*)gameObject->collisionShape;
 			if (rect->IsPhantom())
 			{
-				DrawRectangle(rect->halfDim, gameObject->transform, vec4(0.0f, 0.0f, 1.0f, 0.3f), &camera);
+				Transform t = gameObject->transform;
+				t.position += rect->GetOffset();
+				DrawRectangle(rect->halfDim, t, vec4(0.0f, 0.0f, 1.0f, 0.3f), &camera);
 			}
 			vec2 upperLeft = gameObject->transform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * gameObject->transform.scale) + gameObject->collisionShape->GetOffset();
 			vec2 dimensions = rect->halfDim * 2.0f * gameObject->transform.scale;
@@ -2587,7 +2630,10 @@ bool GameInitialize()
 	CreateTree(vec2( 4.0f, -2.0f), debugDraw);
 	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
 
+
 	CreateBackground("background_10-6", vec2(0.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), debugDraw);
+	CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), debugDraw);
 	CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
 	CreateDancingFlowers(vec2(1.5f, 10.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, 5.5f), debugDraw); // Left Group Start
@@ -2604,10 +2650,13 @@ bool GameInitialize()
 	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);
 
 	CreateBackground("background_11-6", vec2(10.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), debugDraw);
+	CreateVerticalTransitionBar(vec2(-5.0f, 16.0f), debugDraw);
+
 	CreateBackground("background_11-7", vec2(10.0f, 16.0f), debugDraw);
 	CreateBackground("background_10-7", vec2(0.0f, 16.0f), debugDraw);
 
-	heroGO = CreateHero(/*vec2(0.75f, -2.0f)*/vec2(-0.5f, 0.5f), debugDraw);
+	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 
@@ -2633,6 +2682,19 @@ void UpdateGameObjects_PostPhysics(F32 dt)
 	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
 	{
 		GameObject::gameObjects[i]->Update_PostPhysics(dt);
+	}
+}
+
+void AdvanceAnimations(F32 dt)
+{
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		bool hasAnimations = go->animator != NULL && go->animator->NumberOfAnimations();
+		if (hasAnimations)
+		{
+			go->animator->StepElapsedAnimationTime(dt);
+		}
 	}
 }
 
@@ -2726,7 +2788,7 @@ void GameUpdate(F32 dt)
 
 
 	//DebugPrintf(512, "delta time = %f\n", dt);
-	//heroGO->rigidbody->ApplyImpulse(vec2(1.0f, 0.0f), 1.5f);
+	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
  	Clear();
 	UpdateGameObjects_PrePhysics(dt);
 	IntegratePhysicsObjects(dt);
@@ -2745,6 +2807,7 @@ void GameUpdate(F32 dt)
 
 
 	UpdateGameObjects_PostPhysics(dt);
+	AdvanceAnimations(dt);
 	DrawGameObjects(dt);
 
 	ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
