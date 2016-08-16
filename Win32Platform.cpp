@@ -1295,3 +1295,8 @@ void DebugPrintf(U32 size, const char* formatString, ...)
 	va_end(vl);
 	free(buff);
 }
+
+void SystemSleep(U32 milliseconds)
+{
+	Sleep(milliseconds);
+}

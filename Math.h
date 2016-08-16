@@ -99,10 +99,3 @@ inline vec2 Perpendicular_2D(vec2 v)
 
 	return result;
 }
-
-inline vec2 Lerp(vec2 start, vec2 end, F32 t)
-{
-	vec2 result;
-	result = ((1.0f - t) * start) + (t * end);
-	return result;
-}

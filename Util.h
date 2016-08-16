@@ -68,3 +68,18 @@ inline U32 String_HashFunction(const char* key, U32 numberOfIndices)
 
 	return hash;
 }
+
+inline vec2 Lerp(vec2 start, vec2 end, F32 t)
+{
+	vec2 result;
+	result = ((1.0f - t) * start) + (t * end);
+	return result;
+}
+
+inline vec2 LerpClamped(vec2 start, vec2 end, F32 t)
+{
+	F32 clampedt = ClampRange_F32(t, 0.0f, 1.0f);
+	vec2 result;
+	result = Lerp(start, end, clampedt);
+	return result;
+}

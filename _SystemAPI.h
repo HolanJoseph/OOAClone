@@ -13,6 +13,8 @@ void Assert(int expression);
 void DebugPrint(const char* outputString);
 void DebugPrintf(U32 size, const char* formatString, ...);
 
+void SystemSleep(U32 milliseconds);
+
 
 
 
@@ -89,6 +91,18 @@ inline SystemTime MillisecondsToSystemTime(U32 milliseconds)
 	return result;
 }
 
+inline U32 SystemTimeToMilliseconds(SystemTime time)
+{
+	U32 result;
+
+	result = 3600000 * time.hours;
+	result += 60000 * time.minutes;
+	result += 1000 * time.seconds;
+	result += time.milliseconds;
+
+	return result;
+}
+
 inline SystemTime operator-(const SystemTime& lhs, const SystemTime& rhs)
 {
 	SystemTime result;
@@ -101,7 +115,7 @@ inline SystemTime operator-(const SystemTime& lhs, const SystemTime& rhs)
 	return result;
 }
 
-// NOTE: Assumed to be milliseconds
+// NOTE: System time functions that take U32 are assumed to be in milliseconds
 inline SystemTime operator-(const SystemTime& lhs, const U32& rhs)
 {
 	SystemTime result;
@@ -124,7 +138,6 @@ inline SystemTime operator+(const SystemTime& lhs, const SystemTime& rhs)
 	return result;
 }
 
-// NOTE: Assumed to be milliseconds
 inline SystemTime operator+(const SystemTime& lhs, const U32& rhs)
 {
 	SystemTime result;
@@ -135,7 +148,6 @@ inline SystemTime operator+(const SystemTime& lhs, const U32& rhs)
 	return result;
 }
 
-// NOTE: Assumed to be milliseconds
 inline SystemTime operator+(const U32& lhs, const SystemTime& rhs)
 {
 	SystemTime result;
@@ -145,15 +157,36 @@ inline SystemTime operator+(const U32& lhs, const SystemTime& rhs)
 	return result;
 }
 
-//// NOTE: Subtracting a time that is larger than the initial time WILL wrap
-//SystemTime operator-(const SystemTime& lhs, const SystemTime& rhs); 
-//SystemTime operator+(const SystemTime& lhs, const SystemTime& rhs);
-//
-//// NOTE: Assumed to be milliseconds
-//SystemTime operator-(const SystemTime& lhs, const U64& rhs);
-//SystemTime operator+(const SystemTime& lhs, const U64& rhs);
-//SystemTime operator+(const U64& lhs, const SystemTime& rhs);
+inline F32 operator/(const U32& lhs, const SystemTime& rhs)
+{
+	F32 result;
 
+	U32 rhsMS = SystemTimeToMilliseconds(rhs);
+	result = (F32)((F64)lhs / (F64)rhsMS);
+
+	return result;
+}
+
+inline F32 operator/(const SystemTime& lhs, const SystemTime& rhs)
+{
+	F32 result;
+
+	U32 lhsMS = SystemTimeToMilliseconds(lhs);
+	U32 rhsMS = SystemTimeToMilliseconds(rhs);
+	result = (F32)((F64)lhsMS / (F64)rhsMS);
+
+	return result;
+}
+
+inline F32 operator/(const SystemTime& lhs, const U32& rhs)
+{
+	F32 result;
+
+	U32 lhsMS = SystemTimeToMilliseconds(lhs);
+	result = (F32)((F64)lhsMS / (F64)rhs);
+
+	return result;
+}
 
 SystemTime GetTimeSinceStartup();
 

@@ -860,6 +860,8 @@ enum EventType
 	ET_OnCollision,
 	ET_OnCollisionExit,
 
+	ET_DummyEvent,
+
 	ET_COUNT
 };
 
@@ -872,6 +874,16 @@ struct Event
 	Event()
 	{
 		this->type = ET_NULL;
+	}
+
+	Event(Event* e)
+	{	
+		EventType et = e->GetType();
+		this->SetType(et);
+		for (size_t i = 0; i < this->MAXARGUMENTCOUNT; ++i)
+		{
+			this->arguments[i] = e->arguments[i];
+		}
 	}
 
 	EventType GetType()
@@ -1700,6 +1712,51 @@ vector<GameObject*> FindGameObjectByTag(GameObject::Tags tag)
 	return result;
 }
 
+void SendEvent(GameObject* gameObject, Event* e)
+{
+	gameObject->HandleEvent(e);
+}
+
+struct QueuedEvent
+{
+	GameObject* recipient;
+	Event* e;
+	U32 numberOfFramesToWait;
+
+	QueuedEvent(GameObject* recipient, Event* e, U32 numberOfFramesToWait)
+	{
+		this->recipient = recipient;
+		this->e = new Event(e);
+		this->numberOfFramesToWait = numberOfFramesToWait;
+	}
+};
+vector<QueuedEvent> queuedEvents;
+void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait)
+{
+	queuedEvents.push_back(QueuedEvent(gameObject, e, numberOfFramesToWait));
+}
+
+void SendQueuedEvents()
+{
+	for (size_t i = 0; i < queuedEvents.size(); ++i)
+	{
+		QueuedEvent* qe = &(queuedEvents[i]);
+		--qe->numberOfFramesToWait;
+		if (qe->numberOfFramesToWait <= 0)
+		{
+			SendEvent(qe->recipient, qe->e);
+		}
+	}
+
+	for (I32 i = queuedEvents.size() - 1; i >= 0; --i)
+	{
+		QueuedEvent* qe = &(queuedEvents[i]);
+		if (qe->numberOfFramesToWait <= 0)
+		{
+			queuedEvents.erase(queuedEvents.begin() + i);
+		}
+	}
+}
 
 
 /*
@@ -2703,6 +2760,10 @@ void DrawGameObjects(F32 dt)
 
 
 
+SystemTime startTime;
+U32 lerpLength;
+vec2 startPos;
+vec2 endPos;
 /*
  * Core Game API Functions
  */
@@ -2778,6 +2839,17 @@ bool GameInitialize()
 	//renderCamera->position = vec2(0.0f, 0.0f);
 	//renderCamera->rotationAngle = 0.0f;
 	//renderCamera->scale = 1.0f;
+
+	//startTime = GetTimeSinceStartup();
+	//lerpLength = 2000;
+	//startPos = heroGO->transform.position;
+	//endPos = startPos + vec2(0.0f, -2.0f);
+	Event testEvent;
+	testEvent.SetType(ET_DummyEvent);
+	testEvent.arguments[0] = EventArgument((void*)heroGO);
+	testEvent.arguments[1] = EventArgument((void*)"hello");
+	testEvent.arguments[2] = EventArgument(5.34f);
+	QueueEvent(heroGO, &testEvent, 1);
 
 	return true;
 }
@@ -2928,11 +3000,14 @@ void GameUpdate(F32 dt)
 	//biasedTransform.scale *= 1.2f;
 	//CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, biasedTransform/*heroGO->transform*/, treeGO->collisionShape, treeGO->transform);
 	//vec2 perp = Perpendicular_2D(vec2(0.0f, 1.0f));
-
-
+	//SystemTime currTime = GetTimeSinceStartup();
+	//SystemTime diffTime = currTime - startTime;
+	//F32 percentageOfTotal = diffTime / lerpLength;
+	//vec2 lerpedPosition = LerpClamped(startPos, endPos, percentageOfTotal);
+	//heroGO->transform.position = lerpedPosition;
 	
 
-
+	SendQueuedEvents();
 	UpdateGameObjects_PostPhysics(dt);
 	AdvanceAnimations(dt);
 	ReconcileCameras();
