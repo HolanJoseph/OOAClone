@@ -35,6 +35,8 @@ HWND  windowHandle;
 HDC   windowDC;
 HGLRC windowOpenGLContext;
 
+ULARGE_INTEGER applicationStartTime;
+
 // NOTE: Input globals
 U64 inputBuffer;
 U64 inputBackBuffer;
@@ -375,6 +377,12 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 	DebugPrintf(256, "GL Version %i.%i\nIs doublebuffered: %i\n", glMajor, glMinor, glDoublebuffered);
 
 
+	// NOTE: Time
+	FILETIME tempFT;
+	GetSystemTimeAsFileTime(&tempFT);
+	applicationStartTime.HighPart = tempFT.dwHighDateTime;
+	applicationStartTime.LowPart = tempFT.dwLowDateTime;
+
 
 	bool gameSetup = GameInitialize();
 	if (!gameSetup)
@@ -382,7 +390,6 @@ INT WINAPI WinMain(HINSTANCE instanceHandle, HINSTANCE deadArg, PSTR commandLine
 		DebugPrint("Couldn't set up game state\n");
 		return 1;
 	}
-
 
 
 	ShowWindow(windowHandle, showOnStartup);
@@ -602,6 +609,40 @@ void SetWindowTitle(const char* newTitle)
 {
 	SetWindowText( windowHandle, newTitle);
 }
+
+
+
+
+
+
+/*
+ * TIME API IMPLEMENTATION
+ */
+SystemTime GetTimeSinceStartup()
+{
+	SystemTime result;
+
+	FILETIME tempFileTime;
+	GetSystemTimeAsFileTime(&tempFileTime);
+	ULARGE_INTEGER currentTime;
+	currentTime.HighPart = tempFileTime.dwHighDateTime;
+	currentTime.LowPart = tempFileTime.dwLowDateTime;
+	ULARGE_INTEGER diffTime;
+	diffTime.QuadPart = currentTime.QuadPart - applicationStartTime.QuadPart;
+	tempFileTime.dwHighDateTime = diffTime.HighPart;
+	tempFileTime.dwLowDateTime = diffTime.LowPart;
+	SYSTEMTIME timeDiffSystemTime;
+	FileTimeToSystemTime(&tempFileTime, &timeDiffSystemTime);
+
+	result.hours = timeDiffSystemTime.wHour;
+	result.minutes = timeDiffSystemTime.wMinute;
+	result.seconds = timeDiffSystemTime.wSecond;
+	result.milliseconds = timeDiffSystemTime.wMilliseconds;
+
+	return result;
+}
+
+
 
 
 

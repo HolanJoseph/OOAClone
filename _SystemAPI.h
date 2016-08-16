@@ -64,6 +64,105 @@ void  SetWindowTitle(const char* newTitle);
 
 
 /*
+ * TIME API
+ */
+struct SystemTime 
+{
+	U32 hours;
+	U32 minutes;
+	U32 seconds;
+	U32 milliseconds;
+};
+
+inline SystemTime MillisecondsToSystemTime(U32 milliseconds)
+{
+	SystemTime result;
+
+	result.hours = milliseconds / 3600000;
+	milliseconds -= result.hours * 3600000;
+	result.minutes = milliseconds / 60000;
+	milliseconds -= result.minutes * 60000;
+	result.seconds = milliseconds / 1000;
+	milliseconds -= result.seconds * 1000;
+	result.milliseconds = milliseconds;
+
+	return result;
+}
+
+inline SystemTime operator-(const SystemTime& lhs, const SystemTime& rhs)
+{
+	SystemTime result;
+
+	result.hours = lhs.hours - rhs.hours;
+	result.minutes = lhs.minutes - rhs.minutes;
+	result.seconds = lhs.seconds - rhs.seconds;
+	result.milliseconds = lhs.milliseconds - rhs.milliseconds;
+
+	return result;
+}
+
+// NOTE: Assumed to be milliseconds
+inline SystemTime operator-(const SystemTime& lhs, const U32& rhs)
+{
+	SystemTime result;
+
+	SystemTime timeToSubtract = MillisecondsToSystemTime(rhs);
+	result = lhs - timeToSubtract;
+
+	return result;
+}
+
+inline SystemTime operator+(const SystemTime& lhs, const SystemTime& rhs)
+{
+	SystemTime result;
+
+	result.hours = lhs.hours + rhs.hours;
+	result.minutes = lhs.minutes + rhs.minutes;
+	result.seconds = lhs.seconds + rhs.seconds;
+	result.milliseconds = lhs.milliseconds + rhs.milliseconds;
+
+	return result;
+}
+
+// NOTE: Assumed to be milliseconds
+inline SystemTime operator+(const SystemTime& lhs, const U32& rhs)
+{
+	SystemTime result;
+
+	SystemTime timeToAdd = MillisecondsToSystemTime(rhs);
+	result = lhs + timeToAdd;
+
+	return result;
+}
+
+// NOTE: Assumed to be milliseconds
+inline SystemTime operator+(const U32& lhs, const SystemTime& rhs)
+{
+	SystemTime result;
+
+	result = rhs + lhs;
+
+	return result;
+}
+
+//// NOTE: Subtracting a time that is larger than the initial time WILL wrap
+//SystemTime operator-(const SystemTime& lhs, const SystemTime& rhs); 
+//SystemTime operator+(const SystemTime& lhs, const SystemTime& rhs);
+//
+//// NOTE: Assumed to be milliseconds
+//SystemTime operator-(const SystemTime& lhs, const U64& rhs);
+//SystemTime operator+(const SystemTime& lhs, const U64& rhs);
+//SystemTime operator+(const U64& lhs, const SystemTime& rhs);
+
+
+SystemTime GetTimeSinceStartup();
+
+
+
+
+
+
+/*
  *  INPUT API
  */
 enum KeyCode
