@@ -32,8 +32,9 @@ using std::vector;
 #define GAME 1
 
 
-
+// NOTE: These are half dimensions
 const vec2 TileDimensions = vec2(0.5f, 0.5f);
+const vec2 ScreenDimensions = vec2(5.0f, 4.0f);
 
 
 
@@ -900,8 +901,10 @@ struct GameObject
 		PlayerCharacter,
 		StaticEnvironmentPiece,
 		PlayerCamera,
-		Fire,
 		TransitionBar,
+		Fire,
+
+
 		Button,
 		/*// Player Character
 		Link,
@@ -1016,6 +1019,7 @@ struct GameObject
 	AnimationController* animator;
 	RigidBody* rigidbody;
 	Shape_2D* collisionShape;
+	Camera* camera;
 
 	// State
 	// NOTE: This needs to be dealt with.
@@ -1038,6 +1042,7 @@ struct GameObject
 		this->animator = NULL;
 		this->rigidbody = NULL;
 		this->collisionShape = NULL;
+		this->camera = NULL;
 	}
 
 	void SetType(Type type);
@@ -1053,11 +1058,13 @@ struct GameObject
 	void AddRigidbody(F32 invmass = 0.0f, F32 dampingfactor = 0.0f, vec2 velocity = vec2(0.0f, 0.0f), vec2 force = vec2(0.0f));
 	template <typename S>
 	void AddCollisionShape(S shape);
+	void AddCamera(vec2 halfDim);
 
 	void RemoveSprite();
 	void RemoveAnimator();
 	void RemoveRigidbody();
 	void RemoveCollisionShape();
+	void RemoveCamera();
 
 	void Update_PrePhysics(F32 dt);
 	void Update_PostPhysics(F32 dt);
@@ -1111,6 +1118,8 @@ bool GameObject::HasTag(Tags tag)
 	return result;
 }
 
+
+
 void GameObject::AddSprite(const char * sprite)
 {
 	this->sprite = new Sprite();
@@ -1145,6 +1154,19 @@ void GameObject::AddCollisionShape(S shape)
 	}
 	//collisionGameObjects.push_back(this);
 }
+
+void SetRenderCamera(Camera* camera);
+void GameObject::AddCamera(vec2 halfDim)
+{
+	this->camera = new Camera();
+	this->camera->position = this->transform.position;
+	this->camera->scale = 1.0f;
+	this->camera->rotationAngle = this->transform.rotationAngle;
+	this->camera->ResizeViewArea(halfDim);
+	SetRenderCamera(this->camera);
+}
+
+
 
 void GameObject::RemoveSprite()
 {
@@ -1198,6 +1220,14 @@ void GameObject::RemoveCollisionShape()
 	this->collisionShape = NULL;
 }
 
+void GameObject::RemoveCamera()
+{
+	delete this->camera;
+	this->camera = NULL;
+}
+
+
+
 /*
  * Forward declarations for the update functions
  */
@@ -1212,10 +1242,14 @@ GameObject* CreateSpookyTree(vec2 position, bool debugDraw);
 GameObject* CreateBlocker(vec2 position, vec2 scale, bool debugDraw);
 GameObject* CreateButton(vec2 position, bool debugDraw);
 GameObject* CreateFire(vec2 position, bool debugDraw);
-
+GameObject* CreateHorizontalTransitionBar(vec2 position, bool debugDraw);
+GameObject* CreateVerticalTransitionBar(vec2 position, bool debugDraw);
+GameObject* CreatePlayerCamera(vec2 position, bool debugDraw);
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle);
+vector<GameObject*> FindGameObjectByType(GameObject::Type type);
+vector<GameObject*> FindGameObjectByTag(GameObject::Tags tag);
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
@@ -1545,19 +1579,34 @@ void GameObject::HandleEvent(Event* e)
 
 											   if (go->GetType() == PlayerCharacter)
 											   {
-												   DebugPrintf(512, "character entered\n");
-
+												   vector<GameObject*> playerCameras = FindGameObjectByType(PlayerCamera);
 												   vec2 ep = floor(this->transform.position - (collisionNormal * 0.1f)) + TileDimensions;
 												   if (collisionNormal.x != 0.0f)
 												   {
 													   go->transform.position.x = ep.x;
+
+													   if (collisionNormal.x > 0)
+													   {
+														   playerCameras[0]->transform.position.x -= ScreenDimensions.x * 2.0f;
+													   }
+													   else
+													   {
+														   playerCameras[0]->transform.position.x += ScreenDimensions.x * 2.0f;
+													   }
 												   }
 												   if (collisionNormal.y != 0.0f)
 												   {
 													   go->transform.position.y = ep.y;
+													   
+													   if (collisionNormal.y > 0)
+													   {
+														   playerCameras[0]->transform.position.y -= ScreenDimensions.y * 2.0f;
+													   }
+													   else
+													   {
+														   playerCameras[0]->transform.position.y += ScreenDimensions.y * 2.0f;
+													   }
 												   }
-
-												   //go->transform.position -= collisionNormal * 0.8f;
 											   }
 				   }
 				   break;
@@ -1616,6 +1665,40 @@ vector<GameObject*> GameObject::gameObjectDestructionQueue;
 vector<GameObject*> GameObject::physicsGameObjects;
 vector<GameObject*> GameObject::collisionGameObjects;
 vector<GameObject*> GameObject::staticCollisionGameObjects;
+
+vector<GameObject*> FindGameObjectByType(GameObject::Type type)
+{
+	vector<GameObject*> result;
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		GameObject::Type goType = go->GetType();
+		if (goType == type)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
+
+vector<GameObject*> FindGameObjectByTag(GameObject::Tags tag)
+{
+	vector<GameObject*> result;
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		bool hasTag = go->HasTag(tag);
+		if (hasTag)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
 
 
 
@@ -2346,17 +2429,33 @@ GameObject* CreateVerticalTransitionBar(vec2 position, bool debugDraw = true)
 	return ctb;
 }
 
+GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
+{
+	GameObject* camera = CreateGameObject(GameObject::PlayerCamera);
+
+	camera->transform.position = position;
+	camera->AddCamera(ScreenDimensions);
+
+	camera->SetDebugState(debugDraw);
+
+
+	return camera;
+}
+
+
+
 /*
  * Global Game State
  */
 bool globalDebugDraw = true;
 bool resetDebugStatePerFrame = false;
-Camera camera;
 
 //#define NUMGAMEOBJECTS 1 // NOTE: LUL
+GameObject* heroGO;
+GameObject* cameraGO;
+
 GameObject* flowerGO;
 GameObject* treeGO;
-GameObject* heroGO;
 GameObject* weedGO1;
 GameObject* weedGO2;
 GameObject* buttonGO;
@@ -2366,52 +2465,65 @@ GameObject* buttonGO;
 /*
  * Rendering
  */
+Camera* renderCamera;
+void SetRenderCamera(Camera* camera)
+{
+	renderCamera = camera;
+}
+
+Camera* GetRenderCamera()
+{
+	Camera* result;
+	result = renderCamera;
+	return result;
+}
+
 void DrawCameraGrid()
 {
 	// NOTE: Camera space grid, corresponding to tiles
-	F32 initialXPos = camera.position.x - 10.0f / 2.0f;
+	F32 initialXPos = renderCamera->position.x - 10.0f / 2.0f;
 	F32 endXPos = initialXPos + 10.0f;
-	F32 posY = camera.position.y + 8.0f / 2.0f;
-	F32 negY = camera.position.y - 8.0f / 2.0f;
+	F32 posY = renderCamera->position.y + 8.0f / 2.0f;
+	F32 negY = renderCamera->position.y - 8.0f / 2.0f;
 	vec4 gridLineColor = vec4(.251f, .251f, .251f, 1.0f);
 	for (F32 xPos = initialXPos; xPos <= endXPos; ++xPos)
 	{
-		DrawLine(vec2(xPos, posY), vec2(xPos, negY), gridLineColor, &camera);
+		DrawLine(vec2(xPos, posY), vec2(xPos, negY), gridLineColor, renderCamera);
 	}
 
-	F32 initialYPos = camera.position.y - 8.0f / 2.0f;
+	F32 initialYPos = renderCamera->position.y - 8.0f / 2.0f;
 	F32 endYPos = initialYPos + 8.0f;
-	F32 posX = camera.position.x + 10.0f / 2.0f;
-	F32 negX = camera.position.x - 10.0f / 2.0f;
+	F32 posX = renderCamera->position.x + 10.0f / 2.0f;
+	F32 negX = renderCamera->position.x - 10.0f / 2.0f;
 	for (F32 yPos = initialYPos; yPos <= endYPos; ++yPos)
 	{
-		DrawLine(vec2(posX, yPos), vec2(negX, yPos), gridLineColor, &camera);
+		DrawLine(vec2(posX, yPos), vec2(negX, yPos), gridLineColor, renderCamera);
 	}
 
-	DrawLine(vec2(0.0f, posY), vec2(0.0f, negY), vec4(0.09f, 0.52f, 0.09f, 1.0f), &camera);
-	DrawLine(vec2(posX, 0.0f), vec2(negX, 0.0f), vec4(0.52f, 0.09f, 0.09f, 1.0f), &camera);
+	DrawLine(vec2(0.0f, posY), vec2(0.0f, negY), vec4(0.09f, 0.52f, 0.09f, 1.0f), renderCamera);
+	DrawLine(vec2(posX, 0.0f), vec2(negX, 0.0f), vec4(0.52f, 0.09f, 0.09f, 1.0f), renderCamera);
 }
 
 // NOTE: DebugDraw functions are shell functions that draw into the world without needing to supply the rendering camera.
 //	the default rendering view is assumed
 void DebugDrawPoint(vec2 p, F32 pointSize, vec4 color)
 {
-	DrawPoint(p, pointSize, color, &camera);
+	DrawPoint(p, pointSize, color, renderCamera);
 }
 
 void DebugDrawLine(vec2 a, vec2 b, vec4 color)
 {
-	DrawLine(a, b, color, &camera);
+	DrawLine(a, b, color, renderCamera);
 }
 
 void DebugDrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset)
 {
-	DrawRectangleOutline(upperLeft, dimensions, color, &camera, offset);
+	DrawRectangleOutline(upperLeft, dimensions, color, renderCamera, offset);
 }
 
 void DebugDrawRectangleSolidColor(vec2 halfDim, Transform transform, vec4 color)
 {
-	DrawRectangle(halfDim, transform, color, &camera);
+	DrawRectangle(halfDim, transform, color, renderCamera);
 }
 
 bool CompareYPosition(GameObject* a, GameObject* b)
@@ -2436,11 +2548,11 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 	{
 		TextureHandle animationFrame = gameObject->animator->GetCurrentAnimationFrame();
 		vec2 spriteOffset = gameObject->animator->GetSpriteOffset();
-		DrawSprite(animationFrame, spriteOffset, gameObject->transform, &camera);
+		DrawSprite(animationFrame, spriteOffset, gameObject->transform, renderCamera);
 	}
 	else if (hasSprite)
 	{
-		DrawSprite(gameObject->sprite->texture, gameObject->sprite->offset, gameObject->transform, &camera);
+		DrawSprite(gameObject->sprite->texture, gameObject->sprite->offset, gameObject->transform, renderCamera);
 	}
 
 	if (gameObject->collisionShape != NULL && gameObject->debugDraw)
@@ -2457,11 +2569,11 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 			{
 				Transform t = gameObject->transform;
 				t.position += rect->GetOffset();
-				DrawRectangle(rect->halfDim, t, vec4(0.0f, 0.0f, 1.0f, 0.3f), &camera);
+				DrawRectangle(rect->halfDim, t, vec4(0.0f, 0.0f, 1.0f, 0.3f), renderCamera);
 			}
 			vec2 upperLeft = gameObject->transform.position + (vec2(-rect->halfDim.x, rect->halfDim.y) * gameObject->transform.scale) + gameObject->collisionShape->GetOffset();
 			vec2 dimensions = rect->halfDim * 2.0f * gameObject->transform.scale;
-			DrawRectangleOutline(upperLeft, dimensions, debugCollisionColor, &camera);
+			DrawRectangleOutline(upperLeft, dimensions, debugCollisionColor, renderCamera);
 		}
 		else if (gameObjectHash == circleHash)
 		{
@@ -2475,16 +2587,16 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 			trianglePoints[0] = vec2(A * vec3(triangle->points[0].x, triangle->points[0].y, 1.0f));
 			trianglePoints[1] = vec2(A * vec3(triangle->points[1].x, triangle->points[1].y, 1.0f));
 			trianglePoints[2] = vec2(A * vec3(triangle->points[2].x, triangle->points[2].y, 1.0f));
-			DrawLine(trianglePoints[0], trianglePoints[1], debugCollisionColor, &camera);
-			DrawLine(trianglePoints[1], trianglePoints[2], debugCollisionColor, &camera);
-			DrawLine(trianglePoints[2], trianglePoints[0], debugCollisionColor, &camera);
+			DrawLine(trianglePoints[0], trianglePoints[1], debugCollisionColor, renderCamera);
+			DrawLine(trianglePoints[1], trianglePoints[2], debugCollisionColor, renderCamera);
+			DrawLine(trianglePoints[2], trianglePoints[0], debugCollisionColor, renderCamera);
 		}
 	}
 
 	// Draw Position
 	if (gameObject->debugDraw)
 	{
-		DrawPoint(gameObject->transform.position, 4, vec4(0.0f, 0.0f, 1.0f, 1.0f), &camera);
+		DrawPoint(gameObject->transform.position, 4, vec4(0.0f, 0.0f, 1.0f, 1.0f), renderCamera);
 	}
 }
 
@@ -2657,14 +2769,15 @@ bool GameInitialize()
 	CreateBackground("background_10-7", vec2(0.0f, 16.0f), debugDraw);
 
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
+	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 
-	
-	camera.halfDim = vec2(5.0f, 4.0f);
-	camera.position = vec2(0.0f, 0.0f);
-	camera.rotationAngle = 0.0f;
-	camera.scale = 1.0f;
+	//renderCamera = new Camera();
+	//renderCamera->halfDim = vec2(5.0f, 4.0f);
+	//renderCamera->position = vec2(0.0f, 0.0f);
+	//renderCamera->rotationAngle = 0.0f;
+	//renderCamera->scale = 1.0f;
 
 	return true;
 }
@@ -2698,6 +2811,20 @@ void AdvanceAnimations(F32 dt)
 	}
 }
 
+void ReconcileCameras()
+{
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		GameObject::Type goType = go->GetType();
+		if (goType == GameObject::PlayerCamera)
+		{
+			go->camera->position = go->transform.position;
+			go->camera->rotationAngle = go->transform.rotationAngle;
+		}
+	}
+}
+
 void DebugDrawGameObjects()
 {
 	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
@@ -2725,27 +2852,27 @@ void GameUpdate(F32 dt)
 	 */
 	if (GetKeyDown(KeyCode_Minus))
 	{
-		camera.halfDim *= 2.0f;
+		renderCamera->halfDim *= 2.0f;
 	}
 	if (GetKeyDown(KeyCode_Equal))
 	{
-		camera.halfDim /= 2.0f;
+		renderCamera->halfDim /= 2.0f;
 	}
 	if (GetKeyDown(KeyCode_Up))
 	{
-		camera.position.y += 8.0f;
+		cameraGO->transform.position.y += 8.0f;
 	}
 	if (GetKeyDown(KeyCode_Down))
 	{
-		camera.position.y -= 8.0f;
+		cameraGO->transform.position.y -= 8.0f;
 	}
 	if (GetKeyDown(KeyCode_Right))
 	{
-		camera.position.x += 10.0f;
+		cameraGO->transform.position.x += 10.0f;
 	}
 	if (GetKeyDown(KeyCode_Left))
 	{
-		camera.position.x -= 10.0f;
+		cameraGO->transform.position.x -= 10.0f;
 	}
 
 	// NOTE: Debug drawing toggle grids, clearing, ray casting
@@ -2808,6 +2935,7 @@ void GameUpdate(F32 dt)
 
 	UpdateGameObjects_PostPhysics(dt);
 	AdvanceAnimations(dt);
+	ReconcileCameras();
 	DrawGameObjects(dt);
 
 	ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
