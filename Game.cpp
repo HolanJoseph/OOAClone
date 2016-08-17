@@ -1285,6 +1285,8 @@ vector<GameObject*> FindGameObjectByType(GameObject::Type type);
 vector<GameObject*> FindGameObjectByTag(GameObject::Tags tag);
 void SendEvent(GameObject* gameObject, Event* e);
 void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
+void PauseAllAnimations();
+void UnpauseAllAnimations();
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
@@ -1439,6 +1441,44 @@ void GameObject::Update_PrePhysics(F32 dt)
 							//this->pushingForward = false;
 							this->facing = newFacing;
 							this->pushingForward = false;
+	}
+	break;
+
+	case PlayerCamera:
+	{
+						 /*
+						 * Camera Controls
+						 *
+						 * - zoom camera out  2x
+						 * + zoom camera in 2x
+						 *
+						 * WASD Move camera to the next screen
+						 */
+						 if (GetKeyDown(KeyCode_Minus))
+						 {
+							 this->camera->halfDim *= 2.0f;
+						 }
+						 if (GetKeyDown(KeyCode_Equal))
+						 {
+							 this->camera->halfDim /= 2.0f;
+						 }
+						 if (GetKeyDown(KeyCode_Up))
+						 {
+							 this->transform.position.y += 8.0f;
+						 }
+						 if (GetKeyDown(KeyCode_Down))
+						 {
+							 this->transform.position.y -= 8.0f;
+						 }
+						 if (GetKeyDown(KeyCode_Right))
+						 {
+							 this->transform.position.x += 10.0f;
+						 }
+						 if (GetKeyDown(KeyCode_Left))
+						 {
+							 this->transform.position.x -= 10.0f;
+						 }
+
 	}
 	break;
 
@@ -1670,11 +1710,13 @@ void GameObject::HandleEvent(Event* e)
 													   }
 												   }
 
+												   PauseAllAnimations();
+
 												   // Queue an event to handle the transition.
 												   Event e;
 												   e.SetType(ET_Transition);
 												   e.arguments[0] = EventArgument(GetTimeSinceStartup());
-												   e.arguments[1] = EventArgument(500 * 2);
+												   e.arguments[1] = EventArgument(750);
 												   e.arguments[2] = EventArgument(go->transform.position);
 												   e.arguments[3] = EventArgument(playerEndPos);
 												   e.arguments[4] = EventArgument(playerCameras[0]->transform.position);
@@ -1723,6 +1765,8 @@ void GameObject::HandleEvent(Event* e)
 											 Event unfreezeE;
 											 unfreezeE.SetType(ET_Unfreeze);
 											 QueueEvent(player, &unfreezeE, 1);
+
+											 UnpauseAllAnimations(); // Note: This should be done on the same frame as the unfreeze.
 										 }
 				   }
 				   break;
@@ -2628,6 +2672,17 @@ GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
 bool globalDebugDraw = true;
 bool resetDebugStatePerFrame = false;
 
+bool pauseAnimations = false;
+void PauseAllAnimations()
+{
+	pauseAnimations = true;
+}
+
+void UnpauseAllAnimations()
+{
+	pauseAnimations = false;
+}
+
 //#define NUMGAMEOBJECTS 1 // NOTE: LUL
 GameObject* heroGO;
 GameObject* cameraGO;
@@ -2881,10 +2936,6 @@ void DrawGameObjects(F32 dt)
 
 
 
-SystemTime startTime;
-U32 lerpLength;
-vec2 startPos;
-vec2 endPos;
 /*
  * Core Game API Functions
  */
@@ -3035,38 +3086,7 @@ void GameUpdate(F32 dt)
 		return;
 	}
 
-	/*
-	 * Camera Controls
-	 *
-	 * - zoom camera out  2x
-	 * + zoom camera in 2x
-	 *
-	 * WASD Move camera to the next screen
-	 */
-	if (GetKeyDown(KeyCode_Minus))
-	{
-		renderCamera->halfDim *= 2.0f;
-	}
-	if (GetKeyDown(KeyCode_Equal))
-	{
-		renderCamera->halfDim /= 2.0f;
-	}
-	if (GetKeyDown(KeyCode_Up))
-	{
-		cameraGO->transform.position.y += 8.0f;
-	}
-	if (GetKeyDown(KeyCode_Down))
-	{
-		cameraGO->transform.position.y -= 8.0f;
-	}
-	if (GetKeyDown(KeyCode_Right))
-	{
-		cameraGO->transform.position.x += 10.0f;
-	}
-	if (GetKeyDown(KeyCode_Left))
-	{
-		cameraGO->transform.position.x -= 10.0f;
-	}
+	
 
 	// NOTE: Debug drawing toggle grids, clearing, ray casting
 	//if (GetKeyDown(KeyCode_1))
@@ -3117,20 +3137,13 @@ void GameUpdate(F32 dt)
 	/*
 	 * Tests
 	 */
-	//Transform biasedTransform = heroGO->transform;
-	//biasedTransform.scale *= 1.2f;
-	//CollisionInfo_2D ci = DetectCollision_2D(heroGO->collisionShape, biasedTransform/*heroGO->transform*/, treeGO->collisionShape, treeGO->transform);
-	//vec2 perp = Perpendicular_2D(vec2(0.0f, 1.0f));
-	//SystemTime currTime = GetTimeSinceStartup();
-	//SystemTime diffTime = currTime - startTime;
-	//F32 percentageOfTotal = diffTime / lerpLength;
-	//vec2 lerpedPosition = LerpClamped(startPos, endPos, percentageOfTotal);
-	//heroGO->transform.position = lerpedPosition;
+
+
 	
 	size_t qs = queuedEventsToProcess.size();
 	SendQueuedEvents();
 	UpdateGameObjects_PostPhysics(dt);
-	AdvanceAnimations(dt);
+	pauseAnimations ? NULL : AdvanceAnimations(dt);
 	ReconcileCameras();
 	DrawGameObjects(dt);
 
