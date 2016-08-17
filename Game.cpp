@@ -742,6 +742,7 @@ enum ArgumentType
 	AT_F32,
 	AT_Bool,
 	AT_Vec2,
+	AT_SystemTime,
 
 	AT_COUNT
 };
@@ -757,6 +758,7 @@ struct EventArgument
 		F32 asF32;
 		bool asBool;
 		F32 asVec2[2];
+		SystemTime asSystemTime;
 	};
 
 	EventArgument()
@@ -799,6 +801,12 @@ struct EventArgument
 		this->type = AT_Vec2;
 		this->asVec2[0] = vec.x;
 		this->asVec2[1] = vec.y;
+	}
+
+	EventArgument(SystemTime time)
+	{
+		this->type = AT_SystemTime;
+		this->asSystemTime = time;
 	}
 
 	ArgumentType GetType()
@@ -850,6 +858,13 @@ struct EventArgument
 		result.y = this->asVec2[1];
 		return result;
 	}
+
+	SystemTime AsSystemTime()
+	{
+		SystemTime result;
+		result = this->asSystemTime;
+		return result;
+	}
 };
 
 enum EventType
@@ -859,6 +874,8 @@ enum EventType
 	ET_OnCollisionEnter,
 	ET_OnCollision,
 	ET_OnCollisionExit,
+
+	ET_Transition,
 
 	ET_DummyEvent,
 
@@ -1262,6 +1279,8 @@ vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distan
 vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle);
 vector<GameObject*> FindGameObjectByType(GameObject::Type type);
 vector<GameObject*> FindGameObjectByTag(GameObject::Tags tag);
+void SendEvent(GameObject* gameObject, Event* e);
+void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
@@ -1592,34 +1611,79 @@ void GameObject::HandleEvent(Event* e)
 											   if (go->GetType() == PlayerCharacter)
 											   {
 												   vector<GameObject*> playerCameras = FindGameObjectByType(PlayerCamera);
-												   vec2 ep = floor(this->transform.position - (collisionNormal * 0.1f)) + TileDimensions;
+												   vec2 endPoint = floor(this->transform.position - (collisionNormal * 0.1f)) + TileDimensions;
+
+												   vec2 playerEndPos = go->transform.position;
+												   vec2 cameraEndPos = playerCameras[0]->transform.position;
+
 												   if (collisionNormal.x != 0.0f)
 												   {
-													   go->transform.position.x = ep.x;
+													   playerEndPos.x = endPoint.x;
 
 													   if (collisionNormal.x > 0)
 													   {
-														   playerCameras[0]->transform.position.x -= ScreenDimensions.x * 2.0f;
+														   cameraEndPos.x -= ScreenDimensions.x * 2.0f;
 													   }
 													   else
 													   {
-														   playerCameras[0]->transform.position.x += ScreenDimensions.x * 2.0f;
+														   cameraEndPos.x += ScreenDimensions.x * 2.0f;
 													   }
 												   }
 												   if (collisionNormal.y != 0.0f)
 												   {
-													   go->transform.position.y = ep.y;
+													   playerEndPos.y = endPoint.y;
 													   
 													   if (collisionNormal.y > 0)
 													   {
-														   playerCameras[0]->transform.position.y -= ScreenDimensions.y * 2.0f;
+														   cameraEndPos.y -= ScreenDimensions.y * 2.0f;
 													   }
 													   else
 													   {
-														   playerCameras[0]->transform.position.y += ScreenDimensions.y * 2.0f;
+														   cameraEndPos.y += ScreenDimensions.y * 2.0f;
 													   }
 												   }
+
+												   Event e;
+												   e.SetType(ET_Transition);
+												   e.arguments[0] = EventArgument(GetTimeSinceStartup());
+												   e.arguments[1] = EventArgument(500 * 2);
+												   e.arguments[2] = EventArgument(go->transform.position);
+												   e.arguments[3] = EventArgument(playerEndPos);
+												   e.arguments[4] = EventArgument(playerCameras[0]->transform.position);
+												   e.arguments[5] = EventArgument(cameraEndPos);
+												   e.arguments[6] = EventArgument((void*)go);
+												   e.arguments[7] = EventArgument((void*)(playerCameras[0]));
+												   QueueEvent(this, &e, 1);
 											   }
+				   }
+				   break;
+
+				   case ET_Transition:
+				   {
+										 //
+										 SystemTime transitionStartTime = e->arguments[0].AsSystemTime();
+										 U32 transitionLength = e->arguments[1].AsU32();
+										 vec2 playerStartPos = e->arguments[2].AsVec2();
+										 vec2 playerEndPos = e->arguments[3].AsVec2();
+										 vec2 cameraStartPos = e->arguments[4].AsVec2();
+										 vec2 cameraEndPos = e->arguments[5].AsVec2();
+										 GameObject* player = (GameObject*)e->arguments[6].AsPointer();
+										 GameObject* camera = (GameObject*)e->arguments[7].AsPointer();
+										 SystemTime currentTime = GetTimeSinceStartup();
+										 SystemTime diffTime = currentTime - transitionStartTime;
+										 F32 percentageTime = diffTime / transitionLength;
+
+										 vec2 newPlayerPos = LerpClamped(playerStartPos, playerEndPos, percentageTime);
+										 vec2 newCameraPos = LerpClamped(cameraStartPos, cameraEndPos, percentageTime);
+
+										 player->transform.position = newPlayerPos;
+										 camera->transform.position = newCameraPos;
+
+										 if (percentageTime < 1.0f)
+										 {
+											 // Send this event again.
+											 QueueEvent(this, e, 1);
+										 }
 				   }
 				   break;
 
@@ -1730,30 +1794,42 @@ struct QueuedEvent
 		this->numberOfFramesToWait = numberOfFramesToWait;
 	}
 };
-vector<QueuedEvent> queuedEvents;
+vector<QueuedEvent> queuedEventsToProcess;
+vector<QueuedEvent> queuedEventsFromThisFrame;
 void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait)
 {
-	queuedEvents.push_back(QueuedEvent(gameObject, e, numberOfFramesToWait));
+	queuedEventsFromThisFrame.push_back(QueuedEvent(gameObject, e, numberOfFramesToWait));
+}
+
+void AddThisFramesQueuedEventsToProcessingQueue()
+{
+	for (size_t i = 0; i < queuedEventsFromThisFrame.size(); ++i)
+	{
+		queuedEventsToProcess.push_back(queuedEventsFromThisFrame[i]);
+	}
+	queuedEventsFromThisFrame.clear();
 }
 
 void SendQueuedEvents()
 {
-	for (size_t i = 0; i < queuedEvents.size(); ++i)
+	for (size_t i = 0; i < queuedEventsToProcess.size(); ++i)
 	{
-		QueuedEvent* qe = &(queuedEvents[i]);
+		QueuedEvent* qe = &(queuedEventsToProcess[i]);
 		--qe->numberOfFramesToWait;
 		if (qe->numberOfFramesToWait <= 0)
 		{
 			SendEvent(qe->recipient, qe->e);
 		}
+		size_t qs = queuedEventsToProcess.size();
+		size_t tlsz = 1;
 	}
 
-	for (I32 i = queuedEvents.size() - 1; i >= 0; --i)
+	for (I32 i = queuedEventsToProcess.size() - 1; i >= 0; --i)
 	{
-		QueuedEvent* qe = &(queuedEvents[i]);
+		QueuedEvent* qe = &(queuedEventsToProcess[i]);
 		if (qe->numberOfFramesToWait <= 0)
 		{
-			queuedEvents.erase(queuedEvents.begin() + i);
+			queuedEventsToProcess.erase(queuedEventsToProcess.begin() + i);
 		}
 	}
 }
@@ -2844,12 +2920,12 @@ bool GameInitialize()
 	//lerpLength = 2000;
 	//startPos = heroGO->transform.position;
 	//endPos = startPos + vec2(0.0f, -2.0f);
-	Event testEvent;
-	testEvent.SetType(ET_DummyEvent);
-	testEvent.arguments[0] = EventArgument((void*)heroGO);
-	testEvent.arguments[1] = EventArgument((void*)"hello");
-	testEvent.arguments[2] = EventArgument(5.34f);
-	QueueEvent(heroGO, &testEvent, 1);
+	//Event testEvent;
+	//testEvent.SetType(ET_DummyEvent);
+	//testEvent.arguments[0] = EventArgument((void*)heroGO);
+	//testEvent.arguments[1] = EventArgument((void*)"hello");
+	//testEvent.arguments[2] = EventArgument(5.34f);
+	//QueueEvent(heroGO, &testEvent, 1);
 
 	return true;
 }
@@ -3006,13 +3082,14 @@ void GameUpdate(F32 dt)
 	//vec2 lerpedPosition = LerpClamped(startPos, endPos, percentageOfTotal);
 	//heroGO->transform.position = lerpedPosition;
 	
-
+	size_t qs = queuedEventsToProcess.size();
 	SendQueuedEvents();
 	UpdateGameObjects_PostPhysics(dt);
 	AdvanceAnimations(dt);
 	ReconcileCameras();
 	DrawGameObjects(dt);
 
+	AddThisFramesQueuedEventsToProcessingQueue();
 	ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
 	
 	// NOTE: For ray testing
