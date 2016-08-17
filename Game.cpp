@@ -877,6 +877,9 @@ enum EventType
 
 	ET_Transition,
 
+	ET_Freeze,
+	ET_Unfreeze,
+
 	ET_DummyEvent,
 
 	ET_COUNT
@@ -1058,6 +1061,7 @@ struct GameObject
 	F32 slowPercentage;
 	bool isSlowed;
 	bool pushingForward;
+	bool frozen;
 	bool showRay;
 
 	F32 lifetime;
@@ -1288,6 +1292,10 @@ void GameObject::Update_PrePhysics(F32 dt)
 	{
 	case PlayerCharacter:
 	{
+							if (this->frozen)
+							{
+								break;
+							}
 							// NOTE: This method seems to be more stable WHY???
 							// NOTE: If pressing A and D and then pressing W or S we move up/ down with 1.5 speed
 							//			this is because both of the diagonal forces are being applied
@@ -1445,6 +1453,11 @@ void GameObject::Update_PostPhysics(F32 dt)
 	{
 	case PlayerCharacter:
 	{
+							if (this->frozen)
+							{
+								break;
+							}
+
 							if (this->moving)
 							{
 								if (this->pushingForward)
@@ -1581,6 +1594,20 @@ void GameObject::HandleEvent(Event* e)
 							}
 							break;
 
+							case ET_Freeze:
+							{
+											  this->frozen = true;
+											  this->animator->PauseAnimation();
+							}
+							break;
+
+							case ET_Unfreeze:
+							{
+												this->frozen = false;
+												this->animator->StartAnimation();
+							}
+							break;
+
 							default:
 							break;
 							}
@@ -1643,6 +1670,7 @@ void GameObject::HandleEvent(Event* e)
 													   }
 												   }
 
+												   // Queue an event to handle the transition.
 												   Event e;
 												   e.SetType(ET_Transition);
 												   e.arguments[0] = EventArgument(GetTimeSinceStartup());
@@ -1654,6 +1682,11 @@ void GameObject::HandleEvent(Event* e)
 												   e.arguments[6] = EventArgument((void*)go);
 												   e.arguments[7] = EventArgument((void*)(playerCameras[0]));
 												   QueueEvent(this, &e, 1);
+
+												   // Queue an even to freeze the player
+												   Event freezeE;
+												   freezeE.SetType(ET_Freeze);
+												   QueueEvent(go, &freezeE, 1);
 											   }
 				   }
 				   break;
@@ -1683,6 +1716,13 @@ void GameObject::HandleEvent(Event* e)
 										 {
 											 // Send this event again.
 											 QueueEvent(this, e, 1);
+										 }
+										 else
+										 {
+											 // Queue an event to the player to unfreeze
+											 Event unfreezeE;
+											 unfreezeE.SetType(ET_Unfreeze);
+											 QueueEvent(player, &unfreezeE, 1);
 										 }
 				   }
 				   break;
@@ -2348,6 +2388,10 @@ void DestroyQueuedGameObject(GameObject* gameObject)
 	{
 		gameObject->RemoveCollisionShape();
 	}
+	if (gameObject->camera != NULL)
+	{
+		gameObject->RemoveCamera();
+	}
 
 	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
 	{
@@ -2414,6 +2458,7 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	hero->isSlowed = false;
 	hero->pushingForward = false;
 	hero->showRay = debugDraw;
+	hero->frozen = false;
 
 	hero->SetDebugState(debugDraw);
 
