@@ -2673,6 +2673,15 @@ bool globalDebugDraw = true;
 bool resetDebugStatePerFrame = false;
 
 bool pauseAnimations = false;
+bool AreAllAnimationsPaused()
+{
+	bool result;
+
+	result = pauseAnimations;
+
+	return result;
+}
+
 void PauseAllAnimations()
 {
 	pauseAnimations = true;
@@ -2681,6 +2690,66 @@ void PauseAllAnimations()
 void UnpauseAllAnimations()
 {
 	pauseAnimations = false;
+}
+
+
+
+bool freezeNextFrame = false;
+bool gameFrozen = false;
+F32 freezeTimer = 0.0f;
+F32 freezeLength = 0;
+
+bool GameFrozen()
+{
+	bool result;
+
+	result = gameFrozen;
+
+	return result;
+}
+
+void StartFreeze()
+{
+	freezeNextFrame = false;
+	gameFrozen = true;
+	freezeTimer = 0.0f;
+}
+
+bool WantsToBeFrozen()
+{
+	bool result;
+	result = freezeNextFrame;
+	return result;
+}
+
+void EndFreeze()
+{
+	freezeNextFrame = false;
+	gameFrozen = false;
+	freezeTimer = 0.0f;
+	freezeLength = 0.0f;
+}
+
+void StepGameFreeze(F32 dt)
+{
+	if (GameFrozen())
+	{
+		freezeTimer += dt;
+		if (freezeTimer >= freezeLength)
+		{
+			EndFreeze();
+		}
+	}
+}
+
+// Game freezes take effect starting the NEXT FRAME
+void FreezeGame(U32 milliseconds)
+{
+	if (!(GameFrozen() || WantsToBeFrozen()))
+	{
+		freezeNextFrame = true;
+		freezeLength = (F32)((F64)milliseconds / (F64)1000);
+	}
 }
 
 //#define NUMGAMEOBJECTS 1 // NOTE: LUL
@@ -2771,6 +2840,7 @@ void SortBinByYPosition(GameObject** bin, size_t count)
 	MergeSort(bin, count, CompareYPosition);
 }
 
+//NOTE:  Draws do not need dt anymore it was for stepping animations internally which has been removed. remove this.
 const vec4 debugCollisionColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 void DrawGameObject(GameObject* gameObject, F32 dt)
 {
@@ -3081,11 +3151,23 @@ F32 time = 0.0f;
 F32 skipThreshold = 0.5f;
 void GameUpdate(F32 dt)
 {
+	// Handle really long frame times. Mainly for debugging/ moving the window around
+	//	we should probably pause the game when the player moves the window around instead of just throwing the frame out 
+	//  this is just a temp measure.
 	if (dt > skipThreshold)
 	{
 		return;
 	}
 
+	// Handle freezing the game.
+	if (WantsToBeFrozen())
+	{
+		StartFreeze();
+	}
+	if (GameFrozen())
+	{
+		StepGameFreeze(dt);
+	}
 	
 
 	// NOTE: Debug drawing toggle grids, clearing, ray casting
@@ -3109,54 +3191,53 @@ void GameUpdate(F32 dt)
 	//	heroGO->showRay = !heroGO->showRay;
 	//}
 
-	//dt = 0.0166f;// *2.0f;
-	//if (heroGO->transform.position.y < 3.0f)
-	//{
-	//	time += dt;
-	//}
-	//else
-	//{
-	//	F32 i = 0;
-	//}
-
-	// NOTE: Get rid of this just for testing IP
-	//time += dt;
-	//if (heroGO->transform.position.y >= 2.0f)
-	//{
-	//	I32 g = 0;
-	//}
-
+	if (time > 2.0f && time <= 3.0f)
+	{
+		time += dt;
+		FreezeGame(2000);
+	}
+	else
+	{
+		time += dt;
+	}
 
 	//DebugPrintf(512, "delta time = %f\n", dt);
 	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
  	Clear();
-	UpdateGameObjects_PrePhysics(dt);
-	IntegratePhysicsObjects(dt);
-	FixAllInterpenetrations();
+	if (!GameFrozen())
+	{
+		DebugPrintf(512, "time: %u\n", SystemTimeToMilliseconds(GetTimeSinceStartup()));
+		UpdateGameObjects_PrePhysics(dt);
+		IntegratePhysicsObjects(dt);
+		FixAllInterpenetrations();
 
-	/*
-	 * Tests
-	 */
+		/*
+		 * Tests
+		 */
 
 
-	
-	size_t qs = queuedEventsToProcess.size();
-	SendQueuedEvents();
-	UpdateGameObjects_PostPhysics(dt);
-	pauseAnimations ? NULL : AdvanceAnimations(dt);
-	ReconcileCameras();
+
+		size_t qs = queuedEventsToProcess.size();
+		SendQueuedEvents();
+		UpdateGameObjects_PostPhysics(dt);
+		AreAllAnimationsPaused() ? NULL : AdvanceAnimations(dt);
+		ReconcileCameras();
+	}
 	DrawGameObjects(dt);
 
-	AddThisFramesQueuedEventsToProcessingQueue();
-	ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
-	
-	// NOTE: For ray testing
-	if (resetDebugStatePerFrame)
+	if (!GameFrozen())
 	{
-		for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+		AddThisFramesQueuedEventsToProcessingQueue();
+		ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
+
+		// NOTE: For ray testing
+		if (resetDebugStatePerFrame)
 		{
-			GameObject* go = GameObject::gameObjects[i];
-			go->SetDebugState(false);
+			for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+			{
+				GameObject* go = GameObject::gameObjects[i];
+				go->SetDebugState(false);
+			}
 		}
 	}
 }
