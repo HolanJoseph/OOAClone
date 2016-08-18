@@ -888,7 +888,7 @@ enum EventType
 struct Event
 {
 	EventType type;
-	static const size_t MAXARGUMENTCOUNT = 8;
+	static const size_t MAXARGUMENTCOUNT = 12;
 	EventArgument arguments[MAXARGUMENTCOUNT];
 
 	Event()
@@ -933,6 +933,7 @@ struct GameObject
 		PlayerCharacter,
 		StaticEnvironmentPiece,
 		PlayerCamera,
+		CameraTetherPoint,
 		TransitionBar,
 		Fire,
 
@@ -1055,6 +1056,7 @@ struct GameObject
 
 	// State
 	// NOTE: This needs to be dealt with.
+	// Player
 	vec2 facing;
 	bool moving;
 	F32 movementSpeed;
@@ -1064,7 +1066,12 @@ struct GameObject
 	bool frozen;
 	bool showRay;
 
+	// Fire
 	F32 lifetime;
+
+	// Camera
+	GameObject* tetherPoint;
+
 
 	GameObject()
 	{
@@ -1278,6 +1285,7 @@ GameObject* CreateFire(vec2 position, bool debugDraw);
 GameObject* CreateHorizontalTransitionBar(vec2 position, bool debugDraw);
 GameObject* CreateVerticalTransitionBar(vec2 position, bool debugDraw);
 GameObject* CreatePlayerCamera(vec2 position, bool debugDraw);
+GameObject* CreateCameraTetherPoint(vec2 position, bool debugDraw);
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle);
@@ -1287,6 +1295,7 @@ void SendEvent(GameObject* gameObject, Event* e);
 void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
 void PauseAllAnimations();
 void UnpauseAllAnimations();
+void FreezeGame(U32 milliseconds);
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
@@ -1678,10 +1687,14 @@ void GameObject::HandleEvent(Event* e)
 											   if (go->GetType() == PlayerCharacter)
 											   {
 												   vector<GameObject*> playerCameras = FindGameObjectByType(PlayerCamera);
+												   GameObject* playerCamera = playerCameras[0];
 												   vec2 endPoint = floor(this->transform.position - (collisionNormal * 0.1f)) + TileDimensions;
 
 												   vec2 playerEndPos = go->transform.position;
-												   vec2 cameraEndPos = playerCameras[0]->transform.position;
+												   vec2 cameraEndPos = playerCamera->transform.position;
+
+												   vector<GameObject*> inRaycast;
+												   vector<GameObject*> cameraTethers;
 
 												   if (collisionNormal.x != 0.0f)
 												   {
@@ -1690,6 +1703,7 @@ void GameObject::HandleEvent(Event* e)
 													   if (collisionNormal.x > 0)
 													   {
 														   cameraEndPos.x -= ScreenDimensions.x * 2.0f;
+														   
 													   }
 													   else
 													   {
@@ -1709,26 +1723,56 @@ void GameObject::HandleEvent(Event* e)
 														   cameraEndPos.y += ScreenDimensions.y * 2.0f;
 													   }
 												   }
+												   inRaycast = RaycastAll_Line_2D(playerCamera->tetherPoint->transform.position, -collisionNormal, 20.0f);
 
+												   for (size_t i = 0; i < inRaycast.size(); ++i)
+												   {
+													   GameObject* go = inRaycast[i];
+													   GameObject::Type goType = go->GetType();
+													   if (goType == CameraTetherPoint)
+													   {
+														   cameraTethers.push_back(go);
+													   }
+												   }
+
+												   GameObject* newCameraTether = NULL;
+												   F32 shortestTetherDistance = 10000.0f;
+												   for (size_t i = 0; i < cameraTethers.size(); i++)
+												   {
+													   GameObject* go = cameraTethers[i];
+													   vec2 toTether = go->transform.position - playerCamera->transform.position;
+													   F32 distanceToTether = length(toTether);
+													   if (distanceToTether <= shortestTetherDistance && distanceToTether > 0.0f)
+													   {
+														   shortestTetherDistance = distanceToTether;
+														   newCameraTether = go;
+													   }
+												   }
+												   GameObject* oldCameraTether = playerCamera->tetherPoint;
+												   playerCamera->tetherPoint = NULL;
+
+												   U32 freezeLength = 250;
+												   FreezeGame(freezeLength);
 												   PauseAllAnimations();
 
 												   // Queue an event to handle the transition.
 												   Event e;
 												   e.SetType(ET_Transition);
-												   e.arguments[0] = EventArgument(GetTimeSinceStartup());
+												   e.arguments[0] = EventArgument(GetTimeSinceStartup() + freezeLength);
 												   e.arguments[1] = EventArgument(750);
 												   e.arguments[2] = EventArgument(go->transform.position);
 												   e.arguments[3] = EventArgument(playerEndPos);
-												   e.arguments[4] = EventArgument(playerCameras[0]->transform.position);
-												   e.arguments[5] = EventArgument(cameraEndPos);
+												   e.arguments[4] = EventArgument(oldCameraTether->transform.position);
+												   e.arguments[5] = EventArgument(newCameraTether->transform.position);
 												   e.arguments[6] = EventArgument((void*)go);
-												   e.arguments[7] = EventArgument((void*)(playerCameras[0]));
-												   QueueEvent(this, &e, 1);
+												   e.arguments[7] = EventArgument((void*)(playerCamera));
+												   e.arguments[8] = EventArgument((void*)(newCameraTether));
+												   QueueEvent(this, &e, 2); // NOTE: Watch to see if this causes jumps again.
 
 												   // Queue an even to freeze the player
 												   Event freezeE;
 												   freezeE.SetType(ET_Freeze);
-												   QueueEvent(go, &freezeE, 1);
+												   QueueEvent(go, &freezeE, 2);
 											   }
 				   }
 				   break;
@@ -1744,6 +1788,7 @@ void GameObject::HandleEvent(Event* e)
 										 vec2 cameraEndPos = e->arguments[5].AsVec2();
 										 GameObject* player = (GameObject*)e->arguments[6].AsPointer();
 										 GameObject* camera = (GameObject*)e->arguments[7].AsPointer();
+										 GameObject* newCameraTether = (GameObject*)e->arguments[8].AsPointer();
 										 SystemTime currentTime = GetTimeSinceStartup();
 										 SystemTime diffTime = currentTime - transitionStartTime;
 										 F32 percentageTime = diffTime / transitionLength;
@@ -1765,6 +1810,8 @@ void GameObject::HandleEvent(Event* e)
 											 Event unfreezeE;
 											 unfreezeE.SetType(ET_Unfreeze);
 											 QueueEvent(player, &unfreezeE, 1);
+
+											 camera->tetherPoint = newCameraTether;
 
 											 UnpauseAllAnimations(); // Note: This should be done on the same frame as the unfreeze.
 										 }
@@ -2657,13 +2704,42 @@ GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
 
 	camera->transform.position = position;
 	camera->AddCamera(ScreenDimensions);
-
 	camera->SetDebugState(debugDraw);
 
+	vector<GameObject*> inRaycast = RaycastAll_Rectangle_2D(camera->transform.position, ScreenDimensions, 0.0f);
+	GameObject* closestTetherPoint = NULL;
+	F32 closestTetherPoint_Distance = 10000.0f;
+	for (size_t i = 0; i < inRaycast.size(); ++i)
+	{
+		GameObject* go = inRaycast[i];
+		GameObject::Type goType = go->GetType();
+		if (goType == GameObject::CameraTetherPoint)
+		{
+			vec2 toTether = go->transform.position - camera->transform.position;
+			F32 distanceToTether = length(toTether);
+			if (distanceToTether < closestTetherPoint_Distance)
+			{
+				closestTetherPoint_Distance = distanceToTether;
+				closestTetherPoint = go;
+			}
+		}
+	}
+	camera->tetherPoint = closestTetherPoint;
 
 	return camera;
 }
 
+GameObject* CreateCameraTetherPoint(vec2 position, bool debugDraw = true)
+{
+	GameObject* tp = CreateGameObject(GameObject::CameraTetherPoint);
+
+	tp->transform.position = position;
+	tp->AddTag(GameObject::Environment);
+	tp->AddCollisionShape(Rectangle_2D(TileDimensions, vec2(0.0f, 0.0f), true));
+	tp->SetDebugState(debugDraw);
+
+	return tp;
+}
 
 
 /*
@@ -3024,6 +3100,9 @@ bool GameInitialize()
 
 	bool debugDraw = globalDebugDraw;
 	CreateBackground("background_10-5", vec2(0.0f, 0.0f), debugDraw);
+	CreateCameraTetherPoint(vec2(0.0f, 0.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
+	CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), debugDraw);
 	CreateDancingFlowers(vec2(-0.5f, -1.5f), debugDraw);
 	CreateDancingFlowers(vec2(-2.5f, 1.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, -0.5f), debugDraw); // Left Group Start
@@ -3047,6 +3126,7 @@ bool GameInitialize()
 
 
 	CreateBackground("background_10-6", vec2(0.0f, 8.0f), debugDraw);
+	CreateCameraTetherPoint(vec2(0.0f, 8.0f), debugDraw);
 	CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), debugDraw);
 	CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), debugDraw);
 	CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
@@ -3064,12 +3144,26 @@ bool GameInitialize()
 	CreateSpookyTree(vec2(4.0f, 10.0f), debugDraw); // Right Group Start
 	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);
 
-	CreateBackground("background_11-6", vec2(10.0f, 8.0f), debugDraw);
+
+	CreateBackground("background_10-7", vec2(0.0f, 16.0f), debugDraw);
+	CreateCameraTetherPoint(vec2(0.0f, 16.0f), debugDraw);
 	CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), debugDraw);
 	CreateVerticalTransitionBar(vec2(-5.0f, 16.0f), debugDraw);
 
+	CreateBackground("background_11-6", vec2(10.0f, 8.0f), debugDraw);
+	CreateCameraTetherPoint(vec2(10.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), debugDraw);
+	CreateVerticalTransitionBar(vec2(5.0f, 8.0f), debugDraw);
+
 	CreateBackground("background_11-7", vec2(10.0f, 16.0f), debugDraw);
-	CreateBackground("background_10-7", vec2(0.0f, 16.0f), debugDraw);
+	CreateCameraTetherPoint(vec2(10.0f, 16.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), debugDraw);
+	CreateVerticalTransitionBar(vec2(5.0f, 16.0f), debugDraw);
+
+
+	// Lefthand tether points
+	CreateCameraTetherPoint(vec2(-10.0f, 8.0f), debugDraw); // NOTE: 9-6
+	CreateCameraTetherPoint(vec2(-10.0f, 16.0f), debugDraw); // NOTE: 9-7
 
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
@@ -3191,22 +3285,21 @@ void GameUpdate(F32 dt)
 	//	heroGO->showRay = !heroGO->showRay;
 	//}
 
-	if (time > 2.0f && time <= 3.0f)
-	{
-		time += dt;
-		FreezeGame(2000);
-	}
-	else
-	{
-		time += dt;
-	}
+	//if (time > 2.0f && time <= 3.0f)
+	//{
+	//	time += dt;
+	//}
+	//else
+	//{
+	//	time += dt;
+	//}
 
 	//DebugPrintf(512, "delta time = %f\n", dt);
 	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
  	Clear();
 	if (!GameFrozen())
 	{
-		DebugPrintf(512, "time: %u\n", SystemTimeToMilliseconds(GetTimeSinceStartup()));
+		//DebugPrintf(512, "time: %u\n", SystemTimeToMilliseconds(GetTimeSinceStartup()));
 		UpdateGameObjects_PrePhysics(dt);
 		IntegratePhysicsObjects(dt);
 		FixAllInterpenetrations();
