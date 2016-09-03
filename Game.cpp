@@ -1,4 +1,3 @@
-// From pc2
 #include "Types.h"
 #include "Math.h"
 
@@ -15,12 +14,9 @@
 #include "AssetNameToFilepathTable.h"
 
 #include "Renderer.h"
-//#include "CollisionDetection2D.h"
 #include "CollisionDetection2DObj.h"
 
 #include "StringAPI_Tests.h"
-
-//#include "CollisionDetection2D_Applet.h"
 
 #include <vector>
 using std::vector;
@@ -28,8 +24,6 @@ using std::vector;
 
 
 
-//#define RUN_UNIT_TESTS 1
-//#define COLLISION2DAPPLET 1
 #define GAME 1
 
 
@@ -109,6 +103,8 @@ struct Sprite
 		this->offset = offset;
 	}
 };
+
+
 
 /*
 *  Animations
@@ -616,6 +612,8 @@ struct AnimationController
 	}
 };
 
+
+
 /*
  * RigidBodies
  */
@@ -1072,6 +1070,8 @@ struct GameObject
 
 	// Camera
 	GameObject* tetherPoint;
+	bool bound;
+	GameObject* target;
 
 
 	GameObject()
@@ -1489,6 +1489,45 @@ void GameObject::Update_PrePhysics(F32 dt)
 							 this->transform.position.x -= 10.0f;
 						 }
 
+						 if (this->bound)
+						 {
+							 this->transform.position = this->target->transform.position;
+
+							 vector<vec2> directions = {vec2(1.0f,0.0f), vec2(-1.0f,0.0f), vec2(0.0f,1.0f), vec2(0.0f,-1.0f)};
+							 vector<F32>  closenesses = {5.0f, 5.0f, 4.0f, 4.0f};
+							 for (size_t i = 0; i < directions.size(); ++i)
+							 {
+								 vec2 direction = directions[i];
+								 F32  closeness = closenesses[i];
+								 vector<GameObject*> gameObjectsInDirection = RaycastAll_Line_2D(this->transform.position, direction, 20.0f); // NOTE: arbitrary number
+								 GameObject* closestTransitionBarInDirection = NULL;
+								 F32 distanceToTransitionBar = 10000.0f;
+								 for (size_t k = 0;  k < gameObjectsInDirection.size(); ++k)
+								 {
+									 GameObject* go = gameObjectsInDirection[k];
+									 GameObject::Type goType = go->GetType();
+									 if (goType == GameObject::TransitionBar)
+									 {
+										 vec2 camera1D = VVM(this->transform.position, direction);
+										 vec2 transitionBar1D = VVM(go->transform.position, direction);
+										 F32 distanceBetween = length(camera1D - transitionBar1D);
+										 if (distanceBetween < distanceToTransitionBar)
+										 {
+											 closestTransitionBarInDirection = go;
+											 distanceToTransitionBar = distanceBetween;
+										 }
+									 }
+								 }
+
+								 if (distanceToTransitionBar < closeness) 
+								 {
+									 F32 difference = closeness - distanceToTransitionBar;
+									 vec2 deltaMovement = direction * difference;
+									 this->transform.position -= deltaMovement;
+								 }
+							 }
+						 }
+
 	}
 	break;
 
@@ -1724,33 +1763,34 @@ void GameObject::HandleEvent(Event* e)
 														   cameraEndPos.y += ScreenDimensions.y * 2.0f;
 													   }
 												   }
-												   inRaycast = RaycastAll_Line_2D(playerCamera->tetherPoint->transform.position, -collisionNormal, 20.0f);
-
-												   for (size_t i = 0; i < inRaycast.size(); ++i)
-												   {
-													   GameObject* go = inRaycast[i];
-													   GameObject::Type goType = go->GetType();
-													   if (goType == CameraTetherPoint)
-													   {
-														   cameraTethers.push_back(go);
-													   }
-												   }
-
-												   GameObject* newCameraTether = NULL;
-												   F32 shortestTetherDistance = 10000.0f;
-												   for (size_t i = 0; i < cameraTethers.size(); i++)
-												   {
-													   GameObject* go = cameraTethers[i];
-													   vec2 toTether = go->transform.position - playerCamera->transform.position;
-													   F32 distanceToTether = length(toTether);
-													   if (distanceToTether <= shortestTetherDistance && distanceToTether > 0.0f)
-													   {
-														   shortestTetherDistance = distanceToTether;
-														   newCameraTether = go;
-													   }
-												   }
-												   GameObject* oldCameraTether = playerCamera->tetherPoint;
-												   playerCamera->tetherPoint = NULL;
+// 												   inRaycast = RaycastAll_Line_2D(playerCamera->tetherPoint->transform.position, -collisionNormal, 20.0f);
+// 
+// 												   for (size_t i = 0; i < inRaycast.size(); ++i)
+// 												   {
+// 													   GameObject* go = inRaycast[i];
+// 													   GameObject::Type goType = go->GetType();
+// 													   if (goType == CameraTetherPoint)
+// 													   {
+// 														   cameraTethers.push_back(go);
+// 													   }
+// 												   }
+//
+// 												   GameObject* newCameraTether = NULL;
+// 												   F32 shortestTetherDistance = 10000.0f;
+// 												   for (size_t i = 0; i < cameraTethers.size(); i++)
+// 												   {
+// 													   GameObject* go = cameraTethers[i];
+// 													   vec2 toTether = go->transform.position - playerCamera->transform.position;
+// 													   F32 distanceToTether = length(toTether);
+// 													   if (distanceToTether <= shortestTetherDistance && distanceToTether > 0.0f)
+// 													   {
+// 														   shortestTetherDistance = distanceToTether;
+// 														   newCameraTether = go;
+// 													   }
+// 												   }
+// 												   GameObject* oldCameraTether = playerCamera->tetherPoint;
+// 												   playerCamera->tetherPoint = NULL;
+												   playerCamera->bound = false;
 
 												   U32 freezeLength = 250;
 												   FreezeGame(freezeLength);
@@ -1763,11 +1803,11 @@ void GameObject::HandleEvent(Event* e)
 												   e.arguments[1] = EventArgument(750);
 												   e.arguments[2] = EventArgument(go->transform.position);
 												   e.arguments[3] = EventArgument(playerEndPos);
-												   e.arguments[4] = EventArgument(oldCameraTether->transform.position);
-												   e.arguments[5] = EventArgument(newCameraTether->transform.position);
+												   e.arguments[4] = EventArgument(playerCamera->transform.position);
+												   e.arguments[5] = EventArgument(cameraEndPos);
 												   e.arguments[6] = EventArgument((void*)go);
 												   e.arguments[7] = EventArgument((void*)(playerCamera));
-												   e.arguments[8] = EventArgument((void*)(newCameraTether));
+												   e.arguments[8] = EventArgument((void*)NULL/*(newCameraTether)*/);
 												   QueueEvent(this, &e, 2); // NOTE: Watch to see if this causes jumps again.
 
 												   // Queue an even to freeze the player
@@ -1812,7 +1852,8 @@ void GameObject::HandleEvent(Event* e)
 											 unfreezeE.SetType(ET_Unfreeze);
 											 QueueEvent(player, &unfreezeE, 1);
 
-											 camera->tetherPoint = newCameraTether;
+											 //camera->tetherPoint = newCameraTether;
+											 camera->bound = true;
 
 											 UnpauseAllAnimations(); // Note: This should be done on the same frame as the unfreeze.
 										 }
@@ -1965,6 +2006,7 @@ void SendQueuedEvents()
 		}
 	}
 }
+
 
 
 /*
@@ -2451,6 +2493,7 @@ vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rot
 }
 
 
+
 /*
  * Generate Prefab
  */
@@ -2707,25 +2750,32 @@ GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
 	camera->AddCamera(ScreenDimensions);
 	camera->SetDebugState(debugDraw);
 
-	vector<GameObject*> inRaycast = RaycastAll_Rectangle_2D(camera->transform.position, ScreenDimensions, 0.0f);
-	GameObject* closestTetherPoint = NULL;
-	F32 closestTetherPoint_Distance = 10000.0f;
-	for (size_t i = 0; i < inRaycast.size(); ++i)
+	//vector<GameObject*> inRaycast = RaycastAll_Rectangle_2D(camera->transform.position, ScreenDimensions, 0.0f);
+	//GameObject* closestTetherPoint = NULL;
+	//F32 closestTetherPoint_Distance = 10000.0f;
+	//for (size_t i = 0; i < inRaycast.size(); ++i)
+	//{
+	//	GameObject* go = inRaycast[i];
+	//	GameObject::Type goType = go->GetType();
+	//	if (goType == GameObject::CameraTetherPoint)
+	//	{
+	//		vec2 toTether = go->transform.position - camera->transform.position;
+	//		F32 distanceToTether = length(toTether);
+	//		if (distanceToTether < closestTetherPoint_Distance)
+	//		{
+	//			closestTetherPoint_Distance = distanceToTether;
+	//			closestTetherPoint = go;
+	//		}
+	//	}
+	//}
+	//camera->tetherPoint = closestTetherPoint;
+	camera->bound = true;
+	vector<GameObject*> playerCharacters = FindGameObjectByType(GameObject::PlayerCharacter);
+	if (playerCharacters.size() > 0)
 	{
-		GameObject* go = inRaycast[i];
-		GameObject::Type goType = go->GetType();
-		if (goType == GameObject::CameraTetherPoint)
-		{
-			vec2 toTether = go->transform.position - camera->transform.position;
-			F32 distanceToTether = length(toTether);
-			if (distanceToTether < closestTetherPoint_Distance)
-			{
-				closestTetherPoint_Distance = distanceToTether;
-				closestTetherPoint = go;
-			}
-		}
+		camera->target = playerCharacters[0];
 	}
-	camera->tetherPoint = closestTetherPoint;
+
 
 	return camera;
 }
@@ -2742,6 +2792,47 @@ GameObject* CreateCameraTetherPoint(vec2 position, bool debugDraw = true)
 	return tp;
 }
 
+GameObject* CreateMiniWall_2x1(vec2 position, bool debugDraw)
+{
+	GameObject* mw = CreateGameObject(GameObject::StaticEnvironmentPiece);
+	mw->transform.position = position;
+	mw->transform.scale = vec2(1.0f, 0.5f);
+	mw->AddSprite("blockers2x1");
+	mw->AddTag(GameObject::Environment);
+	mw->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	mw->SetDebugState(debugDraw);
+
+	return mw;
+}
+
+GameObject* CreateMiniWall_1x2(vec2 position, bool debugDraw)
+{
+	GameObject* mw = CreateGameObject(GameObject::StaticEnvironmentPiece);
+	mw->transform.position = position;
+	mw->transform.scale = vec2(0.5f, 1.0f);
+	mw->AddSprite("blockers1x2");
+	mw->AddTag(GameObject::Environment);
+	mw->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	mw->SetDebugState(debugDraw);
+
+	return mw;
+}
+
+GameObject* CreateMiniWall_1x1(vec2 position, bool debugDraw)
+{
+	GameObject* mw = CreateGameObject(GameObject::StaticEnvironmentPiece);
+	mw->transform.position = position;
+	mw->transform.scale = vec2(0.5f, 0.5f);
+	mw->AddSprite("blockers1x1");
+	mw->AddTag(GameObject::Environment);
+	mw->AddCollisionShape(Rectangle_2D(TileDimensions));
+
+	mw->SetDebugState(debugDraw);
+
+	return mw;
+}
 
 /*
  * Global Game State
@@ -3100,7 +3191,7 @@ bool GameInitialize()
 	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
 	bool debugDraw = globalDebugDraw;
-	CreateBackground("background_10-5", vec2(0.0f, 0.0f), debugDraw);
+	CreateBackground("background_present_worldMap_10-5", vec2(0.0f, 0.0f), debugDraw);
 	CreateCameraTetherPoint(vec2(0.0f, 0.0f), debugDraw);
 	CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
 	CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), debugDraw);
@@ -3126,7 +3217,7 @@ bool GameInitialize()
 	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
 
 
-	CreateBackground("background_10-6", vec2(0.0f, 8.0f), debugDraw);
+	CreateBackground("background_present_worldMap_10-6", vec2(0.0f, 8.0f), debugDraw);
 	CreateCameraTetherPoint(vec2(0.0f, 8.0f), debugDraw);
 	CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), debugDraw);
 	CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), debugDraw);
@@ -3146,17 +3237,17 @@ bool GameInitialize()
 	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);
 
 
-	CreateBackground("background_10-7", vec2(0.0f, 16.0f), debugDraw);
+	CreateBackground("background_present_worldMap_10-7", vec2(0.0f, 16.0f), debugDraw);
 	CreateCameraTetherPoint(vec2(0.0f, 16.0f), debugDraw);
 	CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), debugDraw);
 	CreateVerticalTransitionBar(vec2(-5.0f, 16.0f), debugDraw);
 
-	CreateBackground("background_11-6", vec2(10.0f, 8.0f), debugDraw);
+	CreateBackground("background_present_worldMap_11-6", vec2(10.0f, 8.0f), debugDraw);
 	CreateCameraTetherPoint(vec2(10.0f, 8.0f), debugDraw);
 	CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), debugDraw);
 	CreateVerticalTransitionBar(vec2(5.0f, 8.0f), debugDraw);
 
-	CreateBackground("background_11-7", vec2(10.0f, 16.0f), debugDraw);
+	CreateBackground("background_present_worldMap_11-7", vec2(10.0f, 16.0f), debugDraw);
 	CreateCameraTetherPoint(vec2(10.0f, 16.0f), debugDraw);
 	CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), debugDraw);
 	CreateVerticalTransitionBar(vec2(5.0f, 16.0f), debugDraw);
@@ -3166,11 +3257,16 @@ bool GameInitialize()
 	CreateCameraTetherPoint(vec2(-10.0f, 8.0f), debugDraw); // NOTE: 9-6
 	CreateCameraTetherPoint(vec2(-10.0f, 16.0f), debugDraw); // NOTE: 9-7
 
+	CreateMiniWall_1x1(vec2(1.25f, 3.75f), debugDraw);
+	CreateMiniWall_2x1(vec2(2.5f, 1.0f), debugDraw);
+	CreateMiniWall_1x2(vec2(2.0f - 7.0f + 0.25f, 2.0f + 4.0f), debugDraw);
+
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
-
+	CreateVerticalTransitionBar(vec2(5.0f, 0.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
 	//renderCamera = new Camera();
 	//renderCamera->halfDim = vec2(5.0f, 4.0f);
 	//renderCamera->position = vec2(0.0f, 0.0f);
