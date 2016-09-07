@@ -488,7 +488,7 @@ inline void InitializeRenderer()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	StartUpTexturePool(150);
+	StartUpTexturePool(300);
 
 
 	/*AddToTexturePool("Assets/x60/Objects/boulder.bmp");

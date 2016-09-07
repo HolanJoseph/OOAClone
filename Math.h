@@ -100,12 +100,23 @@ inline vec2 Perpendicular_2D(vec2 v)
 	return result;
 }
 
+// Hadamard Product
 inline vec2 VVM(vec2 lhs, vec2 rhs)
 {
 	vec2 result;
 
 	result.x = lhs.x * rhs.x;
 	result.y = lhs.y * rhs.y;
+
+	return result;
+}
+
+inline vec2 VVD(vec2 lhs, vec2 rhs)
+{
+	vec2 result;
+
+	result.x = lhs.x / rhs.x;
+	result.y = lhs.y / rhs.y;
 
 	return result;
 }

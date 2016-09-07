@@ -2600,12 +2600,12 @@ GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
 	return hero;
 }
 
-GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0.0f, 0.0f), vec2 scale = vec2(10.0f, 8.0f), bool debugDraw = true)
 {
 	GameObject* bg = CreateGameObject(GameObject::StaticEnvironmentPiece);
 	bg->AddTag(GameObject::Background);
 	bg->transform.position = position;
-	bg->transform.scale = vec2(10.0f, 8.0f);
+	bg->transform.scale = scale;
 	bg->AddSprite(backgroundName);
 
 	bg->SetDebugState(debugDraw);
@@ -2716,27 +2716,27 @@ GameObject* CreateFire(vec2 position, bool debugDraw = true)
 	return fire;
 }
 
-GameObject* CreateHorizontalTransitionBar(vec2 position, bool debugDraw = true)
+GameObject* CreateHorizontalTransitionBar(vec2 position, F32 length = 10.0f, bool debugDraw = true)
 {
 	GameObject* ctb = CreateGameObject(GameObject::TransitionBar);
 
 	ctb->transform.position = position;
 	ctb->transform.scale = vec2(1.0f, 1.0f); // vec2(10.0f, 0.5f);
 	ctb->AddTag(GameObject::Environment);
-	ctb->AddCollisionShape(Rectangle_2D(vec2(5.0f, 0.125f), vec2(0.0f, -0.125f), true));
+	ctb->AddCollisionShape(Rectangle_2D(vec2(length/2.0f, 0.125f), vec2(0.0f, -0.125f), true));
 	ctb->SetDebugState(debugDraw);
 
 	return ctb;
 }
 
-GameObject* CreateVerticalTransitionBar(vec2 position, bool debugDraw = true)
+GameObject* CreateVerticalTransitionBar(vec2 position, F32 length = 8.0f, bool debugDraw = true)
 {
 	GameObject* ctb = CreateGameObject(GameObject::TransitionBar);
 
 	ctb->transform.position = position;
 	ctb->transform.scale = vec2(1.0f, 1.0f); // vec2(10.0f, 0.5f);
 	ctb->AddTag(GameObject::Environment);
-	ctb->AddCollisionShape(Rectangle_2D(vec2(0.125f, 4.0f), vec2(0.0f, 0.0f), true));
+	ctb->AddCollisionShape(Rectangle_2D(vec2(0.125f, length/2.0f), vec2(0.0f, 0.0f), true));
 	ctb->SetDebugState(debugDraw);
 
 	return ctb;
@@ -2833,6 +2833,39 @@ GameObject* CreateMiniWall_1x1(vec2 position, bool debugDraw)
 
 	return mw;
 }
+
+
+
+void CreateMap(const char* name, vec2 size, vec2 numberOfScreens, vec2 originOffset = vec2(0.0f, 0.0f), vec2 screenCountOffset = vec2(0.0f, 0.0f))
+{
+	vec2 screenDimensions = VVD(size, numberOfScreens);
+
+	// Generate Screens
+	for (size_t x = screenCountOffset.x; x < screenCountOffset.x + numberOfScreens.x; ++x)
+	{
+		for (size_t y = screenCountOffset.y; y < screenCountOffset.y + numberOfScreens.y; ++y)
+		{
+			vec2 backgroundPosition = vec2((screenDimensions.x * (x - screenCountOffset.x)) + screenDimensions.x / 2.0f, (screenDimensions.y * (y - screenCountOffset.y)) + screenDimensions.y / 2.0f) + originOffset;
+			char* assetName = Concat(Concat(Concat(Concat(Concat("background_", name), "_"), ToString((U32)x)), "-"), ToString((U32)y));
+			CreateBackground(assetName, backgroundPosition, screenDimensions, true);
+
+			CreateVerticalTransitionBar(backgroundPosition - vec2(screenDimensions.x / 2.0f, 0.0f), screenDimensions.y, true);
+			CreateHorizontalTransitionBar(backgroundPosition - vec2(0.0f, screenDimensions.y / 2.0f), screenDimensions.x, true);
+
+			if (x == (screenCountOffset.x + numberOfScreens.x) - 1)
+			{
+				CreateVerticalTransitionBar(backgroundPosition + vec2(screenDimensions.x / 2.0f, 0.0f), screenDimensions.y, true);
+			}
+
+			if (y == (screenCountOffset.y + numberOfScreens.y) - 1)
+			{
+				CreateHorizontalTransitionBar(backgroundPosition + vec2(0.0f, screenDimensions.y / 2.0f), screenDimensions.x, true);
+			}
+		}
+	}
+}
+
+
 
 /*
  * Global Game State
@@ -3191,11 +3224,11 @@ bool GameInitialize()
 	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
 	bool debugDraw = globalDebugDraw;
-	CreateBackground("background_present_worldMap_10-5", vec2(0.0f, 0.0f), debugDraw);
-	CreateCameraTetherPoint(vec2(0.0f, 0.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
-	CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), debugDraw);
-	CreateDancingFlowers(vec2(-0.5f, -1.5f), debugDraw);
+	//CreateBackground("background_present_worldMap_10-5", vec2(0.0f, 0.0f), debugDraw);
+	//CreateCameraTetherPoint(vec2(0.0f, 0.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
+	//CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), debugDraw);
+	/*CreateDancingFlowers(vec2(-0.5f, -1.5f), debugDraw);
 	CreateDancingFlowers(vec2(-2.5f, 1.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, -0.5f), debugDraw); // Left Group Start
 	CreateWeed(vec2(-3.5f, -0.5f), debugDraw);
@@ -3214,14 +3247,14 @@ bool GameInitialize()
 	CreateTree(vec2( 4.0f,  2.0f), debugDraw);
 	CreateTree(vec2( 4.0f,  0.0f), debugDraw);
 	CreateTree(vec2( 4.0f, -2.0f), debugDraw);
-	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
+	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall*/
 
 
-	CreateBackground("background_present_worldMap_10-6", vec2(0.0f, 8.0f), debugDraw);
-	CreateCameraTetherPoint(vec2(0.0f, 8.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), debugDraw);
-	CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), debugDraw);
-	CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
+	//CreateBackground("background_present_worldMap_10-6", vec2(0.0f, 8.0f), debugDraw);
+	//CreateCameraTetherPoint(vec2(0.0f, 8.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), debugDraw);
+	//CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), debugDraw);
+	/*CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
 	CreateDancingFlowers(vec2(1.5f, 10.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, 5.5f), debugDraw); // Left Group Start
 	CreateWeed(vec2(-2.5f, 6.5f), debugDraw);
@@ -3234,39 +3267,52 @@ bool GameInitialize()
 	CreateTree(vec2(4.0f, 6.0f), debugDraw); // Right Group Start
 	CreateTree(vec2(4.0f, 8.0f), debugDraw);
 	CreateSpookyTree(vec2(4.0f, 10.0f), debugDraw); // Right Group Start
-	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);
+	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);*/
 
 
-	CreateBackground("background_present_worldMap_10-7", vec2(0.0f, 16.0f), debugDraw);
-	CreateCameraTetherPoint(vec2(0.0f, 16.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), debugDraw);
-	CreateVerticalTransitionBar(vec2(-5.0f, 16.0f), debugDraw);
+	//CreateBackground("background_present_worldMap_10-7", vec2(0.0f, 16.0f), debugDraw);
+	//CreateCameraTetherPoint(vec2(0.0f, 16.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), debugDraw);
+	//CreateVerticalTransitionBar(vec2(-5.0f, 16.0f), debugDraw);
 
-	CreateBackground("background_present_worldMap_11-6", vec2(10.0f, 8.0f), debugDraw);
-	CreateCameraTetherPoint(vec2(10.0f, 8.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), debugDraw);
-	CreateVerticalTransitionBar(vec2(5.0f, 8.0f), debugDraw);
+	//CreateBackground("background_present_worldMap_11-6", vec2(10.0f, 8.0f), debugDraw);
+	//CreateCameraTetherPoint(vec2(10.0f, 8.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), debugDraw);
+	//CreateVerticalTransitionBar(vec2(5.0f, 8.0f), debugDraw);
 
-	CreateBackground("background_present_worldMap_11-7", vec2(10.0f, 16.0f), debugDraw);
-	CreateCameraTetherPoint(vec2(10.0f, 16.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), debugDraw);
-	CreateVerticalTransitionBar(vec2(5.0f, 16.0f), debugDraw);
+	//CreateBackground("background_present_worldMap_11-7", vec2(10.0f, 16.0f), debugDraw);
+	//CreateCameraTetherPoint(vec2(10.0f, 16.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), debugDraw);
+	//CreateVerticalTransitionBar(vec2(5.0f, 16.0f), debugDraw);
 
 
 	// Lefthand tether points
-	CreateCameraTetherPoint(vec2(-10.0f, 8.0f), debugDraw); // NOTE: 9-6
-	CreateCameraTetherPoint(vec2(-10.0f, 16.0f), debugDraw); // NOTE: 9-7
+	//CreateCameraTetherPoint(vec2(-10.0f, 8.0f), debugDraw); // NOTE: 9-6
+	//CreateCameraTetherPoint(vec2(-10.0f, 16.0f), debugDraw); // NOTE: 9-7
 
-	CreateMiniWall_1x1(vec2(1.25f, 3.75f), debugDraw);
+	/*CreateMiniWall_1x1(vec2(1.25f, 3.75f), debugDraw);
 	CreateMiniWall_2x1(vec2(2.5f, 1.0f), debugDraw);
-	CreateMiniWall_1x2(vec2(2.0f - 7.0f + 0.25f, 2.0f + 4.0f), debugDraw);
+	CreateMiniWall_1x2(vec2(2.0f - 7.0f + 0.25f, 2.0f + 4.0f), debugDraw);*/
 
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
+	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(-65.0f, -20.0f), vec2(4, 3));
+	CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-70.0f, -22.0f));
+	CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-45.0f, 0.0f));
+	CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(0.0f, 8.0f));
+	CreateMap("past_worldMap", vec2(60, 64), vec2(6, 8), vec2(0.0f, -64.0f));
+	CreateMap("present_poeGrave", vec2(10, 8), vec2(1, 1), vec2(-25.0f, -8.0f));
+	CreateMap("present_skullCave", vec2(15, 11), vec2(1, 1), vec2(-15.0f, -11.0f));
+	CreateMap("present_makuPath", vec2(15, 44), vec2(1, 4), vec2(-60.0f, 0.0f));
+	CreateMap("present_townHouses", vec2(130, 8), vec2(13, 1));
+	CreateMap("present_spiritsGrave", vec2(75, 77), vec2(5, 7), vec2(-135.0f, 0.0f));
+
+	CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(0.0f, 16.0f), vec2(4,3));
+
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
-	CreateVerticalTransitionBar(vec2(5.0f, 0.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
+	//CreateVerticalTransitionBar(vec2(5.0f, 0.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
 	//renderCamera = new Camera();
 	//renderCamera->halfDim = vec2(5.0f, 4.0f);
 	//renderCamera->position = vec2(0.0f, 0.0f);
