@@ -241,6 +241,7 @@ struct PooledTexture
 
 			bool isDataLoaded;
 
+			const char* filepath;
 			Texture data;
 		};
 
@@ -334,6 +335,45 @@ inline bool IsValidTextureHandle(TextureHandle th)
 	return result;
 }
 
+inline bool IsTextureLoaded(TextureHandle th)
+{
+	bool result = false;
+
+	PooledTexture* pt = &(texturePool[th.poolIndex]);
+	result = pt->isDataLoaded;
+
+	return result;
+}
+
+inline void LoadTexture(TextureHandle th)
+{
+	PooledTexture* pt = &(texturePool[th.poolIndex]);
+	const char* filepath = pt->filepath;
+	Initialize(&pt->data, filepath);
+	pt->isDataLoaded = true;
+
+	if (numberOfAllocatedBytes + (pt->data.width * pt->data.height) > maxNumberOfAllocatableBytes)
+	{
+		// LRU = GetLRU
+		// destroy LRUs texture
+		// set LRUs loaded to false
+		// loop until we are under the maxNumberOfAllocatableBytes
+	}
+}
+
+inline void UnloadTexture(TextureHandle th)
+{
+
+	PooledTexture* pt = &(texturePool[th.poolIndex]);
+	const char* filepath = pt->filepath;
+	U32 numberOfBytes = pt->data.width * pt->data.height;
+
+	Destroy(&pt->data);
+
+	pt->isDataLoaded = false;
+	numberOfAllocatedBytes -= numberOfBytes;
+}
+
 inline TextureHandle AddToTexturePool(const char* filepath)
 {
 	TextureHandle result;
@@ -361,18 +401,11 @@ inline TextureHandle AddToTexturePool(const char* filepath)
 			pt->initialized = true;
 			pt->loadNumber = GenerateLoadNumberTexturePool();
 			pt->poolIndex = pt - texturePool;
-			pt->isDataLoaded = true;
-			Initialize(&pt->data, filepath);
-
-			if (numberOfAllocatedBytes + (pt->data.width * pt->data.height) > maxNumberOfAllocatableBytes)
-			{
-				// LRU = GetLRU
-				// destroy LRUs texture
-				// set LRUs loaded to false
-				// loop until we are under the maxNumberOfAllocatableBytes
-			}
-
+			pt->isDataLoaded = false;
+			pt->filepath = Copy(filepath);
 			result = TextureHandle(pt->loadNumber, pt->poolIndex);
+			LoadTexture(result);
+
 			AddKVPair(&processedTextures, filepath, result);
 			Texture* t = GetTexture(result);
 			numberOfAllocatedBytes += (t->width * t->height);
@@ -642,10 +675,21 @@ inline void DrawUVRectangle(Texture* texture, Transform transform, Camera* camer
 
 inline void DrawSprite(TextureHandle texture, vec2 spriteOffset, Transform transform, Camera* camera)
 {
-	Texture* t = GetTexture(texture);
+	bool loaded = IsTextureLoaded(texture);
+	
 	transform.position += spriteOffset;
 	transform.scale /= 2.0f;
-	DrawUVRectangle(t, transform, camera);
+
+	if (loaded)
+	{
+		Texture* t = GetTexture(texture);
+		DrawUVRectangle(t, transform, camera);
+	}
+	else
+	{
+		vec4 unloadedTextureColor = vec4(1.0f, 0.5f, 0.0f, 1.0f);
+		DrawRectangle(vec2(0.5f, 0.5f), transform, unloadedTextureColor, camera);
+	}
 }
 
 // NOTE: starts from upper left corner

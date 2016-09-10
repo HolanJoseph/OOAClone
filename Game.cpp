@@ -1464,6 +1464,10 @@ void GameObject::Update_PrePhysics(F32 dt)
 						 *
 						 * WASD Move camera to the next screen
 						 */
+						 if (GetKeyDown(KeyCode_Spacebar))
+						 {
+							 this->bound = !(this->bound);
+						 }
 						 if (GetKeyDown(KeyCode_Minus))
 						 {
 							 this->camera->halfDim *= 2.0f;
@@ -3298,17 +3302,17 @@ bool GameInitialize()
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
 	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(-65.0f, -20.0f), vec2(4, 3));
-	CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-70.0f, -22.0f));
-	CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-45.0f, 0.0f));
-	CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(0.0f, 8.0f));
-	CreateMap("past_worldMap", vec2(60, 64), vec2(6, 8), vec2(0.0f, -64.0f));
-	CreateMap("present_poeGrave", vec2(10, 8), vec2(1, 1), vec2(-25.0f, -8.0f));
-	CreateMap("present_skullCave", vec2(15, 11), vec2(1, 1), vec2(-15.0f, -11.0f));
-	CreateMap("present_makuPath", vec2(15, 44), vec2(1, 4), vec2(-60.0f, 0.0f));
-	CreateMap("present_townHouses", vec2(130, 8), vec2(13, 1));
+	//CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-70.0f, -22.0f));
+	//CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-45.0f, 0.0f));
+	//CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(0.0f, 8.0f));
+	//CreateMap("past_worldMap", vec2(60, 64), vec2(6, 8), vec2(0.0f, -64.0f));
+	//CreateMap("present_poeGrave", vec2(10, 8), vec2(1, 1), vec2(-25.0f, -8.0f));
+	//CreateMap("present_skullCave", vec2(15, 11), vec2(1, 1), vec2(-15.0f, -11.0f));
+	//CreateMap("present_makuPath", vec2(15, 44), vec2(1, 4), vec2(-60.0f, 0.0f));
+	//CreateMap("present_townHouses", vec2(130, 8), vec2(13, 1));
 	CreateMap("present_spiritsGrave", vec2(75, 77), vec2(5, 7), vec2(-135.0f, 0.0f));
-
-	CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(0.0f, 16.0f), vec2(4,3));
+	//
+	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(0.0f, 16.0f), vec2(4,3));
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 	//CreateVerticalTransitionBar(vec2(5.0f, 0.0f), debugDraw);
