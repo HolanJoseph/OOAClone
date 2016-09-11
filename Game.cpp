@@ -1289,7 +1289,9 @@ GameObject* CreatePlayerCamera(vec2 position, bool debugDraw);
 GameObject* CreateCameraTetherPoint(vec2 position, bool debugDraw);
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
+vector<GameObject*> RaycastType_Line_2D(GameObject::Type type, vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle);
+vector<GameObject*> RaycastType_Rectangle_2D(GameObject::Type type, vec2 position, vec2 halfDim, F32 rotationAngle);
 vector<GameObject*> FindGameObjectByType(GameObject::Type type);
 vector<GameObject*> FindGameObjectByTag(GameObject::Tags tag);
 void SendEvent(GameObject* gameObject, Event* e);
@@ -1297,6 +1299,91 @@ void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
 void PauseAllAnimations();
 void UnpauseAllAnimations();
 void FreezeGame(U32 milliseconds);
+void SetSimulationSpace(vec2 center, vec2 dimensions);
+
+GameObject* FindWithSmallestX(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 smallestX = 100000.0f;
+	GameObject* smallestX_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.x < smallestX)
+		{
+			smallestX = go->transform.position.x;
+			smallestX_go = go;
+		}
+	}
+	result = smallestX_go;
+	
+	return result;
+}
+
+GameObject* FindWithLargestX(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 largestX = -100000.0f;
+	GameObject* largestX_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.x > largestX)
+		{
+			largestX = go->transform.position.x;
+			largestX_go = go;
+		}
+	}
+	result = largestX_go;
+
+	return result;
+}
+
+GameObject* FindWithSmallestY(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 smallestY = 100000.0f;
+	GameObject* smallestY_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.x < smallestY)
+		{
+			smallestY = go->transform.position.x;
+			smallestY_go = go;
+		}
+	}
+	result = smallestY_go;
+
+	return result;
+}
+
+GameObject* FindWithLargestY(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 largestY = -100000.0f;
+	GameObject* largestY_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.y > largestY)
+		{
+			largestY = go->transform.position.y;
+			largestY_go = go;
+		}
+	}
+	result = largestY_go;
+
+	return result;
+}
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
@@ -1860,6 +1947,28 @@ void GameObject::HandleEvent(Event* e)
 											 camera->bound = true;
 
 											 UnpauseAllAnimations(); // Note: This should be done on the same frame as the unfreeze.
+
+											 // Change the simulation space to be centered around the new screen.
+											 vec2 rayOrigin = player->transform.position;
+											 vector<GameObject*> rayResults_xPos = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(1.0f, 0.0f), 20.0f);
+											 vector<GameObject*> rayResults_xNeg = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
+											 vector<GameObject*> rayResults_yPos = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
+											 vector<GameObject*> rayResults_yNeg = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
+
+											 GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
+											 GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
+											 GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
+											 GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
+											 
+											 vec2 simulationSpaceDimensions;
+											 simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
+											 simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
+
+											 vec2 simulationSpaceCenter;
+											 simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
+											 simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
+
+											 SetSimulationSpace(simulationSpaceCenter, simulationSpaceDimensions);
 										 }
 				   }
 				   break;
@@ -2463,6 +2572,47 @@ vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distan
 	return result;
 }
 
+vector<GameObject*> RaycastType_Line_2D(GameObject::Type type,vec2 position, vec2 direction, F32 distance)
+{
+	vector<GameObject*> result;
+
+	vec2 rayPerp = Perpendicular_2D(direction);
+	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::collisionGameObjects[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+		{
+			GameObject::Type goType = go->GetType();
+			if (goType == type)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::staticCollisionGameObjects[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+		{
+			GameObject::Type goType = go->GetType();
+			if (goType == type)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+
+	return result;
+}
+
 vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle)
 {
 	vector<GameObject*> result;
@@ -2490,6 +2640,47 @@ vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rot
 		if (ci.collided)
 		{
 			result.push_back(go);
+		}
+	}
+
+	return result;
+}
+
+vector<GameObject*> RaycastType_Rectangle_2D(GameObject::Type type, vec2 position, vec2 halfDim, F32 rotationAngle)
+{
+	vector<GameObject*> result;
+
+	Rectangle_2D collisionRect = Rectangle_2D(halfDim);
+
+	Transform collisionRectTransform;
+	collisionRectTransform.position = position;
+	collisionRectTransform.rotationAngle = rotationAngle;
+
+	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::collisionGameObjects[i];
+		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+		if (ci.collided)
+		{
+			GameObject::Type goType = go->GetType();
+			if (goType == type)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+
+	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::staticCollisionGameObjects[i];
+		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+		if (ci.collided)
+		{
+			GameObject::Type goType = go->GetType();
+			if (goType == type)
+			{
+				result.push_back(go);
+			}
 		}
 	}
 
@@ -3002,6 +3193,25 @@ void SetSimulationSpace(vec2 center = vec2(0.0f, 0.0f), vec2 dimensions = simSpa
 	simSpace_Transform.position = center;
 }
 
+vec2 GetLoadSpacePosition()
+{
+	vec2 result;
+
+	result = GetSimulationSpacePosition();
+
+	return result;
+}
+
+vec2 GetLoadSpaceDimensions()
+{
+	vec2 result;
+
+	result = GetSimulationSpaceDimensions() * 3.0f;
+
+	return result;
+}
+
+
 
 /*
  * Rendering
@@ -3207,13 +3417,6 @@ void DrawGameObjects(F32 dt)
 		DrawCameraGrid();
 	}
 
-	// Draw Simulation Space Outline.
-	vec2 ssDimensions = GetSimulationSpaceDimensions();
-	vec2 ssHalfDim = ssDimensions / 2.0f;
-	vec2 ssPosition = GetSimulationSpacePosition();
-	vec4 ssColor = vec4(0.0f, 0.65f, 1.0f, 1.0f);
-	DebugDrawRectangleOutline(ssPosition + vec2(-ssHalfDim.x, ssHalfDim.y), ssDimensions, ssColor);
-
 
 	for (size_t i = 0; i < bin_Environment.size(); ++i)
 	{
@@ -3236,6 +3439,20 @@ void DrawGameObjects(F32 dt)
 		go->DebugDraw();
 	}
 
+	// Draw Simulation Space Outline.
+	vec2 ssDimensions = GetSimulationSpaceDimensions();
+	vec2 ssHalfDim = ssDimensions / 2.0f;
+	vec2 ssPosition = GetSimulationSpacePosition();
+	vec4 ssColor = vec4(0.0f, 0.65f, 1.0f, 1.0f);
+	DebugDrawRectangleOutline(ssPosition + vec2(-ssHalfDim.x, ssHalfDim.y), ssDimensions, ssColor);
+
+
+	// Draw Load Space Outline
+	vec2 lsDimensions = GetLoadSpaceDimensions();
+	vec2 lsHalfDim = lsDimensions / 2.0f;
+	vec2 lsPosition = GetLoadSpacePosition();
+	vec4 lsColor = vec4(0.57f, 0.0f, 1.0f, 1.0f);
+	DebugDrawRectangleOutline(lsPosition + vec2(-lsHalfDim.x, lsHalfDim.y), lsDimensions, lsColor);
 
 	// Draw chunk outlines
 	/*for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
@@ -3346,9 +3563,9 @@ bool GameInitialize()
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
 	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(-65.0f, -20.0f), vec2(4, 3));
-	CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-22.5f, -11.5f));
+	//CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-22.5f, -11.5f));
 	//CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-22.5f, -22.0f));
-	//CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(-30.0f, 0.0f));
+	CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(-30.0f, 0.0f));
 	//CreateMap("past_worldMap", vec2(60, 64), vec2(6, 8), vec2(-30.0f, -32.0f));
 	//CreateMap("present_poeGrave", vec2(10, 8), vec2(1, 1), vec2(-5.0f, 0.0f));
 	//CreateMap("present_skullCave", vec2(15, 11), vec2(1, 1), vec2(-7.5f, 0.0f));
