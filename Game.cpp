@@ -1732,7 +1732,7 @@ void GameObject::HandleEvent(Event* e)
 											   {
 												   vector<GameObject*> playerCameras = FindGameObjectByType(PlayerCamera);
 												   GameObject* playerCamera = playerCameras[0];
-												   vec2 endPoint = floor(this->transform.position - (collisionNormal * 0.1f)) + TileDimensions;
+												   vec2 endPoint = this->transform.position + VVM(TileDimensions, -collisionNormal);
 
 												   vec2 playerEndPos = go->transform.position;
 												   vec2 cameraEndPos = playerCamera->transform.position;
@@ -2845,9 +2845,9 @@ void CreateMap(const char* name, vec2 size, vec2 numberOfScreens, vec2 originOff
 	vec2 screenDimensions = VVD(size, numberOfScreens);
 
 	// Generate Screens
-	for (size_t x = screenCountOffset.x; x < screenCountOffset.x + numberOfScreens.x; ++x)
+	for (size_t x = (size_t)screenCountOffset.x; x < screenCountOffset.x + numberOfScreens.x; ++x)
 	{
-		for (size_t y = screenCountOffset.y; y < screenCountOffset.y + numberOfScreens.y; ++y)
+		for (size_t y = (size_t)screenCountOffset.y; y < screenCountOffset.y + numberOfScreens.y; ++y)
 		{
 			vec2 backgroundPosition = vec2((screenDimensions.x * (x - screenCountOffset.x)) + screenDimensions.x / 2.0f, (screenDimensions.y * (y - screenCountOffset.y)) + screenDimensions.y / 2.0f) + originOffset;
 			char* assetName = Concat(Concat(Concat(Concat(Concat("background_", name), "_"), ToString((U32)x)), "-"), ToString((U32)y));
@@ -2967,6 +2967,40 @@ GameObject* weedGO1;
 GameObject* weedGO2;
 GameObject* buttonGO;
 
+// Simulation Space
+Rectangle_2D simSpace_Rect;
+Transform simSpace_Transform;
+
+const vec2 simSpace_MINDIMENSIONS = vec2(10.0f, 8.0f);
+const vec2 simSpace_Rect_MAXDIMENSIONS = vec2(15.0f, 11.0f);
+
+vec2 GetSimulationSpacePosition()
+{
+	vec2 result;
+
+	result = simSpace_Transform.position;
+	
+	return result;
+}
+
+vec2 GetSimulationSpaceDimensions()
+{
+	vec2 result;
+
+	result = simSpace_Rect.halfDim * 2.0f;
+
+	return result;
+}
+
+void SetSimulationSpace(vec2 center = vec2(0.0f, 0.0f), vec2 dimensions = simSpace_MINDIMENSIONS)
+{
+	dimensions.x = ClampRange_F32(dimensions.x, simSpace_MINDIMENSIONS.x, simSpace_Rect_MAXDIMENSIONS.x);
+	dimensions.y = ClampRange_F32(dimensions.y, simSpace_MINDIMENSIONS.y, simSpace_Rect_MAXDIMENSIONS.y);
+
+	vec2 halfDim = dimensions / 2.0f;
+	simSpace_Rect = Rectangle_2D(halfDim, vec2(0.0f, 0.0f), true);
+	simSpace_Transform.position = center;
+}
 
 
 /*
@@ -3173,6 +3207,14 @@ void DrawGameObjects(F32 dt)
 		DrawCameraGrid();
 	}
 
+	// Draw Simulation Space Outline.
+	vec2 ssDimensions = GetSimulationSpaceDimensions();
+	vec2 ssHalfDim = ssDimensions / 2.0f;
+	vec2 ssPosition = GetSimulationSpacePosition();
+	vec4 ssColor = vec4(0.0f, 0.65f, 1.0f, 1.0f);
+	DebugDrawRectangleOutline(ssPosition + vec2(-ssHalfDim.x, ssHalfDim.y), ssDimensions, ssColor);
+
+
 	for (size_t i = 0; i < bin_Environment.size(); ++i)
 	{
 		GameObject* go = bin_Environment[i];
@@ -3218,6 +3260,8 @@ bool GameInitialize()
 {
 	// Initialize game sub systems.
 	InitializeRenderer();
+	SetSimulationSpace();
+
 
 	SetWindowTitle("Oracle of Ages Clone");
 	SetClientWindowDimensions(vec2(600, 540));
@@ -3302,17 +3346,16 @@ bool GameInitialize()
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
 	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(-65.0f, -20.0f), vec2(4, 3));
-	//CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-70.0f, -22.0f));
-	//CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-45.0f, 0.0f));
-	//CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(0.0f, 8.0f));
-	//CreateMap("past_worldMap", vec2(60, 64), vec2(6, 8), vec2(0.0f, -64.0f));
-	//CreateMap("present_poeGrave", vec2(10, 8), vec2(1, 1), vec2(-25.0f, -8.0f));
-	//CreateMap("present_skullCave", vec2(15, 11), vec2(1, 1), vec2(-15.0f, -11.0f));
-	//CreateMap("present_makuPath", vec2(15, 44), vec2(1, 4), vec2(-60.0f, 0.0f));
-	//CreateMap("present_townHouses", vec2(130, 8), vec2(13, 1));
-	CreateMap("present_spiritsGrave", vec2(75, 77), vec2(5, 7), vec2(-135.0f, 0.0f));
-	//
-	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(0.0f, 16.0f), vec2(4,3));
+	CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-22.5f, -11.5f));
+	//CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-22.5f, -22.0f));
+	//CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(-30.0f, 0.0f));
+	//CreateMap("past_worldMap", vec2(60, 64), vec2(6, 8), vec2(-30.0f, -32.0f));
+	//CreateMap("present_poeGrave", vec2(10, 8), vec2(1, 1), vec2(-5.0f, 0.0f));
+	//CreateMap("present_skullCave", vec2(15, 11), vec2(1, 1), vec2(-7.5f, 0.0f));
+	//CreateMap("present_makuPath", vec2(15, 44), vec2(1, 4), vec2(-7.5f, -22.0f));
+	//CreateMap("present_townHouses", vec2(130, 8), vec2(13, 1), vec2(-65.0f, 0.0f));
+	//CreateMap("present_spiritsGrave", vec2(75, 77), vec2(5, 7), vec2(-37.5f, -38.5f));
+	
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 	//CreateVerticalTransitionBar(vec2(5.0f, 0.0f), debugDraw);
