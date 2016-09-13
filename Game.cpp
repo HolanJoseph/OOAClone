@@ -1300,90 +1300,8 @@ void PauseAllAnimations();
 void UnpauseAllAnimations();
 void FreezeGame(U32 milliseconds);
 void SetSimulationSpace(vec2 center, vec2 dimensions);
+void SetSimulationSpace(GameObject* target);
 
-GameObject* FindWithSmallestX(GameObject** bin, size_t binCount)
-{
-	GameObject* result = NULL;
-
-	F32 smallestX = 100000.0f;
-	GameObject* smallestX_go = NULL;
-
-	for (size_t i = 0; i < binCount; ++i)
-	{
-		GameObject* go = bin[i];
-		if (go->transform.position.x < smallestX)
-		{
-			smallestX = go->transform.position.x;
-			smallestX_go = go;
-		}
-	}
-	result = smallestX_go;
-	
-	return result;
-}
-
-GameObject* FindWithLargestX(GameObject** bin, size_t binCount)
-{
-	GameObject* result = NULL;
-
-	F32 largestX = -100000.0f;
-	GameObject* largestX_go = NULL;
-
-	for (size_t i = 0; i < binCount; ++i)
-	{
-		GameObject* go = bin[i];
-		if (go->transform.position.x > largestX)
-		{
-			largestX = go->transform.position.x;
-			largestX_go = go;
-		}
-	}
-	result = largestX_go;
-
-	return result;
-}
-
-GameObject* FindWithSmallestY(GameObject** bin, size_t binCount)
-{
-	GameObject* result = NULL;
-
-	F32 smallestY = 100000.0f;
-	GameObject* smallestY_go = NULL;
-
-	for (size_t i = 0; i < binCount; ++i)
-	{
-		GameObject* go = bin[i];
-		if (go->transform.position.x < smallestY)
-		{
-			smallestY = go->transform.position.x;
-			smallestY_go = go;
-		}
-	}
-	result = smallestY_go;
-
-	return result;
-}
-
-GameObject* FindWithLargestY(GameObject** bin, size_t binCount)
-{
-	GameObject* result = NULL;
-
-	F32 largestY = -100000.0f;
-	GameObject* largestY_go = NULL;
-
-	for (size_t i = 0; i < binCount; ++i)
-	{
-		GameObject* go = bin[i];
-		if (go->transform.position.y > largestY)
-		{
-			largestY = go->transform.position.y;
-			largestY_go = go;
-		}
-	}
-	result = largestY_go;
-
-	return result;
-}
 
 void GameObject::Update_PrePhysics(F32 dt)
 {
@@ -1948,27 +1866,7 @@ void GameObject::HandleEvent(Event* e)
 
 											 UnpauseAllAnimations(); // Note: This should be done on the same frame as the unfreeze.
 
-											 // Change the simulation space to be centered around the new screen.
-											 vec2 rayOrigin = player->transform.position;
-											 vector<GameObject*> rayResults_xPos = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(1.0f, 0.0f), 20.0f);
-											 vector<GameObject*> rayResults_xNeg = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
-											 vector<GameObject*> rayResults_yPos = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
-											 vector<GameObject*> rayResults_yNeg = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
-
-											 GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
-											 GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
-											 GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
-											 GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
-											 
-											 vec2 simulationSpaceDimensions;
-											 simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
-											 simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
-
-											 vec2 simulationSpaceCenter;
-											 simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
-											 simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
-
-											 SetSimulationSpace(simulationSpaceCenter, simulationSpaceDimensions);
+											 SetSimulationSpace(player);
 										 }
 				   }
 				   break;
@@ -3165,12 +3063,23 @@ Transform simSpace_Transform;
 const vec2 simSpace_MINDIMENSIONS = vec2(10.0f, 8.0f);
 const vec2 simSpace_Rect_MAXDIMENSIONS = vec2(15.0f, 11.0f);
 
+const F32 loadSpace_SIZEMULTIPLIER = 3.125f;
+
 vec2 GetSimulationSpacePosition()
 {
 	vec2 result;
 
 	result = simSpace_Transform.position;
 	
+	return result;
+}
+
+vec2 GetSimulationSpaceHalfDimensions()
+{
+	vec2 result;
+
+	result = simSpace_Rect.halfDim;
+
 	return result;
 }
 
@@ -3183,6 +3092,90 @@ vec2 GetSimulationSpaceDimensions()
 	return result;
 }
 
+GameObject* FindWithSmallestX(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 smallestX = 100000.0f;
+	GameObject* smallestX_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.x < smallestX)
+		{
+			smallestX = go->transform.position.x;
+			smallestX_go = go;
+		}
+	}
+	result = smallestX_go;
+
+	return result;
+}
+
+GameObject* FindWithLargestX(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 largestX = -100000.0f;
+	GameObject* largestX_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.x > largestX)
+		{
+			largestX = go->transform.position.x;
+			largestX_go = go;
+		}
+	}
+	result = largestX_go;
+
+	return result;
+}
+
+GameObject* FindWithSmallestY(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 smallestY = 100000.0f;
+	GameObject* smallestY_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.x < smallestY)
+		{
+			smallestY = go->transform.position.x;
+			smallestY_go = go;
+		}
+	}
+	result = smallestY_go;
+
+	return result;
+}
+
+GameObject* FindWithLargestY(GameObject** bin, size_t binCount)
+{
+	GameObject* result = NULL;
+
+	F32 largestY = -100000.0f;
+	GameObject* largestY_go = NULL;
+
+	for (size_t i = 0; i < binCount; ++i)
+	{
+		GameObject* go = bin[i];
+		if (go->transform.position.y > largestY)
+		{
+			largestY = go->transform.position.y;
+			largestY_go = go;
+		}
+	}
+	result = largestY_go;
+
+	return result;
+}
+
 void SetSimulationSpace(vec2 center = vec2(0.0f, 0.0f), vec2 dimensions = simSpace_MINDIMENSIONS)
 {
 	dimensions.x = ClampRange_F32(dimensions.x, simSpace_MINDIMENSIONS.x, simSpace_Rect_MAXDIMENSIONS.x);
@@ -3191,6 +3184,31 @@ void SetSimulationSpace(vec2 center = vec2(0.0f, 0.0f), vec2 dimensions = simSpa
 	vec2 halfDim = dimensions / 2.0f;
 	simSpace_Rect = Rectangle_2D(halfDim, vec2(0.0f, 0.0f), true);
 	simSpace_Transform.position = center;
+}
+
+void SetSimulationSpace(GameObject* target)
+{
+	// Change the simulation space to be centered around the new screen.
+	vec2 rayOrigin = target->transform.position;
+	vector<GameObject*> rayResults_xPos = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(1.0f, 0.0f), 20.0f);
+	vector<GameObject*> rayResults_xNeg = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
+	vector<GameObject*> rayResults_yPos = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
+	vector<GameObject*> rayResults_yNeg = RaycastType_Line_2D(GameObject::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
+
+	GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
+	GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
+	GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
+	GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
+
+	vec2 simulationSpaceDimensions;
+	simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
+	simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
+
+	vec2 simulationSpaceCenter;
+	simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
+	simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
+
+	SetSimulationSpace(simulationSpaceCenter, simulationSpaceDimensions);
 }
 
 vec2 GetLoadSpacePosition()
@@ -3206,11 +3224,19 @@ vec2 GetLoadSpaceDimensions()
 {
 	vec2 result;
 
-	result = GetSimulationSpaceDimensions() * 3.0f;
+	result = GetSimulationSpaceDimensions() * loadSpace_SIZEMULTIPLIER;
 
 	return result;
 }
 
+vec2 GetLoadSpaceHalfDimensions()
+{
+	vec2 result;
+
+	result = GetLoadSpaceDimensions() / 2.0f;
+
+	return result;
+}
 
 
 /*
@@ -3477,7 +3503,6 @@ bool GameInitialize()
 {
 	// Initialize game sub systems.
 	InitializeRenderer();
-	SetSimulationSpace();
 
 
 	SetWindowTitle("Oracle of Ages Clone");
@@ -3572,7 +3597,9 @@ bool GameInitialize()
 	//CreateMap("present_makuPath", vec2(15, 44), vec2(1, 4), vec2(-7.5f, -22.0f));
 	//CreateMap("present_townHouses", vec2(130, 8), vec2(13, 1), vec2(-65.0f, 0.0f));
 	//CreateMap("present_spiritsGrave", vec2(75, 77), vec2(5, 7), vec2(-37.5f, -38.5f));
-	
+
+
+	SetSimulationSpace(heroGO); // NOTE: This could probably be moved into the update loop and out of transition bars/ portals
 
 	//buttonGO = CreateFire(vec2(/*1.5f, 1.5f*/2.0f, -2.0f), debugDraw);
 	//CreateVerticalTransitionBar(vec2(5.0f, 0.0f), debugDraw);
@@ -3648,6 +3675,89 @@ void DebugDrawGameObjects()
 	}
 }
 
+
+
+vector<GameObject*> GenerateUpdateBin()
+{
+	vector<GameObject*> result;
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		vec2 goPosition = go->transform.position;
+
+		vec2 simulationSpacePosition = GetSimulationSpacePosition();
+		vec2 simulationSpaceHalfDimensions = GetSimulationSpaceHalfDimensions();
+		vec2 simulationSpaceUpperLeft = simulationSpacePosition + vec2(-simulationSpaceHalfDimensions.x, simulationSpaceHalfDimensions.y);
+		vec2 simulationSpaceLowerRight = simulationSpacePosition + vec2(simulationSpaceHalfDimensions.x, -simulationSpaceHalfDimensions.y);
+
+		if (goPosition.x >= simulationSpaceUpperLeft.x && goPosition.x <= simulationSpaceLowerRight.x &&
+			goPosition.y >= simulationSpaceLowerRight.y && goPosition.y <= simulationSpaceUpperLeft.y)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
+
+void DebugDrawUpdateBin(vector<GameObject*> *bin)
+{
+	vec4 updateBinColor = vec4(0.0f, 1.0f, 1.0f, 1.0f);
+	for (size_t i = 0; i < bin->size(); ++i)
+	{
+		GameObject* go = (*bin)[i];
+
+		Transform unscaledTransform = go->transform;
+		unscaledTransform.scale = vec2(1.0f, 1.0f);
+		DebugDrawRectangleSolidColor((TileDimensions * 0.2f), unscaledTransform, updateBinColor);
+	}
+}
+
+
+
+vector<GameObject*> GenerateLoadBin()
+{
+	vector<GameObject*> result;
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		vec2 goPosition = go->transform.position;
+
+		vec2 simulationSpacePosition = GetLoadSpacePosition();
+		vec2 simulationSpaceHalfDimensions = GetLoadSpaceHalfDimensions();
+		vec2 simulationSpaceUpperLeft = simulationSpacePosition + vec2(-simulationSpaceHalfDimensions.x, simulationSpaceHalfDimensions.y);
+		vec2 simulationSpaceLowerRight = simulationSpacePosition + vec2(simulationSpaceHalfDimensions.x, -simulationSpaceHalfDimensions.y);
+
+		if (goPosition.x >= simulationSpaceUpperLeft.x && goPosition.x <= simulationSpaceLowerRight.x &&
+			goPosition.y >= simulationSpaceLowerRight.y && goPosition.y <= simulationSpaceUpperLeft.y)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
+
+void DebugDrawLoadBin(vector<GameObject*> *bin)
+{
+	vec4 updateBinColor = vec4(1.0f, 0.5f, 0.0f, 1.0f);
+	for (size_t i = 0; i < bin->size(); ++i)
+	{
+		GameObject* go = (*bin)[i];
+
+		Transform unscaledTransform = go->transform;
+		unscaledTransform.scale = vec2(1.0f, 1.0f);
+		DebugDrawRectangleSolidColor((TileDimensions * 0.2f), unscaledTransform, updateBinColor);
+	}
+}
+
+
+
+vector<GameObject*> gameObjectsToUpdate;
+vector<GameObject*> gameObjectsToLoad;
+
 F32 time = 0.0f;
 F32 skipThreshold = 0.5f;
 void GameUpdate(F32 dt)
@@ -3706,6 +3816,14 @@ void GameUpdate(F32 dt)
  	Clear();
 	if (!GameFrozen())
 	{
+		gameObjectsToLoad.clear();
+		gameObjectsToLoad = GenerateLoadBin();
+
+		gameObjectsToUpdate.clear();
+		gameObjectsToUpdate = GenerateUpdateBin();
+
+
+
 		//DebugPrintf(512, "time: %u\n", SystemTimeToMilliseconds(GetTimeSinceStartup()));
 		UpdateGameObjects_PrePhysics(dt);
 		IntegratePhysicsObjects(dt);
@@ -3727,6 +3845,9 @@ void GameUpdate(F32 dt)
 
 	if (!GameFrozen())
 	{
+		//DebugDrawUpdateBin(&gameObjectsToUpdate);
+		DebugDrawLoadBin(&gameObjectsToLoad);
+
 		AddThisFramesQueuedEventsToProcessingQueue();
 		ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
 
