@@ -404,7 +404,7 @@ inline TextureHandle AddToTexturePool(const char* filepath)
 			pt->isDataLoaded = false;
 			pt->filepath = Copy(filepath);
 			result = TextureHandle(pt->loadNumber, pt->poolIndex);
-			LoadTexture(result);
+			//LoadTexture(result);
 
 			AddKVPair(&processedTextures, filepath, result);
 			Texture* t = GetTexture(result);
@@ -687,7 +687,7 @@ inline void DrawSprite(TextureHandle texture, vec2 spriteOffset, Transform trans
 	}
 	else
 	{
-		vec4 unloadedTextureColor = vec4(1.0f, 0.5f, 0.0f, 1.0f);
+		vec4 unloadedTextureColor = vec4(0.62f, 0.62f, 0.62f, 1.0f);
 		DrawRectangle(vec2(0.5f, 0.5f), transform, unloadedTextureColor, camera);
 	}
 }

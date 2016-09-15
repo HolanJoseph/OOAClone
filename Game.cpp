@@ -102,6 +102,24 @@ struct Sprite
 		this->texture = AddToTexturePool(filePath);
 		this->offset = offset;
 	}
+
+	void Load()
+	{
+		bool isLoaded = IsTextureLoaded(this->texture);
+		if (!isLoaded)
+		{
+			LoadTexture(this->texture);
+		}
+	}
+
+	void Unload()
+	{
+		bool isLoaded = IsTextureLoaded(this->texture);
+		if (isLoaded)
+		{
+			UnloadTexture(this->texture);
+		}
+	}
 };
 
 
@@ -163,6 +181,30 @@ struct Animation
 
 		this->numberOfFrames = 0;
 		this->animationTime = 0;
+	}
+
+	void Load()
+	{
+		for (size_t i = 0; i < this->numberOfFrames; ++i)
+		{
+			bool isLoaded = IsTextureLoaded(this->frames[i]);
+			if (!isLoaded)
+			{
+				LoadTexture(this->frames[i]);
+			}
+		}
+	}
+
+	void Unload()
+	{
+		for (size_t i = 0; i < this->numberOfFrames; ++i)
+		{
+			bool isLoaded = IsTextureLoaded(this->frames[i]);
+			if (isLoaded)
+			{
+				UnloadTexture(this->frames[i]);
+			}
+		}
 	}
 };
 
@@ -342,6 +384,36 @@ struct AnimationHash
 		this->table = NULL;
 		this->numberOfIndices = 0;
 		this->length = 0;
+	}
+
+	void Load()
+	{
+		for (size_t i = 0; i < this->numberOfIndices; ++i)
+		{
+			AnimationHashLink* row = this->table[i];
+			U32 rowLength = this->subListLength[i];
+			for (size_t j = 0; j < rowLength; ++j)
+			{
+				AnimationHashLink* entry = &(row[j]);
+
+				entry->v->Load();
+			}
+		}
+	}
+
+	void Unload()
+	{
+		for (size_t i = 0; i < this->numberOfIndices; ++i)
+		{
+			AnimationHashLink* row = this->table[i];
+			U32 rowLength = this->subListLength[i];
+			for (size_t j = 0; j < rowLength; ++j)
+			{
+				AnimationHashLink* entry = &(row[j]);
+
+				entry->v->Unload();
+			}
+		}
 	}
 };
 
@@ -609,6 +681,16 @@ struct AnimationController
 		vec2 result;
 		result = this->spriteOffset;
 		return result;
+	}
+
+	void Load()
+	{
+		this->animations.Load();
+	}
+
+	void Unload()
+	{
+		this->animations.Unload();
 	}
 };
 
@@ -1041,6 +1123,7 @@ struct GameObject
 	};
 
 	// Debug Variables
+	bool forceUpdates;
 	bool debugDraw;
 
 	Type type;
@@ -1076,6 +1159,7 @@ struct GameObject
 
 	GameObject()
 	{
+		this->forceUpdates = false;
 		this->type = Null;
 		this->tags = 0;
 		this->transform = Transform();
@@ -1085,6 +1169,9 @@ struct GameObject
 		this->collisionShape = NULL;
 		this->camera = NULL;
 	}
+
+	void ForceUpdates(bool b);
+	bool ForcesUpdates();
 
 	void SetType(Type type);
 	Type GetType();
@@ -1118,11 +1205,31 @@ struct GameObject
 
 	static vector<GameObject*> gameObjects;
 	static vector<GameObject*> gameObjectDestructionQueue;
+
 	static vector<GameObject*> physicsGameObjects;
 	static vector<GameObject*> collisionGameObjects;
 	static vector<GameObject*> staticCollisionGameObjects;
+	static vector<GameObject*> phantomCollisionGameObjects;
 
 };
+
+
+
+void GameObject::ForceUpdates(bool b)
+{
+	this->forceUpdates = b;
+}
+
+bool GameObject::ForcesUpdates()
+{
+	bool result;
+
+	result = this->forceUpdates;
+
+	return result;
+}
+
+
 
 void GameObject::SetType(Type type)
 {
@@ -1191,6 +1298,10 @@ void GameObject::AddCollisionShape(S shape)
 	}
 	else
 	{
+		if (collider->IsPhantom())
+		{
+			phantomCollisionGameObjects.push_back(this);
+		}
 		collisionGameObjects.push_back(this);
 	}
 	//collisionGameObjects.push_back(this);
@@ -1257,6 +1368,19 @@ void GameObject::RemoveCollisionShape()
 		}
 	}
 
+	if (this->collisionShape->IsPhantom())
+	{
+		for (size_t i = 0; i < GameObject::phantomCollisionGameObjects.size(); ++i)
+		{
+			GameObject* go = GameObject::phantomCollisionGameObjects[i];
+			if (this == go)
+			{
+				GameObject::phantomCollisionGameObjects.erase(GameObject::phantomCollisionGameObjects.begin() + i);
+				break;
+			}
+		}
+	}
+
 	delete this->collisionShape;
 	this->collisionShape = NULL;
 }
@@ -1275,7 +1399,7 @@ void GameObject::RemoveCamera()
 GameObject* CreateGameObject(GameObject::Type type);
 void DestroyGameObject(GameObject* gameObject);
 GameObject* CreateHero(vec2 position, bool debugDraw);
-GameObject* CreateBackground(const char * backgroundName, vec2 position, bool debugDraw);
+GameObject* CreateBackground(const char * backgroundName, vec2 position, vec2 scale, bool debugDraw);
 GameObject* CreateTree(vec2 position, bool debugDraw);
 GameObject* CreateDancingFlowers(vec2 position, bool debugDraw);
 GameObject* CreateWeed(vec2 position, bool debugDraw);
@@ -1283,8 +1407,8 @@ GameObject* CreateSpookyTree(vec2 position, bool debugDraw);
 GameObject* CreateBlocker(vec2 position, vec2 scale, bool debugDraw);
 GameObject* CreateButton(vec2 position, bool debugDraw);
 GameObject* CreateFire(vec2 position, bool debugDraw);
-GameObject* CreateHorizontalTransitionBar(vec2 position, bool debugDraw);
-GameObject* CreateVerticalTransitionBar(vec2 position, bool debugDraw);
+GameObject* CreateHorizontalTransitionBar(vec2 position, F32 length, bool debugDraw);
+GameObject* CreateVerticalTransitionBar(vec2 position, F32 length, bool debugDraw);
 GameObject* CreatePlayerCamera(vec2 position, bool debugDraw);
 GameObject* CreateCameraTetherPoint(vec2 position, bool debugDraw);
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
@@ -1922,9 +2046,11 @@ void GameObject::ToggleDebugState()
 
 vector<GameObject*> GameObject::gameObjects;
 vector<GameObject*> GameObject::gameObjectDestructionQueue;
+
 vector<GameObject*> GameObject::physicsGameObjects;
 vector<GameObject*> GameObject::collisionGameObjects;
 vector<GameObject*> GameObject::staticCollisionGameObjects;
+vector<GameObject*> GameObject::phantomCollisionGameObjects;
 
 vector<GameObject*> FindGameObjectByType(GameObject::Type type)
 {
@@ -2839,6 +2965,7 @@ GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
 {
 	GameObject* camera = CreateGameObject(GameObject::PlayerCamera);
 
+	camera->ForceUpdates(true);
 	camera->transform.position = position;
 	camera->AddCamera(ScreenDimensions);
 	camera->SetDebugState(debugDraw);
@@ -2871,18 +2998,6 @@ GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
 
 
 	return camera;
-}
-
-GameObject* CreateCameraTetherPoint(vec2 position, bool debugDraw = true)
-{
-	GameObject* tp = CreateGameObject(GameObject::CameraTetherPoint);
-
-	tp->transform.position = position;
-	tp->AddTag(GameObject::Environment);
-	tp->AddCollisionShape(Rectangle_2D(TileDimensions, vec2(0.0f, 0.0f), true));
-	tp->SetDebugState(debugDraw);
-
-	return tp;
 }
 
 GameObject* CreateMiniWall_2x1(vec2 position, bool debugDraw)
@@ -3514,11 +3629,10 @@ bool GameInitialize()
 	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
 	bool debugDraw = globalDebugDraw;
-	//CreateBackground("background_present_worldMap_10-5", vec2(0.0f, 0.0f), debugDraw);
-	//CreateCameraTetherPoint(vec2(0.0f, 0.0f), debugDraw);
-	//CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), debugDraw);
-	//CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), debugDraw);
-	/*CreateDancingFlowers(vec2(-0.5f, -1.5f), debugDraw);
+	CreateBackground("background_present_worldMap_10-5", vec2(0.0f, 0.0f), vec2(10.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), 10.0f, debugDraw);
+	CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), 8.0f, debugDraw);
+	CreateDancingFlowers(vec2(-0.5f, -1.5f), debugDraw);
 	CreateDancingFlowers(vec2(-2.5f, 1.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, -0.5f), debugDraw); // Left Group Start
 	CreateWeed(vec2(-3.5f, -0.5f), debugDraw);
@@ -3537,14 +3651,13 @@ bool GameInitialize()
 	CreateTree(vec2( 4.0f,  2.0f), debugDraw);
 	CreateTree(vec2( 4.0f,  0.0f), debugDraw);
 	CreateTree(vec2( 4.0f, -2.0f), debugDraw);
-	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall*/
+	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
 
 
-	//CreateBackground("background_present_worldMap_10-6", vec2(0.0f, 8.0f), debugDraw);
-	//CreateCameraTetherPoint(vec2(0.0f, 8.0f), debugDraw);
-	//CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), debugDraw);
-	//CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), debugDraw);
-	/*CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
+	CreateBackground("background_present_worldMap_10-6", vec2(0.0f, 8.0f), vec2(10.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), 10.0f, debugDraw);
+	CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), 8.0f, debugDraw);
+	CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
 	CreateDancingFlowers(vec2(1.5f, 10.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, 5.5f), debugDraw); // Left Group Start
 	CreateWeed(vec2(-2.5f, 6.5f), debugDraw);
@@ -3557,28 +3670,29 @@ bool GameInitialize()
 	CreateTree(vec2(4.0f, 6.0f), debugDraw); // Right Group Start
 	CreateTree(vec2(4.0f, 8.0f), debugDraw);
 	CreateSpookyTree(vec2(4.0f, 10.0f), debugDraw); // Right Group Start
-	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);*/
+	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);
 
 
-	//CreateBackground("background_present_worldMap_10-7", vec2(0.0f, 16.0f), debugDraw);
-	//CreateCameraTetherPoint(vec2(0.0f, 16.0f), debugDraw);
-	//CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), debugDraw);
-	//CreateVerticalTransitionBar(vec2(-5.0f, 16.0f), debugDraw);
+	CreateBackground("background_present_worldMap_10-7", vec2(0.0f, 16.0f), vec2(10.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), 10.0f, debugDraw);
+	CreateVerticalTransitionBar(vec2(-5.0f, 16.0f),8.0f, debugDraw);
 
-	//CreateBackground("background_present_worldMap_11-6", vec2(10.0f, 8.0f), debugDraw);
-	//CreateCameraTetherPoint(vec2(10.0f, 8.0f), debugDraw);
-	//CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), debugDraw);
-	//CreateVerticalTransitionBar(vec2(5.0f, 8.0f), debugDraw);
+	CreateBackground("background_present_worldMap_11-6", vec2(10.0f, 8.0f), vec2(10.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), 10.0f, debugDraw);
+	CreateVerticalTransitionBar(vec2(5.0f, 8.0f), 8.0f, debugDraw);
 
-	//CreateBackground("background_present_worldMap_11-7", vec2(10.0f, 16.0f), debugDraw);
-	//CreateCameraTetherPoint(vec2(10.0f, 16.0f), debugDraw);
-	//CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), debugDraw);
-	//CreateVerticalTransitionBar(vec2(5.0f, 16.0f), debugDraw);
+	CreateBackground("background_present_worldMap_11-7", vec2(10.0f, 16.0f), vec2(10.0f, 8.0f), debugDraw);
+	CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), 10.0f, debugDraw);
+	CreateVerticalTransitionBar(vec2(5.0f, 16.0f), 8.0f, debugDraw);
 
 
-	// Lefthand tether points
-	//CreateCameraTetherPoint(vec2(-10.0f, 8.0f), debugDraw); // NOTE: 9-6
-	//CreateCameraTetherPoint(vec2(-10.0f, 16.0f), debugDraw); // NOTE: 9-7
+	CreateVerticalTransitionBar(vec2(5.0f, 0.0f), 8.0f, debugDraw);
+
+
+	CreateHorizontalTransitionBar(vec2(0.0f, 20.0f), 10.0f, debugDraw);
+	CreateHorizontalTransitionBar(vec2(10.0f, 20.0f), 10.0f, debugDraw);
+	CreateVerticalTransitionBar(vec2(15.0f, 8.0f), 8.0f, debugDraw);
+	CreateVerticalTransitionBar(vec2(15.0f, 16.0f), 8.0f, debugDraw);
 
 	/*CreateMiniWall_1x1(vec2(1.25f, 3.75f), debugDraw);
 	CreateMiniWall_2x1(vec2(2.5f, 1.0f), debugDraw);
@@ -3590,7 +3704,7 @@ bool GameInitialize()
 	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(-65.0f, -20.0f), vec2(4, 3));
 	//CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-22.5f, -11.5f));
 	//CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-22.5f, -22.0f));
-	CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(-30.0f, 0.0f));
+	//CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(-30.0f, 0.0f));
 	//CreateMap("past_worldMap", vec2(60, 64), vec2(6, 8), vec2(-30.0f, -32.0f));
 	//CreateMap("present_poeGrave", vec2(10, 8), vec2(1, 1), vec2(-5.0f, 0.0f));
 	//CreateMap("present_skullCave", vec2(15, 11), vec2(1, 1), vec2(-7.5f, 0.0f));
@@ -3624,19 +3738,19 @@ bool GameInitialize()
 	return true;
 }
 
-void UpdateGameObjects_PrePhysics(F32 dt)
+void UpdateGameObjects_PrePhysics(vector<GameObject*> &gameObjects, F32 dt)
 {
-	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	for (size_t i = 0; i < gameObjects.size(); ++i)
 	{
-		GameObject::gameObjects[i]->Update_PrePhysics(dt);
+		gameObjects[i]->Update_PrePhysics(dt);
 	}
 }
 
-void UpdateGameObjects_PostPhysics(F32 dt)
+void UpdateGameObjects_PostPhysics(vector<GameObject*> &gameObjects, F32 dt)
 {
-	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	for (size_t i = 0; i < gameObjects.size(); ++i)
 	{
-		GameObject::gameObjects[i]->Update_PostPhysics(dt);
+		gameObjects[i]->Update_PostPhysics(dt);
 	}
 }
 
@@ -3684,6 +3798,12 @@ vector<GameObject*> GenerateUpdateBin()
 	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
 	{
 		GameObject* go = GameObject::gameObjects[i];
+		if (go->ForcesUpdates())
+		{
+			result.push_back(go);
+			continue;
+		}
+		
 		vec2 goPosition = go->transform.position;
 
 		vec2 simulationSpacePosition = GetSimulationSpacePosition();
@@ -3818,6 +3938,20 @@ void GameUpdate(F32 dt)
 	{
 		gameObjectsToLoad.clear();
 		gameObjectsToLoad = GenerateLoadBin();
+		for (size_t i = 0; i < gameObjectsToLoad.size(); ++i)
+		{
+			GameObject* go = gameObjectsToLoad[i];
+
+			if (go->sprite)
+			{
+				go->sprite->Load();
+			}
+
+			if (go->animator)
+			{
+				go->animator->Load();
+			}
+		}
 
 		gameObjectsToUpdate.clear();
 		gameObjectsToUpdate = GenerateUpdateBin();
@@ -3825,7 +3959,7 @@ void GameUpdate(F32 dt)
 
 
 		//DebugPrintf(512, "time: %u\n", SystemTimeToMilliseconds(GetTimeSinceStartup()));
-		UpdateGameObjects_PrePhysics(dt);
+		UpdateGameObjects_PrePhysics(gameObjectsToUpdate/*GameObject::gameObjects*/, dt);
 		IntegratePhysicsObjects(dt);
 		FixAllInterpenetrations();
 
@@ -3837,7 +3971,7 @@ void GameUpdate(F32 dt)
 
 		size_t qs = queuedEventsToProcess.size();
 		SendQueuedEvents();
-		UpdateGameObjects_PostPhysics(dt);
+		UpdateGameObjects_PostPhysics(gameObjectsToUpdate/*GameObject::gameObjects*/, dt);
 		AreAllAnimationsPaused() ? NULL : AdvanceAnimations(dt);
 		ReconcileCameras();
 	}
@@ -3845,8 +3979,8 @@ void GameUpdate(F32 dt)
 
 	if (!GameFrozen())
 	{
-		//DebugDrawUpdateBin(&gameObjectsToUpdate);
-		DebugDrawLoadBin(&gameObjectsToLoad);
+		DebugDrawUpdateBin(&gameObjectsToUpdate);
+		//DebugDrawLoadBin(&gameObjectsToLoad);
 
 		AddThisFramesQueuedEventsToProcessingQueue();
 		ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
