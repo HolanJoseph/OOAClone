@@ -42,6 +42,47 @@ void DebugDrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, F32 
 void DebugDrawRectangleSolidColor(vec2 halfDim, Transform transform, vec4 color);
 
 
+struct Timer
+{
+	const char* name;
+	SystemTime startTime;
+	SystemTime endTime;
+
+	Timer(const char* name)
+	{
+		this->name = Copy(name);
+	}
+
+	~Timer()
+	{
+		free((char*)this->name);
+	}
+
+	void Start()
+	{
+		this->startTime = GetTimeSinceStartup();
+	}
+
+	void End()
+	{
+		this->endTime = GetTimeSinceStartup();
+	}
+
+	SystemTime Get()
+	{
+		SystemTime result;
+
+		result = this->endTime - this->startTime;
+
+		return result;
+	}
+
+	void Report()
+	{
+		DebugPrintf(1024, "Timer %s: %ums\n", this->name, this->Get().milliseconds);
+	}
+};
+
 
 StringStringHashTable spriteAssetFilepathTable;
 inline void ReadInSpriteAssets(StringStringHashTable* hash, char* filename)
@@ -1423,6 +1464,9 @@ void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
 void PauseAllAnimations();
 void UnpauseAllAnimations();
 void FreezeGame(U32 milliseconds);
+vec2 GetSimulationSpacePosition();
+vec2 GetSimulationSpaceDimensions();
+vec2 GetSimulationSpaceHalfDimensions();
 void SetSimulationSpace(vec2 center, vec2 dimensions);
 void SetSimulationSpace(GameObject* target);
 
@@ -1675,6 +1719,8 @@ void GameObject::Update_PostPhysics(F32 dt)
 	{
 	case PlayerCharacter:
 	{
+							Timer playerPostTimer = Timer("   Player Post Physics Update");
+							playerPostTimer.Start();
 							if (this->frozen)
 							{
 								break;
@@ -1750,7 +1796,11 @@ void GameObject::Update_PostPhysics(F32 dt)
 							//	GameObject* go = infront[i];
 							//	go->SetDebugState(true);
 							//}
+							Timer playerRaycastTimer = Timer("   Player Forward Raycast");
+							playerRaycastTimer.Start();
 							GameObject* infront = RaycastFirst_Line_2D(this->transform.position, this->facing, 1000.0f);
+							playerRaycastTimer.End();
+							playerRaycastTimer.Report();
 							if (infront != NULL && this->showRay)
 							{
 								infront->SetDebugState(true);
@@ -1760,6 +1810,9 @@ void GameObject::Update_PostPhysics(F32 dt)
 							{
 								CreateFire(this->transform.position + this->facing, true);
 							}
+
+							playerPostTimer.End();
+							playerPostTimer.Report();
 	}
 	break;
 
@@ -2186,6 +2239,26 @@ vector<CollisionPair> GenerateContacts()
 {
 	vector<CollisionPair> result;
 
+	//vec2 simulationSpacePosition = GetSimulationSpacePosition();
+	//vec2 simulationSpaceHalfDimensions = GetSimulationSpaceHalfDimensions();
+	//F32 collisionSimulationMultiplier = 1.25f;
+	//vec2 scaledHalfDimensions = simulationSpaceHalfDimensions * collisionSimulationMultiplier;
+	//vec2 collisionSimulationRegionUpperLeft = simulationSpacePosition + vec2(-scaledHalfDimensions.x, scaledHalfDimensions.y);
+	//vec2 collisionSimulationRegionBottomRight = simulationSpacePosition + vec2(scaledHalfDimensions.x, - scaledHalfDimensions.y);
+	//
+	//AxisAlignedBoundingBox collisionSimulationRegion = AxisAlignedBoundingBox(collisionSimulationRegionUpperLeft, collisionSimulationRegionBottomRight);
+	//vector<GameObject*> staticColliders;
+	//for (size_t l = 0; l < GameObject::staticCollisionGameObjects.size(); ++l)
+	//{
+	//	GameObject* go = GameObject::staticCollisionGameObjects[l];
+	//
+	//	CollisionInfo_2D trel = DetectRoughCollision_2D(collisionSimulationRegion, go->collisionShape->GetAxisAlignedBoundingBox(go->transform));
+	//	if (trel.collided)
+	//	{
+	//		staticColliders.push_back(go);
+	//	}
+	//}
+
 	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
 	{
 		for (size_t j = i + 1; j < GameObject::collisionGameObjects.size(); ++j)
@@ -2211,10 +2284,10 @@ vector<CollisionPair> GenerateContacts()
 			}
 		}
 
-		for (size_t j = 0; j < GameObject::staticCollisionGameObjects.size(); ++j)
+		for (size_t j = 0; j < GameObject::staticCollisionGameObjects.size()/*staticColliders.size()*/; ++j)
 		{
 			GameObject* go1 = GameObject::collisionGameObjects[i];
-			GameObject* go2 = GameObject::staticCollisionGameObjects[j];
+			GameObject* go2 = GameObject::staticCollisionGameObjects[j];/*staticColliders[j];*/
 
 			/*
 			* NOTE: Still not sure the best way to handle pessimistic biases
@@ -2224,16 +2297,17 @@ vector<CollisionPair> GenerateContacts()
 			*
 			*		   Should we be adding to the scale or multiplying???
 			*/
-			Transform biasedTransform = go1->transform;
-			biasedTransform.scale += vec2(0.2f, 0.2f);
-			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
-			if (ci.collided)
-			{
-				GameObject::Type go1T = go1->GetType();
-				GameObject::Type go2T = go2->GetType();
-				ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
-				result.push_back(CollisionPair(go1, go2, ci));
-			}
+			//Transform biasedTransform = go1->transform;
+			//biasedTransform.scale += vec2(0.2f, 0.2f);
+			//CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
+			//if (ci.collided)
+			//{
+			//	ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
+			//	result.push_back(CollisionPair(go1, go2, ci));
+			//}
+
+			// NOTE: nonbiased
+
 		}
 	}
 
@@ -2346,12 +2420,19 @@ void FixAllInterpenetrations()
 {
 	vector<CollisionEventPair> interpenetrationsFixed;
 
+
+	SystemTime t0 = GetTimeSinceStartup();
 	vector<CollisionPair> collisions = GenerateContacts();
+	SystemTime t1 = GetTimeSinceStartup();
+	SystemTime t01diff = t1 - t0;
+	//DebugPrintf(1024, "\n\n\nGenerate Contacts: %u ms\n", t01diff.milliseconds);
+
 
 	// NOTE: This is all really janky
 	// NOTE: Any weird behavior wrt phantoms is likely caused by this chunk of code
 	// Remove all phantoms from the contacts list because we
 	//	don't want to push objects out of them we just want to know what is inside of them.
+	SystemTime t2 = GetTimeSinceStartup();
 	vector<size_t> erasePositions;
 	for (size_t i = 0; i < collisions.size(); ++i)
 	{
@@ -2370,8 +2451,11 @@ void FixAllInterpenetrations()
 		collisions.erase(collisions.begin() + index);
 	}
 	erasePositions.clear();
+	SystemTime t3 = GetTimeSinceStartup();
+	SystemTime t23diff = t3 - t2;
+	//DebugPrintf(1024, "Clear Phantoms: %u ms\n", t23diff.milliseconds);
 
-
+	SystemTime t4 = GetTimeSinceStartup();
 	size_t maxNumberOfIterations = collisions.size() * 10;
 	size_t i = 0;
 	while (i < maxNumberOfIterations)
@@ -2435,6 +2519,9 @@ void FixAllInterpenetrations()
 
 		++i;
 	}
+	SystemTime t5 = GetTimeSinceStartup();
+	SystemTime t45diff = t5 - t4;
+	//DebugPrintf(1024, "Resolve Interpenetrations: %u ms\n", t45diff.milliseconds);
 
 
 	/*
@@ -3448,7 +3535,7 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 		DrawSprite(gameObject->sprite->texture, gameObject->sprite->offset, gameObject->transform, renderCamera);
 	}
 
-	if (gameObject->collisionShape != NULL && gameObject->debugDraw)
+	/*if (gameObject->collisionShape != NULL && gameObject->debugDraw)
 	{
 		const size_t rectangleHash = typeid(Rectangle_2D).hash_code();
 		const size_t circleHash = typeid(Circle_2D).hash_code();
@@ -3484,13 +3571,13 @@ void DrawGameObject(GameObject* gameObject, F32 dt)
 			DrawLine(trianglePoints[1], trianglePoints[2], debugCollisionColor, renderCamera);
 			DrawLine(trianglePoints[2], trianglePoints[0], debugCollisionColor, renderCamera);
 		}
-	}
+	}*/
 
-	// Draw Position
+	/*// Draw Position
 	if (gameObject->debugDraw)
 	{
 		DrawPoint(gameObject->transform.position, 4, vec4(0.0f, 0.0f, 1.0f, 1.0f), renderCamera);
-	}
+	}*/
 }
 
 void DrawGameObjects(F32 dt)
@@ -3550,50 +3637,50 @@ void DrawGameObjects(F32 dt)
 	{
 		GameObject* go = bin_Background[i];
 		DrawGameObject(go, dt);
-		go->DebugDraw();
+		//go->DebugDraw();
 	}
 
-	if (globalDebugDraw)
-	{
-		DrawCameraGrid();
-	}
+	//if (globalDebugDraw)
+	//{
+	//	DrawCameraGrid();
+	//}
 
 
 	for (size_t i = 0; i < bin_Environment.size(); ++i)
 	{
 		GameObject* go = bin_Environment[i];
 		DrawGameObject(go, dt);
-		go->DebugDraw();
+		//go->DebugDraw();
 	}
 
 	for (size_t i = 0; i < bin_Characters.size(); ++i)
 	{
 		GameObject* go = bin_Characters[i];
 		DrawGameObject(go, dt);
-		go->DebugDraw();
+		//go->DebugDraw();
 	}
 
 	for (size_t i = 0; i < bin_Effects.size(); ++i)
 	{
 		GameObject* go = bin_Effects[i];
 		DrawGameObject(go, dt);
-		go->DebugDraw();
+		//go->DebugDraw();
 	}
 
 	// Draw Simulation Space Outline.
-	vec2 ssDimensions = GetSimulationSpaceDimensions();
-	vec2 ssHalfDim = ssDimensions / 2.0f;
-	vec2 ssPosition = GetSimulationSpacePosition();
-	vec4 ssColor = vec4(0.0f, 0.65f, 1.0f, 1.0f);
-	DebugDrawRectangleOutline(ssPosition + vec2(-ssHalfDim.x, ssHalfDim.y), ssDimensions, ssColor);
+	//vec2 ssDimensions = GetSimulationSpaceDimensions();
+	//vec2 ssHalfDim = ssDimensions / 2.0f;
+	//vec2 ssPosition = GetSimulationSpacePosition();
+	//vec4 ssColor = vec4(0.0f, 0.65f, 1.0f, 1.0f);
+	//DebugDrawRectangleOutline(ssPosition + vec2(-ssHalfDim.x, ssHalfDim.y), ssDimensions, ssColor);
 
 
 	// Draw Load Space Outline
-	vec2 lsDimensions = GetLoadSpaceDimensions();
-	vec2 lsHalfDim = lsDimensions / 2.0f;
-	vec2 lsPosition = GetLoadSpacePosition();
-	vec4 lsColor = vec4(0.57f, 0.0f, 1.0f, 1.0f);
-	DebugDrawRectangleOutline(lsPosition + vec2(-lsHalfDim.x, lsHalfDim.y), lsDimensions, lsColor);
+	//vec2 lsDimensions = GetLoadSpaceDimensions();
+	//vec2 lsHalfDim = lsDimensions / 2.0f;
+	//vec2 lsPosition = GetLoadSpacePosition();
+	//vec4 lsColor = vec4(0.57f, 0.0f, 1.0f, 1.0f);
+	//DebugDrawRectangleOutline(lsPosition + vec2(-lsHalfDim.x, lsHalfDim.y), lsDimensions, lsColor);
 
 	// Draw chunk outlines
 	/*for (size_t x = 0; x < numberOfHorizontalChunks; ++x)
@@ -3629,9 +3716,7 @@ bool GameInitialize()
 	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
 	bool debugDraw = globalDebugDraw;
-	CreateBackground("background_present_worldMap_10-5", vec2(0.0f, 0.0f), vec2(10.0f, 8.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), 10.0f, debugDraw);
-	CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), 8.0f, debugDraw);
+	
 	CreateDancingFlowers(vec2(-0.5f, -1.5f), debugDraw);
 	CreateDancingFlowers(vec2(-2.5f, 1.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, -0.5f), debugDraw); // Left Group Start
@@ -3654,9 +3739,7 @@ bool GameInitialize()
 	CreateBlocker(vec2(0.0f, -3.5f), vec2(10.0f, 1.0f), debugDraw); // Bottom Wall
 
 
-	CreateBackground("background_present_worldMap_10-6", vec2(0.0f, 8.0f), vec2(10.0f, 8.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), 10.0f, debugDraw);
-	CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), 8.0f, debugDraw);
+	
 	CreateDancingFlowers(vec2(-0.5f, 6.5f), debugDraw);
 	CreateDancingFlowers(vec2(1.5f, 10.5f), debugDraw);
 	CreateWeed(vec2(-2.5f, 5.5f), debugDraw); // Left Group Start
@@ -3673,26 +3756,32 @@ bool GameInitialize()
 	CreateSpookyTree(vec2(4.0f, 12.0f), debugDraw);
 
 
-	CreateBackground("background_present_worldMap_10-7", vec2(0.0f, 16.0f), vec2(10.0f, 8.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), 10.0f, debugDraw);
-	CreateVerticalTransitionBar(vec2(-5.0f, 16.0f),8.0f, debugDraw);
-
-	CreateBackground("background_present_worldMap_11-6", vec2(10.0f, 8.0f), vec2(10.0f, 8.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), 10.0f, debugDraw);
-	CreateVerticalTransitionBar(vec2(5.0f, 8.0f), 8.0f, debugDraw);
-
-	CreateBackground("background_present_worldMap_11-7", vec2(10.0f, 16.0f), vec2(10.0f, 8.0f), debugDraw);
-	CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), 10.0f, debugDraw);
-	CreateVerticalTransitionBar(vec2(5.0f, 16.0f), 8.0f, debugDraw);
-
-
-	CreateVerticalTransitionBar(vec2(5.0f, 0.0f), 8.0f, debugDraw);
-
-
-	CreateHorizontalTransitionBar(vec2(0.0f, 20.0f), 10.0f, debugDraw);
-	CreateHorizontalTransitionBar(vec2(10.0f, 20.0f), 10.0f, debugDraw);
-	CreateVerticalTransitionBar(vec2(15.0f, 8.0f), 8.0f, debugDraw);
-	CreateVerticalTransitionBar(vec2(15.0f, 16.0f), 8.0f, debugDraw);
+	//CreateBackground("background_present_worldMap_10-5", vec2(0.0f, 0.0f), vec2(10.0f, 8.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(0.0f, -4.0f), 10.0f, debugDraw);
+	//CreateVerticalTransitionBar(vec2(-5.0f, 0.0f), 8.0f, debugDraw);
+	//
+	//CreateBackground("background_present_worldMap_10-6", vec2(0.0f, 8.0f), vec2(10.0f, 8.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(0.0f, 4.0f), 10.0f, debugDraw);
+	//CreateVerticalTransitionBar(vec2(-5.0f, 8.0f), 8.0f, debugDraw);
+	//
+	//CreateBackground("background_present_worldMap_10-7", vec2(0.0f, 16.0f), vec2(10.0f, 8.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(0.0f, 12.0f), 10.0f, debugDraw);
+	//CreateVerticalTransitionBar(vec2(-5.0f, 16.0f),8.0f, debugDraw);
+	//
+	//CreateBackground("background_present_worldMap_11-6", vec2(10.0f, 8.0f), vec2(10.0f, 8.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(10.0f, 4.0f), 10.0f, debugDraw);
+	//CreateVerticalTransitionBar(vec2(5.0f, 8.0f), 8.0f, debugDraw);
+	//
+	//CreateBackground("background_present_worldMap_11-7", vec2(10.0f, 16.0f), vec2(10.0f, 8.0f), debugDraw);
+	//CreateHorizontalTransitionBar(vec2(10.0f, 12.0f), 10.0f, debugDraw);
+	//CreateVerticalTransitionBar(vec2(5.0f, 16.0f), 8.0f, debugDraw);
+	//
+	//CreateVerticalTransitionBar(vec2(5.0f, 0.0f), 8.0f, debugDraw);
+	//
+	//CreateHorizontalTransitionBar(vec2(0.0f, 20.0f), 10.0f, debugDraw);
+	//CreateHorizontalTransitionBar(vec2(10.0f, 20.0f), 10.0f, debugDraw);
+	//CreateVerticalTransitionBar(vec2(15.0f, 8.0f), 8.0f, debugDraw);
+	//CreateVerticalTransitionBar(vec2(15.0f, 16.0f), 8.0f, debugDraw);
 
 	/*CreateMiniWall_1x1(vec2(1.25f, 3.75f), debugDraw);
 	CreateMiniWall_2x1(vec2(2.5f, 1.0f), debugDraw);
@@ -3701,7 +3790,7 @@ bool GameInitialize()
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
-	//CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(-65.0f, -20.0f), vec2(4, 3));
+	CreateMap("present_worldMap", vec2(100, 72), vec2(10, 9), vec2(-65.0f, -20.0f), vec2(4, 3));
 	//CreateMap("past_blackTower", vec2(45, 22), vec2(3, 2), vec2(-22.5f, -11.5f));
 	//CreateMap("past_makuPath", vec2(45, 44), vec2(3, 4), vec2(-22.5f, -22.0f));
 	//CreateMap("past_townHouses", vec2(60, 8), vec2(6, 1), vec2(-30.0f, 0.0f));
@@ -3879,9 +3968,16 @@ vector<GameObject*> gameObjectsToUpdate;
 vector<GameObject*> gameObjectsToLoad;
 
 F32 time = 0.0f;
-F32 skipThreshold = 0.5f;
+F32 skipThreshold = 1.0f;
 void GameUpdate(F32 dt)
 {
+	HighResolutionTimer frameTimer = HighResolutionTimer("Frame Time");
+	frameTimer.Start();
+
+
+
+	HighResolutionTimer part1Timer = HighResolutionTimer("Update Pre Draw");
+	part1Timer.Start();
 	// Handle really long frame times. Mainly for debugging/ moving the window around
 	//	we should probably pause the game when the player moves the window around instead of just throwing the frame out 
 	//  this is just a temp measure.
@@ -3899,43 +3995,12 @@ void GameUpdate(F32 dt)
 	{
 		StepGameFreeze(dt);
 	}
-	
 
-	// NOTE: Debug drawing toggle grids, clearing, ray casting
-	//if (GetKeyDown(KeyCode_1))
-	//{
-	//	globalDebugDraw = !globalDebugDraw;
-	//	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
-	//	{
-	//		GameObject* go = GameObject::gameObjects[i];
-	//		go->SetDebugState(globalDebugDraw);
-	//	}
-	//}
-	//
-	//if (GetKeyDown(KeyCode_2))
-	//{
-	//	resetDebugStatePerFrame = !resetDebugStatePerFrame;
-	//}
-	//
-	//if (GetKeyDown(KeyCode_3))
-	//{
-	//	heroGO->showRay = !heroGO->showRay;
-	//}
-
-	//if (time > 2.0f && time <= 3.0f)
-	//{
-	//	time += dt;
-	//}
-	//else
-	//{
-	//	time += dt;
-	//}
-
-	//DebugPrintf(512, "delta time = %f\n", dt);
-	//heroGO->rigidbody->ApplyImpulse(vec2(0.0f, 1.0f), 1.5f);
  	Clear();
 	if (!GameFrozen())
 	{
+		HighResolutionTimer loadTimer = HighResolutionTimer("Load");
+		loadTimer.Start();
 		gameObjectsToLoad.clear();
 		gameObjectsToLoad = GenerateLoadBin();
 		for (size_t i = 0; i < gameObjectsToLoad.size(); ++i)
@@ -3952,39 +4017,111 @@ void GameUpdate(F32 dt)
 				go->animator->Load();
 			}
 		}
+		loadTimer.End();
+		loadTimer.Report();
 
+
+
+		HighResolutionTimer updateBinTimer = HighResolutionTimer("Generate Update Bin");
+		updateBinTimer.Start();
 		gameObjectsToUpdate.clear();
 		gameObjectsToUpdate = GenerateUpdateBin();
+		updateBinTimer.End();
+		updateBinTimer.Report();
 
 
 
-		//DebugPrintf(512, "time: %u\n", SystemTimeToMilliseconds(GetTimeSinceStartup()));
+		HighResolutionTimer prePhysUpdateTimer = HighResolutionTimer("Pre Physics Update");
+		prePhysUpdateTimer.Start();
 		UpdateGameObjects_PrePhysics(gameObjectsToUpdate/*GameObject::gameObjects*/, dt);
+		prePhysUpdateTimer.End();
+
+
+
+		HighResolutionTimer integrationTimer = HighResolutionTimer("Physics Object Integration");
+		integrationTimer.Start();
 		IntegratePhysicsObjects(dt);
+		integrationTimer.End();
+		integrationTimer.Report();
+
+
+
+		HighResolutionTimer interpenetrationTimer = HighResolutionTimer("Fixup Interpenetrations");
+		interpenetrationTimer.Start();
 		FixAllInterpenetrations();
-
-		/*
-		 * Tests
-		 */
+		interpenetrationTimer.End();
+		interpenetrationTimer.Report();
 
 
 
+		HighResolutionTimer processQueuedEventsTimer = HighResolutionTimer("Process Queued Events");
+		processQueuedEventsTimer.Start();
 		size_t qs = queuedEventsToProcess.size();
 		SendQueuedEvents();
+		processQueuedEventsTimer.End();
+		processQueuedEventsTimer.Report();
+
+
+
+		HighResolutionTimer postPhysUpdateTimer = HighResolutionTimer("Post Physics Update");
+		postPhysUpdateTimer.Start();
 		UpdateGameObjects_PostPhysics(gameObjectsToUpdate/*GameObject::gameObjects*/, dt);
+		postPhysUpdateTimer.End();
+		postPhysUpdateTimer.Report();
+
+
+
+		HighResolutionTimer advanceAnimationTimer = HighResolutionTimer("Advance Animations");
+		advanceAnimationTimer.Start();
 		AreAllAnimationsPaused() ? NULL : AdvanceAnimations(dt);
+		advanceAnimationTimer.End();
+		advanceAnimationTimer.Report();
+
+
 		ReconcileCameras();
 	}
-	DrawGameObjects(dt);
+	part1Timer.End();
+	part1Timer.Report();
 
+
+	HighResolutionTimer drawGameObjectsTimer = HighResolutionTimer("Draw Game Objects");
+	drawGameObjectsTimer.Start();
+	DrawGameObjects(dt);
+	drawGameObjectsTimer.End();
+	drawGameObjectsTimer.Report();
+
+
+	HighResolutionTimer part2Timer = HighResolutionTimer("Update Post Draw");
+	part2Timer.Start();
 	if (!GameFrozen())
 	{
-		DebugDrawUpdateBin(&gameObjectsToUpdate);
+		HighResolutionTimer debugDrawUpdateBinTimer = HighResolutionTimer("Draw GameObjects To Be Updated");
+		debugDrawUpdateBinTimer.Start();
+		//DebugDrawUpdateBin(&gameObjectsToUpdate);
+		debugDrawUpdateBinTimer.End();
+		debugDrawUpdateBinTimer.Report();
 		//DebugDrawLoadBin(&gameObjectsToLoad);
 
-		AddThisFramesQueuedEventsToProcessingQueue();
-		ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
 
+
+		HighResolutionTimer addToQueuedEventsTimer = HighResolutionTimer("Add New Queued Events For Processing");
+		addToQueuedEventsTimer.Start();
+		AddThisFramesQueuedEventsToProcessingQueue();
+		addToQueuedEventsTimer.End();
+		addToQueuedEventsTimer.Report();
+
+
+
+		HighResolutionTimer destroyGameObjectsTimer = HighResolutionTimer("Clear GameObject Destruction Queue");
+		destroyGameObjectsTimer.Start();
+		ClearDestructionQueue(); // NOTE: Maybe this should be done before we draw?
+		destroyGameObjectsTimer.End();
+		destroyGameObjectsTimer.Report();
+
+
+
+		HighResolutionTimer resetDebugStateTimer = HighResolutionTimer("Reset GameObject DebugState");
+		resetDebugStateTimer.Start();
 		// NOTE: For ray testing
 		if (resetDebugStatePerFrame)
 		{
@@ -3994,7 +4131,16 @@ void GameUpdate(F32 dt)
 				go->SetDebugState(false);
 			}
 		}
+		resetDebugStateTimer.End();
+		resetDebugStateTimer.Report();
 	}
+	part2Timer.End();
+	part2Timer.Report();
+
+
+	frameTimer.End();
+	frameTimer.Report();
+	DebugPrintf(64, "\n\n\n");
 }
 
 bool GameShutdown()

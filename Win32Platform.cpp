@@ -18,6 +18,7 @@
 
 #include "BitManip.h"
 #include "Util.h"
+#include "String.h"
 
 
 // NOTE: Functions from these files must be implemented in this file
@@ -644,7 +645,62 @@ SystemTime GetTimeSinceStartup()
 
 
 
+/*
+*  HIGH RESOLUTION TIMER API
+*/
+HighResolutionTimer::HighResolutionTimer(const char* name)
+{
+	this->name = Copy(name);
+}
 
+HighResolutionTimer::~HighResolutionTimer()
+{
+	free((char*)this->name);
+}
+
+void HighResolutionTimer::Start()
+{
+	LARGE_INTEGER startCycleLI;
+	QueryPerformanceCounter(&startCycleLI);
+
+	this->startCycle = startCycleLI.QuadPart;
+}
+
+void HighResolutionTimer::End()
+{
+	LARGE_INTEGER endCycleLI;
+	QueryPerformanceCounter(&endCycleLI);
+
+	this->endCycle = endCycleLI.QuadPart;
+}
+
+I64 HighResolutionTimer::GetCycles()
+{
+	I64 result;
+
+	result = this->endCycle - this->startCycle;
+
+	return result;
+}
+
+F32 HighResolutionTimer::GetMS()
+{
+	F32 result;
+
+
+	LARGE_INTEGER qpf;
+	QueryPerformanceFrequency(&qpf);
+	I64 performanceFrequency = (I64)qpf.QuadPart;
+	result = (this->GetCycles() / (F32)performanceFrequency) * 1000.0f;
+
+	return result;
+}
+
+void HighResolutionTimer::Report()
+{
+	//DebugPrintf(1024, "Timer %s: %f  %u\n", this->name, this->GetMS(), this->GetCycles());
+	DebugPrintf(1024, "Timer %s: %lli  %f\n", this->name, this->GetCycles(), this->GetMS());
+}
 
 
 

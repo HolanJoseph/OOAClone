@@ -194,6 +194,28 @@ SystemTime GetTimeSinceStartup();
 
 
 
+/*
+ *  HIGH RESOLUTION TIMER API
+ */
+struct HighResolutionTimer
+{
+	const char * name;
+	I64 startCycle;
+	I64 endCycle;
+
+	HighResolutionTimer(const char* name);
+	~HighResolutionTimer();
+
+	void Start();
+	void End();
+	I64 GetCycles();
+	F32 GetMS();
+	void Report();
+};
+
+
+
+
 
 /*
  *  INPUT API

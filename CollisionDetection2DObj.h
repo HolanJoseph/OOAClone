@@ -23,6 +23,24 @@
 
 typedef std::vector<vec2> PointCloud;
 
+struct AxisAlignedBoundingBox
+{
+	vec2 upperLeft;
+	vec2 bottomRight;
+
+	AxisAlignedBoundingBox()
+	{
+		this->upperLeft = vec2(0.0f, 0.0f);
+		this->bottomRight = vec2(0.0f, 0.0f);
+	}
+
+	AxisAlignedBoundingBox(vec2 upperLeft, vec2 bottomRight)
+	{
+		this->upperLeft = upperLeft;
+		this->bottomRight = bottomRight;
+	}
+};
+
 struct Shape_2D
 {
 	virtual vec2 Support(Transform transform, vec2 direction) = 0;
@@ -31,7 +49,7 @@ struct Shape_2D
 	virtual bool IsPhantom() = 0;
 	virtual void SetPhantomState(bool phantomState) = 0;
 	virtual void TogglePhantomState() = 0;
-	//virtual PointCloud Points(Transform transform) = 0;
+	virtual AxisAlignedBoundingBox GetAxisAlignedBoundingBox(Transform transform) = 0;
 };
 
 
@@ -121,18 +139,22 @@ struct Rectangle_2D : public Shape_2D
 		this->isPhantom = !this->isPhantom;
 	}
 
-	/*virtual PointCloud Points(Transform transform)
+	virtual AxisAlignedBoundingBox GetAxisAlignedBoundingBox(Transform transform)
 	{
-		PointCloud result;
+		AxisAlignedBoundingBox result;
 
-		mat3 A = transform.LocalToWorldTransform();
-		result.push_back(vec2(A * vec3(-this->halfDim.x,  this->halfDim.y, 1.0f)));
-		result.push_back(vec2(A * vec3(-this->halfDim.x, -this->halfDim.y, 1.0f)));
-		result.push_back(vec2(A * vec3( this->halfDim.x, -this->halfDim.y, 1.0f)));
-		result.push_back(vec2(A * vec3( this->halfDim.x,  this->halfDim.y, 1.0f)));
+		vec2 minX = this->Support(transform, vec2(-1.0f, 0.0f));
+		vec2 maxX = this->Support(transform, vec2(1.0f, 0.0f));
+		vec2 minY = this->Support(transform, vec2(0.0f, -1.0f));
+		vec2 maxY = this->Support(transform, vec2(0.0f, 1.0f));
+
+		vec2 ul = vec2(minX.x, maxY.y);
+		vec2 br = vec2(maxX.x, minY.y);
+
+		result = AxisAlignedBoundingBox(ul, br);
 
 		return result;
-	}*/
+	}
 };
 
 
@@ -197,6 +219,28 @@ struct Circle_2D : public Shape_2D
 	virtual void TogglePhantomState()
 	{
 		this->isPhantom = !this->isPhantom;
+	}
+
+	virtual AxisAlignedBoundingBox GetAxisAlignedBoundingBox(Transform transform)
+	{
+		AxisAlignedBoundingBox result;
+
+		vec2 minX = this->Support(transform, vec2(-1.0f, 0.0f));
+		vec2 maxX = this->Support(transform, vec2(1.0f, 0.0f));
+		vec2 minY = this->Support(transform, vec2(0.0f, -1.0f));
+		vec2 maxY = this->Support(transform, vec2(0.0f, 1.0f));
+
+		vec2 ul = vec2(minX.x, maxY.y);
+		vec2 br = vec2(maxX.x, minY.y);
+
+		vec3 ul3_World = transform.LocalToWorldTransform() * vec3(ul.x, ul.y, 1.0f);
+		vec2 ul_World = vec2(ul3_World.x, ul3_World.y);
+		vec3 br3_World = transform.LocalToWorldTransform() * vec3(br.x, br.y, 1.0f);
+		vec2 br_World = vec2(br3_World.x, br3_World.y);
+
+		result = AxisAlignedBoundingBox(ul_World, br_World);
+
+		return result;
 	}
 };
 
@@ -291,17 +335,27 @@ struct Triangle_2D : public Shape_2D
 		this->isPhantom = !this->isPhantom;
 	}
 
-	/*virtual PointCloud Points(Transform transform)
+	virtual AxisAlignedBoundingBox GetAxisAlignedBoundingBox(Transform transform)
 	{
-		PointCloud result;
+		AxisAlignedBoundingBox result;
 
-		mat3 A = transform.LocalToWorldTransform();
-		result.push_back(vec2(A * vec3(this->points[0].x, this->points[0].y, 1.0f)));
-		result.push_back(vec2(A * vec3(this->points[1].x, this->points[1].y, 1.0f)));
-		result.push_back(vec2(A * vec3(this->points[2].x, this->points[2].y, 1.0f)));
+		vec2 minX = this->Support(transform, vec2(-1.0f, 0.0f));
+		vec2 maxX = this->Support(transform, vec2(1.0f, 0.0f));
+		vec2 minY = this->Support(transform, vec2(0.0f, -1.0f));
+		vec2 maxY = this->Support(transform, vec2(0.0f, 1.0f));
+
+		vec2 ul = vec2(minX.x, maxY.y);
+		vec2 br = vec2(maxX.x, minY.y);
+
+		vec3 ul3_World = transform.LocalToWorldTransform() * vec3(ul.x, ul.y, 1.0f);
+		vec2 ul_World = vec2(ul3_World.x, ul3_World.y);
+		vec3 br3_World = transform.LocalToWorldTransform() * vec3(br.x, br.y, 1.0f);
+		vec2 br_World = vec2(br3_World.x, br3_World.y);
+
+		result = AxisAlignedBoundingBox(ul_World, br_World);
 
 		return result;
-	}*/
+	}
 };
 
 
@@ -830,5 +884,35 @@ inline CollisionInfo_2D DetectCollision_2D(Shape_2D* shapeA, Transform shapeATra
 		result.distance = epaInfo.distance;
 	}
 
+	return result;
+}
+
+
+
+
+inline bool CollideAxisAlignedBoundingBox(AxisAlignedBoundingBox a, AxisAlignedBoundingBox b)
+{
+	bool result;
+
+	//s1xmax > s2xmin
+	bool test1 = a.bottomRight.x > b.upperLeft.x;
+	//s1xmin < s2xmax
+	bool test2 = a.upperLeft.x <= b.bottomRight.x;
+	//s1ymax > s2ymin
+	bool test3 = a.upperLeft.y > b.bottomRight.y;
+	//s1ymin > s2ymax
+	bool test4 = a.bottomRight.y <= b.upperLeft.y;
+
+	result = test1 && test2 && test3 && test4;
+
+	return result;
+}
+
+inline CollisionInfo_2D DetectRoughCollision_2D(AxisAlignedBoundingBox a_AABB, AxisAlignedBoundingBox b_AABB)
+{
+	CollisionInfo_2D result;
+
+	result.collided = CollideAxisAlignedBoundingBox(a_AABB, b_AABB);
+	
 	return result;
 }
