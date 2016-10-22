@@ -1499,26 +1499,26 @@ bool GameInitialize()
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
-	spooks = CreateSpookyTree(vec2(15.0f, 4.0f), debugDraw);
-
+	spooks = CreateSpookyTree(/*vec2(15.0f, 4.0f)*/vec2(1.0f, 0.0f), debugDraw);
+	collisionWorld.Add(spooks);
 
 	debug_cwgoAddChunks = collisionWorld.Add(heroGO);
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks1 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, 0.0f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks2 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, 0.0f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks3 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, 0.0f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks4 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.50f, 0.0f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks5 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(0.0f, -1.5f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks6 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, -1.5f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks7 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, -1.5f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks8 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, -1.5f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks9 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.5f, -1.5f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks10 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(0.0f, -3.0f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks11 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, -3.0f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks12 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, -3.0f), debugDraw));
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks13 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, -3.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks1 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, 0.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks2 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, 0.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks3 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, 0.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks4 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.50f, 0.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks5 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(0.0f, -1.5f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks6 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, -1.5f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks7 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, -1.5f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks8 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, -1.5f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks9 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.5f, -1.5f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks10 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(0.0f, -3.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks11 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, -3.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks12 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, -3.0f), debugDraw));
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks13 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, -3.0f), debugDraw));
 	//
-	GameObject* tgo = CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.5f, -3.0f), debugDraw);
-	vector<CollisionChunkRectangle> debug_cwgoAddChunks14 = collisionWorld.Add(tgo);
+	//GameObject* tgo = CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.5f, -3.0f), debugDraw);
+	//vector<CollisionChunkRectangle> debug_cwgoAddChunks14 = collisionWorld.Add(tgo);
 
 	//HighResolutionTimer rmt = HighResolutionTimer("Remove GameObject");
 	//rmt.Start();
@@ -1764,7 +1764,12 @@ void GameUpdate(F32 dt)
 		collisionWorld.FixupActives();
 		cwt.End();
 		cwt.Report();
-		//collisionWorld.ResolveInterpenetrations();
+
+		HighResolutionTimer rit = HighResolutionTimer("Collision World Resolve Interpenetrations");
+		rit.Start();
+		collisionWorld.ResolveInterpenetrations(GetSimulationSpacePosition(), GetSimulationSpaceHalfDimensions());
+		rit.End();
+		rit.Report();
 
 
 		SendQueuedEvents();

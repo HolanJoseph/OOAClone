@@ -237,13 +237,35 @@ void CollisionWorld_2D::FixupActives()
 	}
 }
 
+AxisAlignedBoundingBox AxisAlignedBoundingBoxFromCenterAndHalfDim(vec2 center, vec2 halfDim)
+{
+	AxisAlignedBoundingBox result;
+
+	vec2 upperLeft = center + vec2(-halfDim.x, halfDim.y);
+	vec2 bottomRight = center + vec2(halfDim.x, -halfDim.y);
+	result = AxisAlignedBoundingBox(upperLeft, bottomRight);
+
+	return result;
+}
 
 vector<PenetrationInfo_2D> CollisionWorld_2D::ResolveInterpenetrations(vec2 position, vec2 halfDimensions)
 {
 	vector<PenetrationInfo_2D> result;
 
 	vec2 centerChunk = this->GetChunkContainingPosition(position);
-
+	AxisAlignedBoundingBox aabb = AxisAlignedBoundingBoxFromCenterAndHalfDim(position, halfDimensions);
+	Range_2D_size_t chunksToResolve = this->GetRange(centerChunk, aabb);
+	vector<size_t> indices = this->GetIndicesFromRange_2D(chunksToResolve);
+	for (size_t i = 0; i < indices.size(); ++i)
+	{
+		size_t index = indices[i];
+		
+		vector<PenetrationInfo_2D> resolved = this->ResolveInterpenetrations(index);
+		for (size_t j = 0; j < resolved.size(); ++j)
+		{
+			result.push_back(resolved[j]);
+		}
+	}
 
 	return result;
 }
