@@ -648,14 +648,18 @@ SystemTime GetTimeSinceStartup()
 /*
 *  HIGH RESOLUTION TIMER API
 */
-HighResolutionTimer::HighResolutionTimer(const char* name)
+HighResolutionTimer::HighResolutionTimer(const char* name, size_t indentLevel)
 {
 	this->name = Copy(name);
+
+	size_t numberOfIndentCharacters = 3 * indentLevel;
+	this->indentString = DuplicateCharacter(numberOfIndentCharacters, ' ');
 }
 
 HighResolutionTimer::~HighResolutionTimer()
 {
 	free((char*)this->name);
+	free((char*)this->indentString);
 }
 
 void HighResolutionTimer::Start()
@@ -699,7 +703,7 @@ F32 HighResolutionTimer::GetMS()
 void HighResolutionTimer::Report()
 {
 	//DebugPrintf(1024, "Timer %s: %f  %u\n", this->name, this->GetMS(), this->GetCycles());
-	DebugPrintf(1024, "Timer %s: %lli  %f\n", this->name, this->GetCycles(), this->GetMS());
+	DebugPrintf(1024, "%sTimer %s: %llicycles,   %fms\n", this->indentString, this->name, this->GetCycles(), this->GetMS());
 }
 
 

@@ -681,3 +681,18 @@ inline SplitResult Split(const char* string, const char* splitString)
 	SplitResult result = Split(string, stringLength, splitString, splitStringLength);
 	return result;
 }
+
+inline char * DuplicateCharacter(size_t count, char character)
+{
+	char * result = NULL;
+
+	result = (char*)malloc(sizeof(char) * (count + 1));
+	for (size_t i = 0; i < count; ++i)
+	{
+		result[i] = character;
+	}
+	result[count] = '\0';
+
+
+	return result;
+}

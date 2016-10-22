@@ -200,10 +200,11 @@ SystemTime GetTimeSinceStartup();
 struct HighResolutionTimer
 {
 	const char * name;
+	const char * indentString;
 	I64 startCycle;
 	I64 endCycle;
 
-	HighResolutionTimer(const char* name);
+	HighResolutionTimer(const char* name, size_t indentLevel = 0);
 	~HighResolutionTimer();
 
 	void Start();

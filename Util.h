@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Types.h"
-
+#include "Math.h"
 
 
 inline F32 ClampRange_F32(F32 val, F32 low, F32 high)

@@ -28,3 +28,33 @@ struct Transform
 		return result;
 	}
 };
+
+bool operator==(const Transform& lhs, const Transform& rhs)
+{
+	bool result = true;
+
+	if (lhs.position != rhs.position)
+	{
+		result = false;
+	}
+	else if (lhs.rotationAngle != rhs.rotationAngle)
+	{
+		result = false;
+	}
+	else if (lhs.scale != rhs.scale)
+	{
+		result = false;
+	}
+
+
+	return result;
+}
+
+bool operator!=(const Transform& lhs, const Transform& rhs)
+{
+	bool result;
+
+	result = !(lhs == rhs);
+
+	return result;
+}

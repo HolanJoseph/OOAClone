@@ -440,6 +440,7 @@ inline void RemoveFromTexturePool(TextureHandle th)
 
 VertexData_Pos2D	debugPoint;
 VertexData_Pos2D	debugLine;
+VertexData_Pos2D	debugRectangleOutline;
 VertexData_Pos2D	circleInPoint;
 VertexData_Indexed_Pos2D_UV texturedQuad;
 
@@ -496,6 +497,22 @@ inline void InitializeRenderer()
 		vec2(1.0f, 1.0f)
 	};
 	Initialize(&debugLine, debugLinePositions, 2);
+
+	vec2 debugRectangleOutlinePositions[8] =
+	{
+		vec2(-1.0f, -1.0f),
+		vec2(1.0f, -1.0f),
+
+		vec2(1.0f, -1.0f),
+		vec2(1.0f, 1.0f),
+
+		vec2(1.0f, 1.0f),
+		vec2(-1.0f, 1.0f),
+
+		vec2(-1.0f, 1.0f),
+		vec2(-1.0f, -1.0f),
+	};
+	Initialize(&debugRectangleOutline, debugRectangleOutlinePositions, 8);
 
 	const size_t tqNumVertices = 4;
 	vec2 tqiPositions[tqNumVertices] =
@@ -649,10 +666,33 @@ inline void DrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, Ca
 	vec2 x = vec2(dimensions.x, 0);
 	vec2 y = vec2(0, -dimensions.y);
 	vec2 xy = vec2(dimensions.x, -dimensions.y);
-	DrawLine(upperLeft, upperLeft + x, color, camera);
-	DrawLine(upperLeft, upperLeft + y, color, camera);
-	DrawLine(upperLeft + y, upperLeft + xy, color, camera);
-	DrawLine(upperLeft + x, upperLeft + xy, color, camera);
+
+	vec2 upperRight = upperLeft + x;
+	vec2 lowerRight = upperRight + y;
+	vec2 lowerLeft = lowerRight - x;
+
+	mat3 P_projection = camera->GetProjectionMatrix();
+	mat3 C_camera = TranslationMatrix(camera->position);
+	mat3 M_model = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	mat3 PCM = P_projection * inverse(C_camera) * M_model;
+
+	SetShaderProgram(&singleColor2DProgram);
+	SetPCM(&singleColor2DProgram, &PCM);
+	SetColor(&singleColor2DProgram, &color);
+
+	vec2 outlinePositions[8] = 
+	{ 
+		upperLeft, upperRight,
+		upperRight, lowerRight,
+		lowerRight, lowerLeft,
+		lowerLeft, upperLeft
+	};
+	RebufferVertexData(&debugRectangleOutline, outlinePositions, 8);
+	SetVertexData(&debugRectangleOutline);
+	DrawAsLines(debugRectangleOutline.numberOfVertices);
+	ClearVertexData();
+
+	ClearShaderProgram();
 }
 
 inline void DrawUVRectangle(Texture* texture, Transform transform, Camera* camera)
@@ -688,7 +728,7 @@ inline void DrawSprite(TextureHandle texture, vec2 spriteOffset, Transform trans
 	else
 	{
 		vec4 unloadedTextureColor = vec4(0.62f, 0.62f, 0.62f, 1.0f);
-		DrawRectangle(vec2(0.5f, 0.5f), transform, unloadedTextureColor, camera);
+		DrawRectangle(vec2(1.0f, 1.0f), transform, unloadedTextureColor, camera);
 	}
 }
 
