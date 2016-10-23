@@ -2,6 +2,7 @@
 #pragma once
 
 #include "GameObject.h"
+#include "CollisionWorld2D.h"
 
 
 
@@ -76,7 +77,31 @@ void GameObject::AddRigidbody(F32 invmass, F32 dampingfactor, vec2 velocity, vec
 {
 	this->rigidbody = new RigidBody();
 	this->rigidbody->Initialize(this->transform.position, vec2(0.0f, 0.0f), vec2(0.0f, 0.0f), 1.0f, 0.0f);
+
+
 	physicsGameObjects.push_back(this);
+}
+
+template <typename S>
+void GameObject::AddCollisionShape(S shape)
+{
+	S* collider = new S(shape);
+	this->collisionShape = collider;
+
+	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
+	collisionWorld->Add(this);
+	//if (this->HasTag(Environment))
+	//{
+	//	staticCollisionGameObjects.push_back(this);
+	//}
+	//else
+	//{
+	//	if (collider->IsPhantom())
+	//	{
+	//		phantomCollisionGameObjects.push_back(this);
+	//	}
+	//	collisionGameObjects.push_back(this);
+	//}
 }
 
 

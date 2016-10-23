@@ -984,6 +984,17 @@ CollisionWorld_2D collisionWorld;
 vector<CollisionChunkRectangle> debug_collisionWorldChunks;
 vector<CollisionChunkRectangle> debug_cwgoAddChunks;
 
+CollisionWorld_2D*  GetCollisionWorld()
+{
+	CollisionWorld_2D* result;
+
+	result = &collisionWorld;
+
+	return result;
+}
+
+
+
 // Simulation Space
 Rectangle_2D simSpace_Rect;
 Transform simSpace_Transform;
@@ -1117,24 +1128,29 @@ void SetSimulationSpace(vec2 center = vec2(0.0f, 0.0f), vec2 dimensions = simSpa
 void SetSimulationSpace(GameObject* target)
 {
 	// Change the simulation space to be centered around the new screen.
-	vec2 rayOrigin = target->transform.position;
-	vector<GameObject*> rayResults_xPos = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(1.0f, 0.0f), 20.0f);
-	vector<GameObject*> rayResults_xNeg = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
-	vector<GameObject*> rayResults_yPos = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
-	vector<GameObject*> rayResults_yNeg = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
+	//vec2 rayOrigin = target->transform.position;
+	//vector<GameObject*> rayResults_xPos = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(1.0f, 0.0f), 20.0f);
+	//vector<GameObject*> rayResults_xNeg = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
+	//vector<GameObject*> rayResults_yPos = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
+	//vector<GameObject*> rayResults_yNeg = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
+	//
+	//GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
+	//GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
+	//GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
+	//GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
+	//
+	//vec2 simulationSpaceDimensions;
+	//simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
+	//simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
+	//
+	//vec2 simulationSpaceCenter;
+	//simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
+	//simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
 
-	GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
-	GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
-	GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
-	GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
 
-	vec2 simulationSpaceDimensions;
-	simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
-	simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
-
-	vec2 simulationSpaceCenter;
-	simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
-	simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
+	// NOTE: This is a bypass while raycasts are being reworked. Remove when done.
+	vec2 simulationSpaceDimensions = vec2(10.0f, 8.0f);
+	vec2 simulationSpaceCenter = vec2(0.0f, 0.0f);
 
 	SetSimulationSpace(simulationSpaceCenter, simulationSpaceDimensions);
 }
@@ -1499,10 +1515,10 @@ bool GameInitialize()
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
-	spooks = CreateSpookyTree(/*vec2(15.0f, 4.0f)*/vec2(1.0f, 0.0f), debugDraw);
-	collisionWorld.Add(spooks);
+	//spooks = CreateSpookyTree(/*vec2(15.0f, 4.0f)*/vec2(1.0f, 0.0f), debugDraw);
+	//collisionWorld.Add(spooks);
 
-	debug_cwgoAddChunks = collisionWorld.Add(heroGO);
+	//debug_cwgoAddChunks = collisionWorld.Add(heroGO);
 	//vector<CollisionChunkRectangle> debug_cwgoAddChunks1 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, 0.0f), debugDraw));
 	//vector<CollisionChunkRectangle> debug_cwgoAddChunks2 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, 0.0f), debugDraw));
 	//vector<CollisionChunkRectangle> debug_cwgoAddChunks3 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, 0.0f), debugDraw));
@@ -1754,27 +1770,18 @@ void GameUpdate(F32 dt)
 
 		gameObjectsToUpdate.clear();
 		gameObjectsToUpdate = GenerateUpdateBin();
-		UpdateGameObjects_PrePhysics(gameObjectsToUpdate/*GameObject::gameObjects*/, dt);
+		UpdateGameObjects_PrePhysics(gameObjectsToUpdate, dt);
 
 
 		IntegratePhysicsObjects(dt);
-		FixAllInterpenetrations();
-		HighResolutionTimer cwt = HighResolutionTimer("Collision World Fixup");
-		cwt.Start();
+		//FixAllInterpenetrations();
 		collisionWorld.FixupActives();
-		cwt.End();
-		cwt.Report();
-
-		HighResolutionTimer rit = HighResolutionTimer("Collision World Resolve Interpenetrations");
-		rit.Start();
 		collisionWorld.ResolveInterpenetrations(GetSimulationSpacePosition(), GetSimulationSpaceHalfDimensions());
-		rit.End();
-		rit.Report();
 
 
 		SendQueuedEvents();
 
-		UpdateGameObjects_PostPhysics(gameObjectsToUpdate/*GameObject::gameObjects*/, dt);
+		UpdateGameObjects_PostPhysics(gameObjectsToUpdate, dt);
 
 		AreAllAnimationsPaused() ? NULL : AdvanceAnimations(dt);
 
@@ -1782,14 +1789,10 @@ void GameUpdate(F32 dt)
 	}
 
 
-	//HighResolutionTimer drawGameObjectsTimer = HighResolutionTimer("Draw Game Objects");
-	//drawGameObjectsTimer.Start();
 	DrawGameObjects(dt);
-	DrawCollisionChunkRectangles(debug_collisionWorldChunks, vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	DrawCollisionChunkRectangles(debug_cwgoAddChunks, vec4(1.0f, 0.5f, 0.0f, 1.0f));
+	//DrawCollisionChunkRectangles(debug_collisionWorldChunks, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	//DrawCollisionChunkRectangles(debug_cwgoAddChunks, vec4(1.0f, 0.5f, 0.0f, 1.0f));
 	//glFinish();
-	//drawGameObjectsTimer.End();
-	//drawGameObjectsTimer.Report();
 
 
 	if (!GameFrozen())

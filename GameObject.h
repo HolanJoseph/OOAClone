@@ -937,7 +937,7 @@ struct GameObject
 
 	void AddSprite(const char * sprite);
 	void AddAnimator();
-	void AddRigidbody(F32 invmass = 0.0f, F32 dampingfactor = 0.0f, vec2 velocity = vec2(0.0f, 0.0f), vec2 force = vec2(0.0f));
+	void AddRigidbody(F32 invmass = 0.0f, F32 dampingfactor = 0.0f, vec2 velocity = vec2(0.0f, 0.0f), vec2 force = vec2(0.0f)); // NOTE: Rigidbody should be added before collision shapes
 	template <typename S>
 	void AddCollisionShape(S shape);
 	void AddCamera(vec2 halfDim);
@@ -971,27 +971,6 @@ struct GameObject
 	static vector<GameObject*> phantomCollisionGameObjects;
 
 };
-
-
-
-template <typename S>
-void GameObject::AddCollisionShape(S shape)
-{
-	S* collider = new S(shape);
-	this->collisionShape = collider;
-	if (this->HasTag(Environment))
-	{
-		staticCollisionGameObjects.push_back(this);
-	}
-	else
-	{
-		if (collider->IsPhantom())
-		{
-			phantomCollisionGameObjects.push_back(this);
-		}
-		collisionGameObjects.push_back(this);
-	}
-}
 
 void SetRenderCamera(Camera* camera);
 void GameObject::AddCamera(vec2 halfDim)

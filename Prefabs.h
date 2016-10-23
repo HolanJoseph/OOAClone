@@ -67,13 +67,14 @@ inline void Update_PrePhysics_Hero(GameObject* go, F32 dt)
 	//{
 	//	this->rigidbody->ApplyImpulse(vec2(0.0f, -1.0f), 1.5f);
 	//}
-
+	DebugPrintf(512, "HELLO\n");
 
 	vec2 forceDirection = vec2(0.0f, 0.0f);
 	bool getKey_A = GetKey(KeyCode_A);
 	bool getKey_D = GetKey(KeyCode_D);
 	bool getKey_W = GetKey(KeyCode_W);
 	bool getKey_S = GetKey(KeyCode_S);
+	DebugPrintf(512, "Keys: %s %s %s %s\n", (getKey_W ? "W" : ""), (getKey_A ? "A" : ""), (getKey_S ? "S" : ""), (getKey_D ? "D" : ""));
 	if (getKey_W)
 	{
 		forceDirection += vec2(0.0f, 1.0f);
@@ -90,7 +91,7 @@ inline void Update_PrePhysics_Hero(GameObject* go, F32 dt)
 	{
 		forceDirection += vec2(-1.0f, 0.0f);
 	}
-	//DebugPrintf(512, "force direction = (%f, %f)\n", forceDirection.x, forceDirection.y);
+	DebugPrintf(512, "force direction = (%f, %f)\n", forceDirection.x, forceDirection.y);
 	if (forceDirection != vec2(0.0f, 0.0f))
 	{
 		forceDirection = normalize(forceDirection);
@@ -102,7 +103,7 @@ inline void Update_PrePhysics_Hero(GameObject* go, F32 dt)
 		go->rigidbody->ApplyImpulse(forceDirection, movementSpeed);
 	}
 
-
+	DebugPrintf(512, "Velocity = (%f, %f)\n", go->rigidbody->velocity.x, go->rigidbody->velocity.y);
 	if (go->rigidbody->velocity == vec2(0.0f, 0.0f))
 	{
 		go->moving = false;

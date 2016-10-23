@@ -52,11 +52,7 @@ vector<CollisionChunkRectangle> CollisionWorld_2D::Add(GameObject* go)
 {
 	vector<CollisionChunkRectangle> result;
 
-	vec2 goPosition = go->transform.position;
-	vec2 screenSize = VVD(this->size, this->numberOfScreens);
-	vec2 prospectiveChunk = VVD((goPosition - this->originOffset), screenSize);
-	prospectiveChunk.x = (F32)((I32)prospectiveChunk.x);
-	prospectiveChunk.y = (F32)((I32)prospectiveChunk.y);
+	vec2 prospectiveChunk = this->GetChunkContainingPosition(go->transform.position);
 	AxisAlignedBoundingBox goAABB = go->collisionShape->GetAxisAlignedBoundingBox(go->transform);
 
 	Range_2D_size_t range = this->GetRange(prospectiveChunk, goAABB);
@@ -545,6 +541,9 @@ vec2 CollisionWorld_2D::GetChunkContainingPosition(vec2 position)
 	vec2 prospectiveChunk = VVD((position - this->originOffset), screenSize);
 	prospectiveChunk.x = (F32)((I32)prospectiveChunk.x);
 	prospectiveChunk.y = (F32)((I32)prospectiveChunk.y);
+	
+	prospectiveChunk.x = ClampRange_F32(prospectiveChunk.x, 0, this->numberOfScreens.x - 1);
+	prospectiveChunk.y = ClampRange_F32(prospectiveChunk.y, 0, this->numberOfScreens.y - 1);
 
 	return result = prospectiveChunk;
 }
@@ -568,7 +567,7 @@ Range_2D_size_t CollisionWorld_2D::GetRange(vec2 chunkNumber, AxisAlignedBoundin
 	{
 		--startX;
 	}
-	if (goAABB.bottomRight.x > chunkBottomRight.x && endX < this->numberOfScreens.x)
+	if (goAABB.bottomRight.x > chunkBottomRight.x && endX < this->numberOfScreens.x - 1)
 	{
 		++endX;
 	}
@@ -576,7 +575,7 @@ Range_2D_size_t CollisionWorld_2D::GetRange(vec2 chunkNumber, AxisAlignedBoundin
 	{
 		--startY;
 	}
-	if (goAABB.upperLeft.y > chunkUpperLeft.y && endY < this->numberOfScreens.y)
+	if (goAABB.upperLeft.y > chunkUpperLeft.y && endY < this->numberOfScreens.y - 1)
 	{
 		++endY;
 	}

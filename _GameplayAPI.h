@@ -10,6 +10,7 @@ enum GameObjectType;
 enum GameObjectTags;
 struct GameObject;
 struct Event;
+struct CollisionWorld_2D;
 
 #include <vector>
 using std::vector;
@@ -17,7 +18,7 @@ using std::vector;
 
 
 /*
- * Gameplay
+ * GameObjects
  */
 GameObject* CreateGameObject(GameObjectType type);
 void		DestroyGameObject(GameObject* gameObject);
@@ -25,9 +26,20 @@ void		DestroyGameObject(GameObject* gameObject);
 vector<GameObject*> FindGameObjectByType(GameObjectType type);
 vector<GameObject*> FindGameObjectByTag(GameObjectTags tag);
 
+
+
+/*
+ * Events
+ */
 void SendEvent(GameObject* gameObject, Event* e);
 void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
 
+
+
+/*
+ * Collision
+ */
+CollisionWorld_2D*  GetCollisionWorld();
 GameObject*			RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastType_Line_2D(GameObjectType type, vec2 position, vec2 direction, F32 distance);
