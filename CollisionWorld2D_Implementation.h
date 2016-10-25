@@ -415,12 +415,129 @@ GameObject* CollisionWorld_2D::RaycastFirst(vec2 position, vec2 direction)
 {
 	GameObject* result;
 
+	F32 resultDistance = 500.0f;
+	vec2 rayPerp = Perpendicular_2D(direction);
+
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	// Check each bucket.
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+		{
+			resultDistance = goOriginDOTdirection;
+			result = go;
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+		{
+			resultDistance = goOriginDOTdirection;
+			result = go;
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+		{
+			resultDistance = goOriginDOTdirection;
+			result = go;
+		}
+	}
+
 	return result;
 }
 
 GameObject* CollisionWorld_2D::RaycastFirst(vec2 position, vec2 direction, GameObjectType type)
 {
 	GameObject* result;
+
+	F32 resultDistance = 500.0f;
+	vec2 rayPerp = Perpendicular_2D(direction);
+
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	// Check each bucket.
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
 
 	return result;
 }
@@ -429,12 +546,147 @@ GameObject* CollisionWorld_2D::RaycastFirst(vec2 position, vec2 direction, GameO
 {
 	GameObject* result;
 
+	F32 resultDistance = 500.0f;
+	vec2 rayPerp = Perpendicular_2D(direction);
+
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	// Check each bucket.
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
+
 	return result;
 }
 
 GameObject* CollisionWorld_2D::RaycastFirst(vec2 position, vec2 direction, GameObjectType type, GameObjectTags tag)
 {
 	GameObject* result;
+
+	F32 resultDistance = 500.0f;
+	vec2 rayPerp = Perpendicular_2D(direction);
+
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	// Check each bucket.
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
+			{
+				resultDistance = goOriginDOTdirection;
+				result = go;
+			}
+		}
+	}
 
 	return result;
 }
@@ -445,12 +697,113 @@ vector<GameObject*> CollisionWorld_2D::RaycastAll(vec2 position, vec2 direction)
 {
 	vector<GameObject*> result;
 
+	F32 distance = 500.0f;
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	vec2 rayPerp = Perpendicular_2D(direction);
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+		{
+			result.push_back(go);
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+		{
+			result.push_back(go);
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+		{
+			result.push_back(go);
+		}
+	}
+
 	return result;
 }
 
 vector<GameObject*> CollisionWorld_2D::RaycastAll(vec2 position, vec2 direction, GameObjectType type)
 {
 	vector<GameObject*> result;
+
+	F32 distance = 500.0f;
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	vec2 rayPerp = Perpendicular_2D(direction);
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
 
 	return result;
 }
@@ -459,12 +812,131 @@ vector<GameObject*> CollisionWorld_2D::RaycastAll(vec2 position, vec2 direction,
 {
 	vector<GameObject*> result;
 
+	F32 distance = 500.0f;
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	vec2 rayPerp = Perpendicular_2D(direction);
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+
 	return result;
 }
 
 vector<GameObject*> CollisionWorld_2D::RaycastAll(vec2 position, vec2 direction, GameObjectType type, GameObjectTags tag)
 {
 	vector<GameObject*> result;
+
+	F32 distance = 500.0f;
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	vec2 rayPerp = Perpendicular_2D(direction);
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
+			vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
+			F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
+			F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
+			if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
+			{
+				result.push_back(go);
+			}
+		}
+	}
 
 	return result;
 }
@@ -475,12 +947,103 @@ vector<GameObject*> CollisionWorld_2D::Shapecast_Rectangle(vec2 position, vec2 h
 {
 	vector<GameObject*> result;
 
+	Rectangle_2D collisionRect = Rectangle_2D(halfdim);
+	
+	Transform collisionRectTransform;
+	collisionRectTransform.position = position;
+	collisionRectTransform.rotationAngle = rotationAngle;
+	
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+		if (ci.collided)
+		{
+			result.push_back(go);
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+		if (ci.collided)
+		{
+			result.push_back(go);
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+		if (ci.collided)
+		{
+			result.push_back(go);
+		}
+	}
+
 	return result;
 }
 
 vector<GameObject*> CollisionWorld_2D::Shapecast_Rectangle(vec2 position, vec2 halfdim, F32 rotationAngle, GameObjectType type)
 {
 	vector<GameObject*> result;
+
+	Rectangle_2D collisionRect = Rectangle_2D(halfdim);
+
+	Transform collisionRectTransform;
+	collisionRectTransform.position = position;
+	collisionRectTransform.rotationAngle = rotationAngle;
+
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		GameObjectType goType = go->GetType();
+
+		if (goType == type)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
 
 	return result;
 }
@@ -489,12 +1052,121 @@ vector<GameObject*> CollisionWorld_2D::Shapecast_Rectangle(vec2 position, vec2 h
 {
 	vector<GameObject*> result;
 
+	Rectangle_2D collisionRect = Rectangle_2D(halfdim);
+
+	Transform collisionRectTransform;
+	collisionRectTransform.position = position;
+	collisionRectTransform.rotationAngle = rotationAngle;
+
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		bool hasTag = go->HasTag(tag);
+
+		if (hasTag)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+
 	return result;
 }
 
 vector<GameObject*> CollisionWorld_2D::Shapecast_Rectangle(vec2 position, vec2 halfdim, F32 rotationAngle, GameObjectType type, GameObjectTags tag)
 {
 	vector<GameObject*> result;
+
+	Rectangle_2D collisionRect = Rectangle_2D(halfdim);
+
+	Transform collisionRectTransform;
+	collisionRectTransform.position = position;
+	collisionRectTransform.rotationAngle = rotationAngle;
+
+	vec2 chunkNumber = this->GetChunkContainingPosition(position);
+	size_t chunkIndex = this->GetIndex(chunkNumber);
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+
+	for (size_t i = 0; i < chunk->activeColliders.size(); ++i)
+	{
+		GameObject* go = chunk->activeColliders[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->staticColliders.size(); ++i)
+	{
+		GameObject* go = chunk->staticColliders[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
+	for (size_t i = 0; i < chunk->phantoms.size(); ++i)
+	{
+		GameObject* go = chunk->phantoms[i];
+		GameObjectType goType = go->GetType();
+		bool hasTag = go->HasTag(tag);
+
+		if (goType == type && hasTag)
+		{
+			CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
+			if (ci.collided)
+			{
+				result.push_back(go);
+			}
+		}
+	}
 
 	return result;
 }
