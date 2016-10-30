@@ -177,7 +177,8 @@ struct CollisionWorld_2D
 	void FixupActives();
 	vector<PenetrationInfo_2D> ResolveInterpenetrations(vec2 position, vec2 halfDimensions);
 	vector<PenetrationInfo_2D> ResolveInterpenetrations(size_t chunkIndex);
-	vector<PenetrationInfo_2D> GenerateCollisions(vector<GameObject*>& collidables);
+	vector<PenetrationInfo_2D> GetPhantomInterpenetrations(vec2 position, vec2 halfDimensions); // Returns iterpenetrations between actives and phantoms
+	vector<PenetrationInfo_2D> GetPhantomInterpenetrations(size_t chunkIndex);
 
 	GameObject* RaycastFirst(vec2 position, vec2 direction);
 	GameObject* RaycastFirst(vec2 position, vec2 direction, GameObjectType type);

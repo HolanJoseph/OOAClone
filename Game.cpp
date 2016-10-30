@@ -1140,6 +1140,7 @@ vector<GameObject*> gameObjectsToUpdate;
 vector<GameObject*> gameObjectsToLoad;
 
 vector<PenetrationInfo_2D> interpenetrationsFixedLastFrame;
+vector<PenetrationInfo_2D> phantomInterpenetrationsFromLastFrame;
 bool SameGameObjectsInvolved(const PenetrationInfo_2D& lhs, const PenetrationInfo_2D& rhs)
 {
 	bool result = true;
@@ -1154,6 +1155,104 @@ bool SameGameObjectsInvolved(const PenetrationInfo_2D& lhs, const PenetrationInf
 	}
 
 	return result;
+}
+void GenerateCollisionEvents(vector<Event>& events_OnCollisionEnter, vector<Event>& events_OnCollision, vector<Event>& events_OnCollisionExit, vector<PenetrationInfo_2D>& interpenetrationsFixed, vector<PenetrationInfo_2D>& interpenetrationsFixedLastFrame)
+{
+	/* Generate OnCollisionEnter and OnCollsion events */
+	for (size_t i = 0; i < interpenetrationsFixed.size(); ++i)
+	{
+		bool processedLastFrame = false;
+		for (size_t j = 0; j < interpenetrationsFixedLastFrame.size(); ++j)
+		{
+			bool collisionIsTheSame = SameGameObjectsInvolved(interpenetrationsFixed[i], interpenetrationsFixedLastFrame[j]);
+			if (collisionIsTheSame)
+			{
+				processedLastFrame = true;
+				interpenetrationsFixedLastFrame.erase(interpenetrationsFixedLastFrame.begin() + j);
+				break;
+			}
+		}
+		if (!processedLastFrame)
+		{
+			// Generate OnCollisionEnter events for this collision.
+			GameObject* go1 = interpenetrationsFixed[i].go1;
+			GameObject* go2 = interpenetrationsFixed[i].go2;
+			vec2 normal = interpenetrationsFixed[i].normal;
+	
+			Event event1;
+			event1.SetType(ET_OnCollisionEnter);
+			event1.arguments[0] = EventArgument((void*)go1);
+			event1.arguments[1] = EventArgument((void*)go2);
+			event1.arguments[2] = EventArgument(normal);
+			events_OnCollisionEnter.push_back(event1);
+	
+			Event event2;
+			event2.SetType(ET_OnCollisionEnter);
+			event2.arguments[0] = EventArgument((void*)go2);
+			event2.arguments[1] = EventArgument((void*)go1);
+			event2.arguments[2] = EventArgument(-normal);
+			events_OnCollisionEnter.push_back(event2);
+		}
+	
+		// Generate OnCollision event for this collision.
+		GameObject* go1 = interpenetrationsFixed[i].go1;
+		GameObject* go2 = interpenetrationsFixed[i].go2;
+		vec2 normal = interpenetrationsFixed[i].normal;
+	
+		Event event1;
+		event1.SetType(ET_OnCollision);
+		event1.arguments[0] = EventArgument((void*)go1);
+		event1.arguments[1] = EventArgument((void*)go2);
+		event1.arguments[2] = EventArgument(normal);
+		events_OnCollision.push_back(event1);
+	
+		Event event2;
+		event2.SetType(ET_OnCollision);
+		event2.arguments[0] = EventArgument((void*)go2);
+		event2.arguments[1] = EventArgument((void*)go1);
+		event2.arguments[2] = EventArgument(-normal);
+		events_OnCollision.push_back(event2);
+	}
+	
+	/* Generate OnCollisionExit events */
+	for (size_t i = 0; i < interpenetrationsFixedLastFrame.size(); ++i)
+	{
+		// Because we removed all of the collisions that were fixed this frame too, this list only
+		//	contains collisions that didn't happen this frame.
+		// NOTE: Events could also be sent directly from this loop AFTER the OnCollisionEnter, and OnCollision
+		//	Events are sent because it contains only OnCollisionExit events.
+	
+		// Generate OnCollisionExit event
+		GameObject* go1 = interpenetrationsFixedLastFrame[i].go1;
+		GameObject* go2 = interpenetrationsFixedLastFrame[i].go2;
+		vec2 normal = interpenetrationsFixedLastFrame[i].normal;
+	
+		Event event1;
+		event1.SetType(ET_OnCollisionExit);
+		event1.arguments[0] = EventArgument((void*)go1);
+		event1.arguments[1] = EventArgument((void*)go2);
+		event1.arguments[2] = EventArgument(normal);
+		events_OnCollisionExit.push_back(event1);
+	
+		Event event2;
+		event2.SetType(ET_OnCollisionExit);
+		event2.arguments[0] = EventArgument((void*)go2);
+		event2.arguments[1] = EventArgument((void*)go1);
+		event2.arguments[2] = EventArgument(-normal);
+		events_OnCollisionExit.push_back(event2);
+	}
+
+}
+void SendCollisionEvents(vector<Event>& bin)
+{
+	for (size_t i = 0; i < bin.size(); ++i)
+	{
+		GameObject* recipient = (GameObject*)bin[i].arguments[0].AsPointer();
+		if (recipient->DoEvent != NULL)
+		{
+			recipient->DoEvent(recipient, &(bin[i]));
+		}
+	}
 }
 
 F32 time = 0.0f;
@@ -1209,127 +1308,26 @@ void GameUpdate(F32 dt)
 		IntegratePhysicsObjects(dt);
 		collisionWorld.FixupActives();
 		vector<PenetrationInfo_2D> interpenetrationsFixed = collisionWorld.ResolveInterpenetrations(GetSimulationSpacePosition(), GetSimulationSpaceHalfDimensions());
+		vector<PenetrationInfo_2D> phantomInterpenetrations = collisionWorld.GetPhantomInterpenetrations(GetSimulationSpacePosition(), GetSimulationSpaceHalfDimensions());
 
 		vector<Event> events_OnCollisionEnter;
 		vector<Event> events_OnCollision;
 		vector<Event> events_OnCollisionExit;
 
-		/* Generate OnCollisionEnter and OnCollsion events */
-		for (size_t i = 0; i < interpenetrationsFixed.size(); ++i)
-		{
-			bool processedLastFrame = false;
-			for (size_t j = 0; j < interpenetrationsFixedLastFrame.size(); ++j)
-			{
-				bool collisionIsTheSame = SameGameObjectsInvolved(interpenetrationsFixed[i], interpenetrationsFixedLastFrame[j]);
-				if (collisionIsTheSame)
-				{
-					processedLastFrame = true;
-					interpenetrationsFixedLastFrame.erase(interpenetrationsFixedLastFrame.begin() + j);
-					break;
-				}
-			}
-			if (!processedLastFrame)
-			{
-				// Generate OnCollisionEnter events for this collision.
-				GameObject* go1 = interpenetrationsFixed[i].go1;
-				GameObject* go2 = interpenetrationsFixed[i].go2;
-				vec2 normal = interpenetrationsFixed[i].normal;
-
-				Event event1;
-				event1.SetType(ET_OnCollisionEnter);
-				event1.arguments[0] = EventArgument((void*)go1);
-				event1.arguments[1] = EventArgument((void*)go2);
-				event1.arguments[2] = EventArgument(normal);
-				events_OnCollisionEnter.push_back(event1);
-
-				Event event2;
-				event2.SetType(ET_OnCollisionEnter);
-				event2.arguments[0] = EventArgument((void*)go2);
-				event2.arguments[1] = EventArgument((void*)go1);
-				event2.arguments[2] = EventArgument(-normal);
-				events_OnCollisionEnter.push_back(event2);
-			}
-
-			// Generate OnCollision event for this collision.
-			GameObject* go1 = interpenetrationsFixed[i].go1;
-			GameObject* go2 = interpenetrationsFixed[i].go2;
-			vec2 normal = interpenetrationsFixed[i].normal;
-
-			Event event1;
-			event1.SetType(ET_OnCollision);
-			event1.arguments[0] = EventArgument((void*)go1);
-			event1.arguments[1] = EventArgument((void*)go2);
-			event1.arguments[2] = EventArgument(normal);
-			events_OnCollision.push_back(event1);
-
-			Event event2;
-			event2.SetType(ET_OnCollision);
-			event2.arguments[0] = EventArgument((void*)go2);
-			event2.arguments[1] = EventArgument((void*)go1);
-			event2.arguments[2] = EventArgument(-normal);
-			events_OnCollision.push_back(event2);
-		}
-
-		/* Generate OnCollisionExit events */
-		for (size_t i = 0; i < interpenetrationsFixedLastFrame.size(); ++i)
-		{
-			// Because we removed all of the collisions that were fixed this frame too, this list only
-			//	contains collisions that didn't happen this frame.
-			// NOTE: Events could also be sent directly from this loop AFTER the OnCollisionEnter, and OnCollision
-			//	Events are sent because it contains only OnCollisionExit events.
-
-			// Generate OnCollisionExit event
-			GameObject* go1 = interpenetrationsFixedLastFrame[i].go1;
-			GameObject* go2 = interpenetrationsFixedLastFrame[i].go2;
-			vec2 normal = interpenetrationsFixedLastFrame[i].normal;
-
-			Event event1;
-			event1.SetType(ET_OnCollisionExit);
-			event1.arguments[0] = EventArgument((void*)go1);
-			event1.arguments[1] = EventArgument((void*)go2);
-			event1.arguments[2] = EventArgument(normal);
-			events_OnCollisionExit.push_back(event1);
-
-			Event event2;
-			event2.SetType(ET_OnCollisionExit);
-			event2.arguments[0] = EventArgument((void*)go2);
-			event2.arguments[1] = EventArgument((void*)go1);
-			event2.arguments[2] = EventArgument(-normal);
-			events_OnCollisionExit.push_back(event2);
-		}
+		GenerateCollisionEvents(events_OnCollisionEnter, events_OnCollision, events_OnCollisionExit, interpenetrationsFixed, interpenetrationsFixedLastFrame);
+		GenerateCollisionEvents(events_OnCollisionEnter, events_OnCollision, events_OnCollisionExit, phantomInterpenetrations, phantomInterpenetrationsFromLastFrame);
 		interpenetrationsFixedLastFrame = interpenetrationsFixed;
+		phantomInterpenetrationsFromLastFrame = phantomInterpenetrations;
 		DebugPrintf(512, "Interpenetrations Resolved = %u\n", interpenetrationsFixed.size());
+		DebugPrintf(512, "Phantom Collisions = %u\n", phantomInterpenetrations.size());
 
 
 
-		// Send OnCollisionEnter events.
-		for (size_t i = 0; i < events_OnCollisionEnter.size(); ++i)
-		{
-			GameObject* recipient = (GameObject*)events_OnCollisionEnter[i].arguments[0].AsPointer();
-			if (recipient->DoEvent != NULL)
-			{
-				recipient->DoEvent(recipient, &(events_OnCollisionEnter[i]));
-			}
-		}
-		// Send OnCollision events.
-		for (size_t i = 0; i < events_OnCollision.size(); ++i)
-		{
-			GameObject* recipient = (GameObject*)events_OnCollision[i].arguments[0].AsPointer();
-			if (recipient->DoEvent != NULL)
-			{
-				recipient->DoEvent(recipient, &(events_OnCollision[i]));
-			}
-		}
-		// Send OnCollisionExit events.
-		for (size_t i = 0; i < events_OnCollisionExit.size(); ++i)
-		{
-			GameObject* recipient = (GameObject*)events_OnCollisionExit[i].arguments[0].AsPointer();
-			if (recipient->DoEvent != NULL)
-			{
-				recipient->DoEvent(recipient, &(events_OnCollisionExit[i]));
-			}
-		}
 
+		// Send Collision events.
+		SendCollisionEvents(events_OnCollisionEnter);
+		SendCollisionEvents(events_OnCollision);
+		SendCollisionEvents(events_OnCollisionExit);
 
 
 		SendQueuedEvents();

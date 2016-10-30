@@ -406,12 +406,55 @@ vector<PenetrationInfo_2D> CollisionWorld_2D::ResolveInterpenetrations(size_t ch
 	return interpenetrations;
 }
 
-vector<PenetrationInfo_2D> CollisionWorld_2D::GenerateCollisions(vector<GameObject*>& collidables)
+vector<PenetrationInfo_2D> CollisionWorld_2D::GetPhantomInterpenetrations(vec2 position, vec2 halfDimensions)
 {
 	vector<PenetrationInfo_2D> result;
 
+	vec2 centerChunk = this->GetChunkContainingPosition(position);
+	AxisAlignedBoundingBox aabb = AxisAlignedBoundingBoxFromCenterAndHalfDim(position, halfDimensions);
+	Range_2D_size_t chunksToResolve = this->GetRange(centerChunk, aabb);
+	vector<size_t> indices = this->GetIndicesFromRange_2D(chunksToResolve);
+	for (size_t i = 0; i < indices.size(); ++i)
+	{
+		size_t index = indices[i];
+
+		vector<PenetrationInfo_2D> resolved = this->GetPhantomInterpenetrations(index);
+		for (size_t j = 0; j < resolved.size(); ++j)
+		{
+			result.push_back(resolved[j]);
+		}
+	}
+
 	return result;
 }
+
+vector<PenetrationInfo_2D> CollisionWorld_2D::GetPhantomInterpenetrations(size_t chunkIndex)
+{
+	vector<PenetrationInfo_2D> result;
+
+	// Generate Contacts
+	vector<PenetrationInfo_2D> interpenetrations;
+	CollisionChunk_2D* chunk = &(this->chunks[chunkIndex]);
+	vector<GameObject*>& actives = chunk->activeColliders;
+	vector<GameObject*>& phantoms = chunk->phantoms;
+	for (size_t i = 0; i < actives.size(); ++i)
+	{
+		GameObject* go1 = actives[i];
+
+		for (size_t j = 0; j < phantoms.size(); ++j)
+		{
+			GameObject* go2 = phantoms[j];
+			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
+			if (ci.collided)
+			{
+				result.push_back(PenetrationInfo_2D(go1, go2, ci.normal, ci.distance));
+			}
+		}
+	}
+
+	return result;
+}
+
 
 
 
