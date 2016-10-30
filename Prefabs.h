@@ -396,7 +396,7 @@ inline void Update_PrePhysics_PlayerCamera(GameObject* go, F32 dt)
 			F32  closeness = closenesses[i];
 			//HighResolutionTimer cameraRayTimer = HighResolutionTimer("Camera Ray", 1);
 			//cameraRayTimer.Start();
-			vector<GameObject*> gameObjectsInDirection = RaycastAll_Line_2D(go->transform.position, direction, 20.0f); // NOTE: arbitrary number
+			vector<GameObject*> gameObjectsInDirection = RaycastAll(go->transform.position, direction, 20.0f); // NOTE: arbitrary number
 			//cameraRayTimer.End();
 			//cameraRayTimer.Report();
 			GameObject* closestTransitionBarInDirection = NULL;
@@ -480,7 +480,7 @@ inline void Update_PostPhysics_Fire(GameObject* go, F32 dt)
 	{
 		// Do a rectangle cast the size of our collision shape
 		// Destroy every burnable GameObject returned by the cast.
-		vector<GameObject*> inMe = RaycastAll_Rectangle_2D(go->transform.position, ((Rectangle_2D*)go->collisionShape)->halfDim, go->transform.rotationAngle);
+		vector<GameObject*> inMe = Shapecast_Rectangle(go->transform.position, ((Rectangle_2D*)go->collisionShape)->halfDim, go->transform.rotationAngle);
 		for (size_t i = 0; i < inMe.size(); ++i)
 		{
 			GameObject* g = inMe[i];

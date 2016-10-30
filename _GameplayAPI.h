@@ -41,10 +41,10 @@ void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
  */
 CollisionWorld_2D*  GetCollisionWorld();
 GameObject*			RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
-vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance);
-vector<GameObject*> RaycastType_Line_2D(GameObjectType type, vec2 position, vec2 direction, F32 distance);
-vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle);
-vector<GameObject*> RaycastType_Rectangle_2D(GameObjectType type, vec2 position, vec2 halfDim, F32 rotationAngle);
+vector<GameObject*> RaycastAll(vec2 position, vec2 direction, F32 distance);
+vector<GameObject*> RaycastAll(GameObjectType type, vec2 position, vec2 direction, F32 distance);
+vector<GameObject*> Shapecast_Rectangle(vec2 position, vec2 halfDim, F32 rotationAngle);
+vector<GameObject*> Shapecast_Rectangle(GameObjectType type, vec2 position, vec2 halfDim, F32 rotationAngle);
 
 
 

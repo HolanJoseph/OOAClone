@@ -189,601 +189,34 @@ void IntegratePhysicsObjects(F32 dt)
 	}
 }
 
-// struct CollisionPair 
-// {
-// 	GameObject* go1;
-// 	GameObject* go2;
-// 	CollisionInfo_2D info;
-// 
-// 	CollisionPair()
-// 	{
-// 		this->go1 = NULL;
-// 		this->go2 = NULL;
-// 		this->info = CollisionInfo_2D();
-// 	}
-// 
-// 	CollisionPair(GameObject* go1, GameObject* go2, CollisionInfo_2D info)
-// 	{
-// 		this->go1 = go1;
-// 		this->go2 = go2;
-// 		this->info = info;
-// 	}
-// };
 
-// vector<CollisionPair> GenerateContacts()
-// {
-// 	vector<CollisionPair> result;
-// 
-// 	//vec2 simulationSpacePosition = GetSimulationSpacePosition();
-// 	//vec2 simulationSpaceHalfDimensions = GetSimulationSpaceHalfDimensions();
-// 	//F32 collisionSimulationMultiplier = 1.25f;
-// 	//vec2 scaledHalfDimensions = simulationSpaceHalfDimensions * collisionSimulationMultiplier;
-// 	//vec2 collisionSimulationRegionUpperLeft = simulationSpacePosition + vec2(-scaledHalfDimensions.x, scaledHalfDimensions.y);
-// 	//vec2 collisionSimulationRegionBottomRight = simulationSpacePosition + vec2(scaledHalfDimensions.x, - scaledHalfDimensions.y);
-// 	//
-// 	//AxisAlignedBoundingBox collisionSimulationRegion = AxisAlignedBoundingBox(collisionSimulationRegionUpperLeft, collisionSimulationRegionBottomRight);
-// 	//vector<GameObject*> staticColliders;
-// 	//for (size_t l = 0; l < GameObject::staticCollisionGameObjects.size(); ++l)
-// 	//{
-// 	//	GameObject* go = GameObject::staticCollisionGameObjects[l];
-// 	//
-// 	//	CollisionInfo_2D trel = DetectRoughCollision_2D(collisionSimulationRegion, go->collisionShape->GetAxisAlignedBoundingBox(go->transform));
-// 	//	if (trel.collided)
-// 	//	{
-// 	//		staticColliders.push_back(go);
-// 	//	}
-// 	//}
-// 
-// 	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
-// 	{
-// 		for (size_t j = i + 1; j < GameObject::collisionGameObjects.size(); ++j)
-// 		{
-// 			GameObject* go1 = GameObject::collisionGameObjects[i];
-// 			GameObject* go2 = GameObject::collisionGameObjects[j];
-// 			
-// 			/*
-// 			 * NOTE: Still not sure the best way to handle pessimistic biases
-// 			 * ISSUES: ideally we would like to just subtract off the amount we added to the scale from 
-// 			 *				the distance returned on success instead of rerunning collision detection with
-// 			 *				the regular transform after successful detection with the bias
-// 			 *
-// 			 *		   Should we be adding to the scale or multiplying???
-// 			 */
-// 			Transform biasedTransform = go1->transform;
-// 			biasedTransform.scale += vec2(0.2f, 0.2f);
-// 			CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
-// 			if (ci.collided)
-// 			{
-// 				ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
-// 				result.push_back(CollisionPair(go1, go2, ci));
-// 			}
-// 		}
-// 
-// 		for (size_t j = 0; j < GameObject::staticCollisionGameObjects.size()/*staticColliders.size()*/; ++j)
-// 		{
-// 			GameObject* go1 = GameObject::collisionGameObjects[i];
-// 			GameObject* go2 = GameObject::staticCollisionGameObjects[j];/*staticColliders[j];*/
-// 
-// 			/*
-// 			* NOTE: Still not sure the best way to handle pessimistic biases
-// 			* ISSUES: ideally we would like to just subtract off the amount we added to the scale from
-// 			*				the distance returned on success instead of rerunning collision detection with
-// 			*				the regular transform after successful detection with the bias
-// 			*
-// 			*		   Should we be adding to the scale or multiplying???
-// 			*/
-// 			//Transform biasedTransform = go1->transform;
-// 			//biasedTransform.scale += vec2(0.2f, 0.2f);
-// 			//CollisionInfo_2D ci = DetectCollision_2D(go1->collisionShape, biasedTransform, go2->collisionShape, go2->transform);
-// 			//if (ci.collided)
-// 			//{
-// 			//	ci = DetectCollision_2D(go1->collisionShape, go1->transform, go2->collisionShape, go2->transform);
-// 			//	result.push_back(CollisionPair(go1, go2, ci));
-// 			//}
-// 
-// 			// NOTE: nonbiased
-// 
-// 		}
-// 	}
-// 
-// 	return result;
-// }
-
-// bool ComparePenetrationDepth(CollisionPair a, CollisionPair b)
-// {
-// 	bool result = false;
-// 
-// 	if (a.info.distance > b.info.distance)
-// 	{
-// 		result = true;
-// 	}
-// 
-// 	return result;
-// }
-
-//struct Displacements 
-//{
-//	vec2 displacement1;
-//	vec2 displacement2;
-//
-//	Displacements()
-//	{
-//		this->displacement1 = vec2(0.0f, 0.0f);
-//		this->displacement2 = vec2(0.0f, 0.0f);
-//	}
-//};
-// Displacements FixInterpenetration(GameObject* go1, GameObject* go2, CollisionInfo_2D collisionInfo)
-// {
-// 	Displacements result;
-// 
-// 	// NOTE: inverseMass == 0 == infinite mass
-// 	if (go1->HasTag(GameObjectTags::Environment))
-// 	{
-// 		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
-// 		go2->transform.position += displacement;
-// 
-// 		result.displacement2 = displacement;
-// 	}
-// 	else if (go2->HasTag(GameObjectTags::Environment))
-// 	{
-// 		vec2 displacement = collisionInfo.normal * collisionInfo.distance;
-// 		go1->transform.position -= displacement;
-// 
-// 		result.displacement1 = -displacement;
-// 	}
-// 	else
-// 	{
-// 		// NOTE: There is only 1 movable game object in the scene to testing this atm will have to wait.
-// 		F32 pm1Mass = 1.0f;   // / pointMass1->inverseMass;
-// 		F32 pm2Mass = 1.0f;   // / pointMass2->inverseMass;
-// 		vec2 pm1Displacement = (pm2Mass / (pm1Mass + pm2Mass)) * collisionInfo.normal * collisionInfo.distance;
-// 		vec2 pm2Displacement = (pm1Mass / (pm1Mass + pm2Mass)) * -collisionInfo.normal * collisionInfo.distance;
-// 		go1->transform.position -= pm1Displacement;
-// 		go2->transform.position -= pm2Displacement;
-// 
-// 		result.displacement1 = -pm1Displacement;
-// 		result.displacement2 = -pm2Displacement;
-// 	}
-// 
-// 	return result;
-// }
-
-// struct CollisionEventPair
-// {
-// 	GameObject* go1;
-// 	GameObject* go2;
-// 	vec2 collisionNormal; // This is WRT go1
-// 
-// 	CollisionEventPair(GameObject* go1, GameObject* go2, vec2 collisionNormal)
-// 	{
-// 		this->go1 = go1;
-// 		this->go2 = go2;
-// 		this->collisionNormal = collisionNormal;
-// 	}
-// 
-// };
-// bool operator==(const CollisionEventPair& lhs, const CollisionEventPair& rhs)
-// {
-// 	bool result = true;
-// 
-// 	if (lhs.go1 != rhs.go1)
-// 	{
-// 		result = false;
-// 	}
-// 	else if (lhs.go2 != rhs.go2)
-// 	{
-// 		result = false;
-// 	}
-// 	// NOTE: Not sure this is a good check. If the collision normal were to change while an object is
-// 	//			grinding around the outside of another object it could cause false negatives.
-// 	//else if (lhs.collisionNormal != rhs.collisionNormal)
-// 	//{
-// 	//	result = false;
-// 	//}
-// 
-// 	return result;
-// }
-// bool operator!=(const CollisionEventPair& lhs, const CollisionEventPair& rhs)
-// {
-// 	bool result;
-// 	result = !(lhs == rhs);
-// 	return result;
-// }
-
-// vector<CollisionEventPair> interpenetrationsFixedLastFrame = vector<CollisionEventPair>();
-// void FixAllInterpenetrations()
-// {
-// 	vector<CollisionEventPair> interpenetrationsFixed;
-// 
-// 
-// 	SystemTime t0 = GetTimeSinceStartup();
-// 	vector<CollisionPair> collisions = GenerateContacts();
-// 	SystemTime t1 = GetTimeSinceStartup();
-// 	SystemTime t01diff = t1 - t0;
-// 	//DebugPrintf(1024, "\n\n\nGenerate Contacts: %u ms\n", t01diff.milliseconds);
-// 
-// 
-// 	// NOTE: This is all really janky
-// 	// NOTE: Any weird behavior wrt phantoms is likely caused by this chunk of code
-// 	// Remove all phantoms from the contacts list because we
-// 	//	don't want to push objects out of them we just want to know what is inside of them.
-// 	SystemTime t2 = GetTimeSinceStartup();
-// 	vector<size_t> erasePositions;
-// 	for (size_t i = 0; i < collisions.size(); ++i)
-// 	{
-// 		GameObject* go1 = collisions[i].go1;
-// 		GameObject* go2 = collisions[i].go2;
-// 		CollisionInfo_2D ci = collisions[i].info;
-// 		if ((go1->collisionShape->IsPhantom() || go2->collisionShape->IsPhantom()) && ci.collided)
-// 		{
-// 			interpenetrationsFixed.push_back(CollisionEventPair(collisions[i].go1, collisions[i].go2, collisions[i].info.normal));
-// 			erasePositions.push_back(i);
-// 		}
-// 	}
-// 	for (I32 ep = erasePositions.size() - 1; ep >= 0; --ep)
-// 	{
-// 		size_t index = erasePositions[ep];
-// 		collisions.erase(collisions.begin() + index);
-// 	}
-// 	erasePositions.clear();
-// 	SystemTime t3 = GetTimeSinceStartup();
-// 	SystemTime t23diff = t3 - t2;
-// 	//DebugPrintf(1024, "Clear Phantoms: %u ms\n", t23diff.milliseconds);
-// 
-// 	SystemTime t4 = GetTimeSinceStartup();
-// 	size_t maxNumberOfIterations = collisions.size() * 10;
-// 	size_t i = 0;
-// 	while (i < maxNumberOfIterations)
-// 	{
-// 		I32 index = -1;
-// 		F32 penetrationDepth = -1.0f;
-// 		for (size_t j = 0; j < collisions.size(); ++j)
-// 		{
-// 			if (collisions[j].info.collided && collisions[j].info.distance > penetrationDepth)
-// 			{
-// 				index = j;
-// 				penetrationDepth = collisions[j].info.distance;
-// 			}
-// 		}
-// 
-// 		if (index == -1 || penetrationDepth <= 0.0f)
-// 		{
-// 			// We have fixed all interpenetrations.
-// 			break;
-// 		}
-// 
-// 		interpenetrationsFixed.push_back(CollisionEventPair(collisions[index].go1, collisions[index].go2, collisions[index].info.normal));
-// 		Displacements d = FixInterpenetration(collisions[index].go1, collisions[index].go2, collisions[index].info);
-// 		//Assert(length(d.displacement1) + length(d.displacement2) == collisions[index].info.distance);
-// 		collisions[index].info.distance = 0.0f;
-// 		for (size_t k = 0; k < collisions.size(); k++)
-// 		{
-// 			if (k == index)
-// 			{
-// 				continue;
-// 			}
-// 
-// 			GameObject* go1 = collisions[k].go1;
-// 			GameObject* go2 = collisions[k].go2;
-// 			
-// 			GameObject* t1 = collisions[index].go1;
-// 
-// 			// We must project the displacement for that object onto the normal and then add it to the distance
-// 			bool b1 = (go1 == collisions[index].go1);
-// 			bool b2 = (go2 == collisions[index].go1);
-// 			if (b1)
-// 			{
-// 				collisions[k].info.distance += dot(collisions[k].info.normal, d.displacement1);
-// 			}
-// 			if (b2)
-// 			{
-// 				collisions[k].info.distance -= dot(collisions[k].info.normal, d.displacement1);
-// 			}
-// 
-// 			bool b3 = (go1 == collisions[index].go2);
-// 			bool b4 = (go2 == collisions[index].go2);
-// 			if (b3)
-// 			{
-// 				collisions[k].info.distance += dot(collisions[k].info.normal, d.displacement2);
-// 			}
-// 			if (b4)
-// 			{
-// 				collisions[k].info.distance -= dot(collisions[k].info.normal, d.displacement2);
-// 			}
-// 		}
-// 
-// 		++i;
-// 	}
-// 	SystemTime t5 = GetTimeSinceStartup();
-// 	SystemTime t45diff = t5 - t4;
-// 	//DebugPrintf(1024, "Resolve Interpenetrations: %u ms\n", t45diff.milliseconds);
-// 
-// 
-// 	/*
-// 	 * Send collision events
-// 	 */
-// 	for (size_t i = 0; i < interpenetrationsFixed.size(); ++i)
-// 	{
-// 		bool processedLastFrame = false;
-// 		for (size_t j = 0; j < interpenetrationsFixedLastFrame.size(); ++j)
-// 		{
-// 			if (interpenetrationsFixed[i] == interpenetrationsFixedLastFrame[j])
-// 			{
-// 				processedLastFrame = true;
-// 				interpenetrationsFixedLastFrame.erase(interpenetrationsFixedLastFrame.begin() + j);
-// 				break;
-// 			}
-// 		}
-// 		if (!processedLastFrame)
-// 		{
-// 			GameObject* go1 = interpenetrationsFixed[i].go1;
-// 			GameObject* go2 = interpenetrationsFixed[i].go2;
-// 			vec2 normal = interpenetrationsFixed[i].collisionNormal;
-// 			// Send GameObjects OnCollisionEnter Event
-// 			Event event1;
-// 			event1.SetType(ET_OnCollisionEnter);
-// 			event1.arguments[0] = EventArgument((void*)go1);
-// 			event1.arguments[1] = EventArgument((void*)go2);
-// 			event1.arguments[2] = EventArgument(normal);
-// 			go1->DoEvent(go1, &event1);
-// 
-// 			Event event2;
-// 			event2.SetType(ET_OnCollisionEnter);
-// 			event2.arguments[0] = EventArgument((void*)go2);
-// 			event2.arguments[1] = EventArgument((void*)go1);
-// 			event2.arguments[2] = EventArgument(-normal);
-// 			go2->DoEvent(go2, &event2);
-// 		}
-// 
-// 		// Send GameObjects OnCollision Event regardless(this should be received along with OnCollisionEnter on the first frame of a collision)
-// 		GameObject* go1 = interpenetrationsFixed[i].go1;
-// 		GameObject* go2 = interpenetrationsFixed[i].go2;
-// 		vec2 normal = interpenetrationsFixed[i].collisionNormal;
-// 		// Send GameObjects OnCollisionEnter Event
-// 		Event event1;
-// 		event1.SetType(ET_OnCollision);
-// 		event1.arguments[0] = EventArgument((void*)go1);
-// 		event1.arguments[1] = EventArgument((void*)go2);
-// 		event1.arguments[2] = EventArgument(normal);
-// 		go1->DoEvent(go1, &event1);
-// 
-// 		Event event2;
-// 		event2.SetType(ET_OnCollision);
-// 		event2.arguments[0] = EventArgument((void*)go2);
-// 		event2.arguments[1] = EventArgument((void*)go1);
-// 		event2.arguments[2] = EventArgument(-normal);
-// 		go2->DoEvent(go2, &event2);
-// 
-// 
-// 		CollisionEventPair collision = interpenetrationsFixed[i];
-// 		//DebugPrintf(1024, "collision processed (%i, %i)\n", collision.go1->type, collision.go2->type);
-// 	}
-// 
-// 	// Because we removed all of the interpenetrations that were fixed this frame too, this
-// 	//	 list only contains interpenetrations that didn't happen this frame
-// 	for (size_t i = 0; i < interpenetrationsFixedLastFrame.size(); ++i)
-// 	{
-// 		// Send GameObjects OnCollisionExit Event
-// 		GameObject* go1 = interpenetrationsFixedLastFrame[i].go1;
-// 		GameObject* go2 = interpenetrationsFixedLastFrame[i].go2;
-// 		vec2 normal = interpenetrationsFixedLastFrame[i].collisionNormal;
-// 		// Send GameObjects OnCollisionEnter Event
-// 		Event event1;
-// 		event1.SetType(ET_OnCollisionExit);
-// 		event1.arguments[0] = EventArgument((void*)go1);
-// 		event1.arguments[1] = EventArgument((void*)go2);
-// 		event1.arguments[2] = EventArgument(normal);
-// 		go1->DoEvent(go1, &event1);
-// 
-// 		Event event2;
-// 		event2.SetType(ET_OnCollisionExit);
-// 		event2.arguments[0] = EventArgument((void*)go2);
-// 		event2.arguments[1] = EventArgument((void*)go1);
-// 		event2.arguments[2] = EventArgument(-normal);
-// 		go2->DoEvent(go2, &event2);
-// 	}
-// 
-// 	interpenetrationsFixedLastFrame = interpenetrationsFixed;
-// }
 
 GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance)
 {
-// 	GameObject* result = NULL;
-// 	F32 resultDistance = distance;
-// 
-// 	vec2 rayPerp = Perpendicular_2D(direction);
-// 	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::collisionGameObjects[i];
-// 		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
-// 		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
-// 		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
-// 		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
-// 		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
-// 		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
-// 		{
-// 			resultDistance = goOriginDOTdirection;
-// 			result = go;
-// 		}
-// 	}
-// 	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::staticCollisionGameObjects[i];
-// 		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
-// 		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
-// 		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
-// 		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
-// 		F32 goOriginDOTdirection = dot(go->transform.position - position, direction);
-// 		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && goOriginDOTdirection < resultDistance && goOriginDOTdirection > 0.0f)
-// 		{
-// 			resultDistance = goOriginDOTdirection;
-// 			result = go;
-// 		}
-// 	}
-//
-//
-//	return result;
-
 	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
 	return collisionWorld->RaycastFirst(position, direction);
 }
 
-vector<GameObject*> RaycastAll_Line_2D(vec2 position, vec2 direction, F32 distance)
+vector<GameObject*> RaycastAll(vec2 position, vec2 direction, F32 distance)
 {
-// 	vector<GameObject*> result;
-// 
-// 	vec2 rayPerp = Perpendicular_2D(direction);
-// 	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::collisionGameObjects[i];
-// 		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
-// 		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
-// 		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
-// 		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
-// 		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
-// 		{
-// 			result.push_back(go);
-// 		}
-// 	}
-// 	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::staticCollisionGameObjects[i];
-// 		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
-// 		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
-// 		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
-// 		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
-// 		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
-// 		{
-// 			result.push_back(go);
-// 		}
-// 	}
-// 
-// 	return result;
-
 	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
 	return collisionWorld->RaycastAll(position, direction);
 }
 
-vector<GameObject*> RaycastType_Line_2D(GameObjectType type,vec2 position, vec2 direction, F32 distance)
+vector<GameObject*> RaycastAll(GameObjectType type,vec2 position, vec2 direction, F32 distance)
 {
-// 	vector<GameObject*> result;
-// 
-// 	vec2 rayPerp = Perpendicular_2D(direction);
-// 	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::collisionGameObjects[i];
-// 		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
-// 		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
-// 		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
-// 		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
-// 		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
-// 		{
-// 			GameObjectType goType = go->GetType();
-// 			if (goType == type)
-// 			{
-// 				result.push_back(go);
-// 			}
-// 		}
-// 	}
-// 	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::staticCollisionGameObjects[i];
-// 		vec2 farthestRight = go->collisionShape->Support(go->transform, rayPerp) - position;
-// 		vec2 farthestLeft = go->collisionShape->Support(go->transform, -rayPerp) - position;
-// 		F32 farthestRightDOTrayPerp = dot(rayPerp, farthestRight);
-// 		F32 farthestLeftDOTraPerp = dot(rayPerp, farthestLeft);
-// 		if (farthestRightDOTrayPerp > 0.0f && farthestLeftDOTraPerp <= 0.0f && dot(go->transform.position - position, direction) < distance && dot(go->transform.position - position, direction) > 0.0f)
-// 		{
-// 			GameObjectType goType = go->GetType();
-// 			if (goType == type)
-// 			{
-// 				result.push_back(go);
-// 			}
-// 		}
-// 	}
-// 
-// 	return result;
-
 	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
 	return collisionWorld->RaycastAll(position, direction, type);
 }
 
-vector<GameObject*> RaycastAll_Rectangle_2D(vec2 position, vec2 halfDim, F32 rotationAngle)
+vector<GameObject*> Shapecast_Rectangle(vec2 position, vec2 halfDim, F32 rotationAngle)
 {
-// 	vector<GameObject*> result;
-// 
-// 	Rectangle_2D collisionRect = Rectangle_2D(halfDim);
-// 
-// 	Transform collisionRectTransform;
-// 	collisionRectTransform.position = position;
-// 	collisionRectTransform.rotationAngle = rotationAngle;
-// 
-// 	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::collisionGameObjects[i];
-// 		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
-// 		if (ci.collided)
-// 		{
-// 			result.push_back(go);
-// 		}
-// 	}
-// 
-// 	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::staticCollisionGameObjects[i];
-// 		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
-// 		if (ci.collided)
-// 		{
-// 			result.push_back(go);
-// 		}
-// 	}
-// 
-// 	return result;
-
 	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
 	return collisionWorld->Shapecast_Rectangle(position, halfDim, rotationAngle);
 }
 
-vector<GameObject*> RaycastType_Rectangle_2D(GameObjectType type, vec2 position, vec2 halfDim, F32 rotationAngle)
+vector<GameObject*> Shapecast_Rectangle(GameObjectType type, vec2 position, vec2 halfDim, F32 rotationAngle)
 {
-// 	vector<GameObject*> result;
-// 
-// 	Rectangle_2D collisionRect = Rectangle_2D(halfDim);
-// 
-// 	Transform collisionRectTransform;
-// 	collisionRectTransform.position = position;
-// 	collisionRectTransform.rotationAngle = rotationAngle;
-// 
-// 	for (size_t i = 0; i < GameObject::collisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::collisionGameObjects[i];
-// 		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
-// 		if (ci.collided)
-// 		{
-// 			GameObjectType goType = go->GetType();
-// 			if (goType == type)
-// 			{
-// 				result.push_back(go);
-// 			}
-// 		}
-// 	}
-// 
-// 	for (size_t i = 0; i < GameObject::staticCollisionGameObjects.size(); ++i)
-// 	{
-// 		GameObject* go = GameObject::staticCollisionGameObjects[i];
-// 		CollisionInfo_2D ci = DetectCollision_2D(&collisionRect, collisionRectTransform, go->collisionShape, go->transform);
-// 		if (ci.collided)
-// 		{
-// 			GameObjectType goType = go->GetType();
-// 			if (goType == type)
-// 			{
-// 				result.push_back(go);
-// 			}
-// 		}
-// 	}
-// 
-// 	return result;
-
 	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
 	return collisionWorld->Shapecast_Rectangle(position, halfDim, rotationAngle, type);
 }
@@ -1143,29 +576,24 @@ void SetSimulationSpace(vec2 center = vec2(0.0f, 0.0f), vec2 dimensions = simSpa
 void SetSimulationSpace(GameObject* target)
 {
 	// Change the simulation space to be centered around the new screen.
-	//vec2 rayOrigin = target->transform.position;
-	//vector<GameObject*> rayResults_xPos = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(1.0f, 0.0f), 20.0f);
-	//vector<GameObject*> rayResults_xNeg = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
-	//vector<GameObject*> rayResults_yPos = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
-	//vector<GameObject*> rayResults_yNeg = RaycastType_Line_2D(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
-	//
-	//GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
-	//GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
-	//GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
-	//GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
-	//
-	//vec2 simulationSpaceDimensions;
-	//simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
-	//simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
-	//
-	//vec2 simulationSpaceCenter;
-	//simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
-	//simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
-
-
-	// NOTE: This is a bypass while raycasts are being reworked. Remove when done.
-	vec2 simulationSpaceDimensions = vec2(10.0f, 8.0f);
-	vec2 simulationSpaceCenter = vec2(0.0f, 0.0f);
+	vec2 rayOrigin = target->transform.position;
+	vector<GameObject*> rayResults_xPos = RaycastAll(GameObjectType::TransitionBar, rayOrigin, vec2(1.0f, 0.0f), 20.0f);
+	vector<GameObject*> rayResults_xNeg = RaycastAll(GameObjectType::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
+	vector<GameObject*> rayResults_yPos = RaycastAll(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
+	vector<GameObject*> rayResults_yNeg = RaycastAll(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
+	
+	GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
+	GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
+	GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
+	GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
+	
+	vec2 simulationSpaceDimensions;
+	simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
+	simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
+	
+	vec2 simulationSpaceCenter;
+	simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
+	simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
 
 	SetSimulationSpace(simulationSpaceCenter, simulationSpaceDimensions);
 }
@@ -1530,33 +958,6 @@ bool GameInitialize()
 	heroGO = CreateHero(vec2(-0.5f,  3.0f)/*vec2(-0.5f, 0.5f)*/, debugDraw);
 	cameraGO = CreatePlayerCamera(vec2(0.0f, 0.0f), debugDraw);
 
-	//spooks = CreateSpookyTree(/*vec2(15.0f, 4.0f)*/vec2(1.0f, 0.0f), debugDraw);
-	//collisionWorld.Add(spooks);
-
-	//debug_cwgoAddChunks = collisionWorld.Add(heroGO);
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks1 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, 0.0f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks2 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, 0.0f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks3 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, 0.0f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks4 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.50f, 0.0f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks5 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(0.0f, -1.5f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks6 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, -1.5f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks7 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, -1.5f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks8 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, -1.5f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks9 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.5f, -1.5f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks10 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(0.0f, -3.0f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks11 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(1.25f, -3.0f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks12 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(-1.25f, -3.0f), debugDraw));
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks13 = collisionWorld.Add(CreateHero(vec2(-0.5f, 3.0f) + vec2(2.50f, -3.0f), debugDraw));
-	//
-	//GameObject* tgo = CreateHero(vec2(-0.5f, 3.0f) + vec2(-2.5f, -3.0f), debugDraw);
-	//vector<CollisionChunkRectangle> debug_cwgoAddChunks14 = collisionWorld.Add(tgo);
-
-	//HighResolutionTimer rmt = HighResolutionTimer("Remove GameObject");
-	//rmt.Start();
-	//collisionWorld.Remove(tgo);
-	//rmt.End();
-	//rmt.Report();
-
 
 
 	// NOTE: Add all maps.
@@ -1738,6 +1139,23 @@ void DrawCollisionChunkRectangles(vector<CollisionChunkRectangle>& chunks, vec4 
 vector<GameObject*> gameObjectsToUpdate;
 vector<GameObject*> gameObjectsToLoad;
 
+vector<PenetrationInfo_2D> interpenetrationsFixedLastFrame;
+bool SameGameObjectsInvolved(const PenetrationInfo_2D& lhs, const PenetrationInfo_2D& rhs)
+{
+	bool result = true;
+
+	if (lhs.go1 != rhs.go1)
+	{
+		result = false;
+	}
+	if (lhs.go2 != rhs.go2)
+	{
+		result = false;
+	}
+
+	return result;
+}
+
 F32 time = 0.0f;
 F32 skipThreshold = 1.0f;
 void GameUpdate(F32 dt)
@@ -1789,9 +1207,129 @@ void GameUpdate(F32 dt)
 
 
 		IntegratePhysicsObjects(dt);
-		//FixAllInterpenetrations();
 		collisionWorld.FixupActives();
-		collisionWorld.ResolveInterpenetrations(GetSimulationSpacePosition(), GetSimulationSpaceHalfDimensions());
+		vector<PenetrationInfo_2D> interpenetrationsFixed = collisionWorld.ResolveInterpenetrations(GetSimulationSpacePosition(), GetSimulationSpaceHalfDimensions());
+
+		vector<Event> events_OnCollisionEnter;
+		vector<Event> events_OnCollision;
+		vector<Event> events_OnCollisionExit;
+
+		/* Generate OnCollisionEnter and OnCollsion events */
+		for (size_t i = 0; i < interpenetrationsFixed.size(); ++i)
+		{
+			bool processedLastFrame = false;
+			for (size_t j = 0; j < interpenetrationsFixedLastFrame.size(); ++j)
+			{
+				bool collisionIsTheSame = SameGameObjectsInvolved(interpenetrationsFixed[i], interpenetrationsFixedLastFrame[j]);
+				if (collisionIsTheSame)
+				{
+					processedLastFrame = true;
+					interpenetrationsFixedLastFrame.erase(interpenetrationsFixedLastFrame.begin() + j);
+					break;
+				}
+			}
+			if (!processedLastFrame)
+			{
+				// Generate OnCollisionEnter events for this collision.
+				GameObject* go1 = interpenetrationsFixed[i].go1;
+				GameObject* go2 = interpenetrationsFixed[i].go2;
+				vec2 normal = interpenetrationsFixed[i].normal;
+
+				Event event1;
+				event1.SetType(ET_OnCollisionEnter);
+				event1.arguments[0] = EventArgument((void*)go1);
+				event1.arguments[1] = EventArgument((void*)go2);
+				event1.arguments[2] = EventArgument(normal);
+				events_OnCollisionEnter.push_back(event1);
+
+				Event event2;
+				event2.SetType(ET_OnCollisionEnter);
+				event2.arguments[0] = EventArgument((void*)go2);
+				event2.arguments[1] = EventArgument((void*)go1);
+				event2.arguments[2] = EventArgument(-normal);
+				events_OnCollisionEnter.push_back(event2);
+			}
+
+			// Generate OnCollision event for this collision.
+			GameObject* go1 = interpenetrationsFixed[i].go1;
+			GameObject* go2 = interpenetrationsFixed[i].go2;
+			vec2 normal = interpenetrationsFixed[i].normal;
+
+			Event event1;
+			event1.SetType(ET_OnCollision);
+			event1.arguments[0] = EventArgument((void*)go1);
+			event1.arguments[1] = EventArgument((void*)go2);
+			event1.arguments[2] = EventArgument(normal);
+			events_OnCollision.push_back(event1);
+
+			Event event2;
+			event2.SetType(ET_OnCollision);
+			event2.arguments[0] = EventArgument((void*)go2);
+			event2.arguments[1] = EventArgument((void*)go1);
+			event2.arguments[2] = EventArgument(-normal);
+			events_OnCollision.push_back(event2);
+		}
+
+		/* Generate OnCollisionExit events */
+		for (size_t i = 0; i < interpenetrationsFixedLastFrame.size(); ++i)
+		{
+			// Because we removed all of the collisions that were fixed this frame too, this list only
+			//	contains collisions that didn't happen this frame.
+			// NOTE: Events could also be sent directly from this loop AFTER the OnCollisionEnter, and OnCollision
+			//	Events are sent because it contains only OnCollisionExit events.
+
+			// Generate OnCollisionExit event
+			GameObject* go1 = interpenetrationsFixedLastFrame[i].go1;
+			GameObject* go2 = interpenetrationsFixedLastFrame[i].go2;
+			vec2 normal = interpenetrationsFixedLastFrame[i].normal;
+
+			Event event1;
+			event1.SetType(ET_OnCollisionExit);
+			event1.arguments[0] = EventArgument((void*)go1);
+			event1.arguments[1] = EventArgument((void*)go2);
+			event1.arguments[2] = EventArgument(normal);
+			events_OnCollisionExit.push_back(event1);
+
+			Event event2;
+			event2.SetType(ET_OnCollisionExit);
+			event2.arguments[0] = EventArgument((void*)go2);
+			event2.arguments[1] = EventArgument((void*)go1);
+			event2.arguments[2] = EventArgument(-normal);
+			events_OnCollisionExit.push_back(event2);
+		}
+		interpenetrationsFixedLastFrame = interpenetrationsFixed;
+		DebugPrintf(512, "Interpenetrations Resolved = %u\n", interpenetrationsFixed.size());
+
+
+
+		// Send OnCollisionEnter events.
+		for (size_t i = 0; i < events_OnCollisionEnter.size(); ++i)
+		{
+			GameObject* recipient = (GameObject*)events_OnCollisionEnter[i].arguments[0].AsPointer();
+			if (recipient->DoEvent != NULL)
+			{
+				recipient->DoEvent(recipient, &(events_OnCollisionEnter[i]));
+			}
+		}
+		// Send OnCollision events.
+		for (size_t i = 0; i < events_OnCollision.size(); ++i)
+		{
+			GameObject* recipient = (GameObject*)events_OnCollision[i].arguments[0].AsPointer();
+			if (recipient->DoEvent != NULL)
+			{
+				recipient->DoEvent(recipient, &(events_OnCollision[i]));
+			}
+		}
+		// Send OnCollisionExit events.
+		for (size_t i = 0; i < events_OnCollisionExit.size(); ++i)
+		{
+			GameObject* recipient = (GameObject*)events_OnCollisionExit[i].arguments[0].AsPointer();
+			if (recipient->DoEvent != NULL)
+			{
+				recipient->DoEvent(recipient, &(events_OnCollisionExit[i]));
+			}
+		}
+
 
 
 		SendQueuedEvents();

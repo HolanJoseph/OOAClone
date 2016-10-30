@@ -81,8 +81,11 @@ vector<CollisionChunkRectangle> CollisionWorld_2D::Add(GameObject* go)
 		}
 	}
 
-	// NOTE: Remove GameObject from actives list.
-	this->actives.push_back(ActiveColliderInfo(go, go->transform, goAABB, range));
+	// NOTE: Add GameObject to actives list.
+	if (IsActive(go))
+	{
+		this->actives.push_back(ActiveColliderInfo(go, go->transform, goAABB, range));
+	}
 
 	return result;
 }
@@ -399,7 +402,8 @@ vector<PenetrationInfo_2D> CollisionWorld_2D::ResolveInterpenetrations(size_t ch
 	}
 
 
-	return result;
+	//return result;
+	return interpenetrations;
 }
 
 vector<PenetrationInfo_2D> CollisionWorld_2D::GenerateCollisions(vector<GameObject*>& collidables)
