@@ -937,7 +937,7 @@ struct GameObject
 
 	void AddSprite(const char * sprite);
 	void AddAnimator();
-	void AddRigidbody(F32 invmass = 0.0f, F32 dampingfactor = 0.0f, vec2 velocity = vec2(0.0f, 0.0f), vec2 force = vec2(0.0f)); // NOTE: Rigidbody should be added before collision shapes
+	void AddRigidbody(F32 invmass = 0.0f, F32 dampingfactor = 0.0f, vec2 velocity = vec2(0.0f, 0.0f), vec2 force = vec2(0.0f)); // NOTE: Rigidbody should be added BEFORE collision shapes
 	template <typename S>
 	void AddCollisionShape(S shape);
 	void AddCamera(vec2 halfDim);
@@ -945,7 +945,7 @@ struct GameObject
 	void RemoveSprite();
 	void RemoveAnimator();
 	void RemoveRigidbody();
-	void RemoveCollisionShape();
+	void RemoveCollisionShape(); // NOTE: Rigidbody should be removed AFTER collision shapes
 	void RemoveCamera();
 
 	//void Update_PrePhysics(F32 dt);

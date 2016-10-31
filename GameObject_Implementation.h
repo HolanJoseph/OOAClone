@@ -90,18 +90,6 @@ void GameObject::AddCollisionShape(S shape)
 
 	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
 	collisionWorld->Add(this);
-	//if (this->HasTag(Environment))
-	//{
-	//	staticCollisionGameObjects.push_back(this);
-	//}
-	//else
-	//{
-	//	if (collider->IsPhantom())
-	//	{
-	//		phantomCollisionGameObjects.push_back(this);
-	//	}
-	//	collisionGameObjects.push_back(this);
-	//}
 }
 
 
@@ -135,37 +123,8 @@ void GameObject::RemoveRigidbody()
 
 void GameObject::RemoveCollisionShape()
 {
-	vector<GameObject*>* gos = NULL;
-	if (this->HasTag(Environment))
-	{
-		gos = &staticCollisionGameObjects;
-	}
-	else
-	{
-		gos = &collisionGameObjects;
-	}
-	for (size_t i = 0; i < gos->size(); ++i)
-	{
-		GameObject* go = (*gos)[i];
-		if (this == go)
-		{
-			gos->erase(gos->begin() + i);
-			break;
-		}
-	}
-
-	if (this->collisionShape->IsPhantom())
-	{
-		for (size_t i = 0; i < GameObject::phantomCollisionGameObjects.size(); ++i)
-		{
-			GameObject* go = GameObject::phantomCollisionGameObjects[i];
-			if (this == go)
-			{
-				GameObject::phantomCollisionGameObjects.erase(GameObject::phantomCollisionGameObjects.begin() + i);
-				break;
-			}
-		}
-	}
+	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
+	collisionWorld->Remove(this);
 
 	delete this->collisionShape;
 	this->collisionShape = NULL;
