@@ -92,6 +92,16 @@ void GameObject::AddCollisionShape(S shape)
 	collisionWorld->Add(this);
 }
 
+void GameObject::AddCamera(vec2 halfDim)
+{
+	this->camera = new Camera();
+	this->camera->position = this->transform.position;
+	this->camera->scale = 1.0f;
+	this->camera->rotationAngle = this->transform.rotationAngle;
+	this->camera->ResizeViewArea(halfDim);
+	SetRenderCamera(this->camera);
+}
+
 
 
 void GameObject::RemoveSprite()

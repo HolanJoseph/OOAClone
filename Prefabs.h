@@ -246,12 +246,12 @@ inline void Update_PostPhysics_Hero(GameObject* go, F32 dt)
 	//	GameObject* go = infront[i];
 	//	go->SetDebugState(true);
 	//}
-	GameObject* infront = RaycastFirst_Line_2D(go->transform.position, go->facing, 1000.0f);
-	if (infront != NULL && go->showRay)
-	{
-		infront->SetDebugState(true);
-	}
-
+	//GameObject* infront = RaycastFirst_Line_2D(go->transform.position, go->facing, 1000.0f);
+	//if (infront != NULL && go->showRay)
+	//{
+	//	infront->SetDebugState(true);
+	//}
+	//
 	if (GetKeyDown(KeyCode_Spacebar))
 	{
 		CreateFire(go->transform.position + go->facing, true);
@@ -437,25 +437,6 @@ inline GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
 	camera->AddCamera(ScreenDimensions);
 	camera->SetDebugState(debugDraw);
 
-	//vector<GameObject*> inRaycast = RaycastAll_Rectangle_2D(camera->transform.position, ScreenDimensions, 0.0f);
-	//GameObject* closestTetherPoint = NULL;
-	//F32 closestTetherPoint_Distance = 10000.0f;
-	//for (size_t i = 0; i < inRaycast.size(); ++i)
-	//{
-	//	GameObject* go = inRaycast[i];
-	//	GameObject::Type goType = go->GetType();
-	//	if (goType == GameObject::CameraTetherPoint)
-	//	{
-	//		vec2 toTether = go->transform.position - camera->transform.position;
-	//		F32 distanceToTether = length(toTether);
-	//		if (distanceToTether < closestTetherPoint_Distance)
-	//		{
-	//			closestTetherPoint_Distance = distanceToTether;
-	//			closestTetherPoint = go;
-	//		}
-	//	}
-	//}
-	//camera->tetherPoint = closestTetherPoint;
 	camera->bound = true;
 	vector<GameObject*> playerCharacters = FindGameObjectByType(GameObjectType::PlayerCharacter);
 	if (playerCharacters.size() > 0)

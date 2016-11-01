@@ -948,6 +948,8 @@ struct GameObject
 	void RemoveCollisionShape(); // NOTE: Rigidbody should be removed AFTER collision shapes
 	void RemoveCamera();
 
+	// NOTE: These are still here because I'm not sure if this shell is a better idea or 
+	//	if this should be registered and batched to kill a bunch of ifs
 	//void Update_PrePhysics(F32 dt);
 	//void Update_PostPhysics(F32 dt);
 	//void HandleEvent(Event* e);
@@ -966,19 +968,4 @@ struct GameObject
 	static vector<GameObject*> gameObjectDestructionQueue;
 
 	static vector<GameObject*> physicsGameObjects;
-	static vector<GameObject*> collisionGameObjects;
-	static vector<GameObject*> staticCollisionGameObjects;
-	static vector<GameObject*> phantomCollisionGameObjects;
-
 };
-
-void SetRenderCamera(Camera* camera);
-void GameObject::AddCamera(vec2 halfDim)
-{
-	this->camera = new Camera();
-	this->camera->position = this->transform.position;
-	this->camera->scale = 1.0f;
-	this->camera->rotationAngle = this->transform.rotationAngle;
-	this->camera->ResizeViewArea(halfDim);
-	SetRenderCamera(this->camera);
-}

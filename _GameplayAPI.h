@@ -6,6 +6,8 @@
 #include "String.h"
 #include "Transform.h"
 
+struct Camera;
+
 enum GameObjectType;
 enum GameObjectTags;
 struct GameObject;
@@ -29,6 +31,13 @@ vector<GameObject*> FindGameObjectByTag(GameObjectTags tag);
 
 
 /*
+ * World Manipulation
+ */
+void CreateMap(const char* name, vec2 size, vec2 numberOfScreens, vec2 originOffset, vec2 screenCountOffset);
+
+
+
+/*
  * Events
  */
 void SendEvent(GameObject* gameObject, Event* e);
@@ -40,7 +49,7 @@ void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait);
  * Collision
  */
 CollisionWorld_2D*  GetCollisionWorld();
-GameObject*			RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance);
+GameObject*			RaycastFirst(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll(vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> RaycastAll(GameObjectType type, vec2 position, vec2 direction, F32 distance);
 vector<GameObject*> Shapecast_Rectangle(vec2 position, vec2 halfDim, F32 rotationAngle);
@@ -64,6 +73,17 @@ vec2 GetSimulationSpaceHalfDimensions();
 void SetSimulationSpace(vec2 center, vec2 dimensions);
 void SetSimulationSpace(GameObject* target);
 
+vec2 GetLoadSpacePosition();
+vec2 GetLoadSpaceDimensions();
+vec2 GetLoadSpaceHalfDimensions();
+
+
+
+/*
+ * Rendering
+ */
+void SetRenderCamera(Camera* camera);
+Camera* GetRenderCamera();
 
 
 

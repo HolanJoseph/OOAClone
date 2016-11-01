@@ -39,8 +39,6 @@ using std::vector;
 const vec2 TileDimensions = vec2(0.5f, 0.5f);
 const vec2 ScreenDimensions = vec2(5.0f, 4.0f);
 
-
-
 StringStringHashTable spriteAssetFilepathTable;
 inline void ReadInSpriteAssets(StringStringHashTable* hash, char* filename)
 {
@@ -71,160 +69,18 @@ inline void ReadInSpriteAssets(StringStringHashTable* hash, char* filename)
 
 
 
+
+// Initializations for GameObject
 vector<GameObject*> GameObject::gameObjects;
 vector<GameObject*> GameObject::gameObjectDestructionQueue;
-
 vector<GameObject*> GameObject::physicsGameObjects;
-vector<GameObject*> GameObject::collisionGameObjects;
-vector<GameObject*> GameObject::staticCollisionGameObjects;
-vector<GameObject*> GameObject::phantomCollisionGameObjects;
 
-vector<GameObject*> FindGameObjectByType(GameObjectType type)
-{
-	vector<GameObject*> result;
 
-	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
-	{
-		GameObject* go = GameObject::gameObjects[i];
-		GameObjectType goType = go->GetType();
-		if (goType == type)
-		{
-			result.push_back(go);
-		}
-	}
-
-	return result;
-}
-
-vector<GameObject*> FindGameObjectByTag(GameObjectTags tag)
-{
-	vector<GameObject*> result;
-
-	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
-	{
-		GameObject* go = GameObject::gameObjects[i];
-		bool hasTag = go->HasTag(tag);
-		if (hasTag)
-		{
-			result.push_back(go);
-		}
-	}
-
-	return result;
-}
-
-void SendEvent(GameObject* gameObject, Event* e)
-{
-	//gameObject->HandleEvent(e);
-	gameObject->DoEvent(gameObject, e);
-}
-
-struct QueuedEvent
-{
-	GameObject* recipient;
-	Event* e;
-	U32 numberOfFramesToWait;
-
-	QueuedEvent(GameObject* recipient, Event* e, U32 numberOfFramesToWait)
-	{
-		this->recipient = recipient;
-		this->e = new Event(e);
-		this->numberOfFramesToWait = numberOfFramesToWait;
-	}
-};
-vector<QueuedEvent> queuedEventsToProcess;
-vector<QueuedEvent> queuedEventsFromThisFrame;
-void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait)
-{
-	queuedEventsFromThisFrame.push_back(QueuedEvent(gameObject, e, numberOfFramesToWait));
-}
-
-void AddThisFramesQueuedEventsToProcessingQueue()
-{
-	for (size_t i = 0; i < queuedEventsFromThisFrame.size(); ++i)
-	{
-		queuedEventsToProcess.push_back(queuedEventsFromThisFrame[i]);
-	}
-	queuedEventsFromThisFrame.clear();
-}
-
-void SendQueuedEvents()
-{
-	for (size_t i = 0; i < queuedEventsToProcess.size(); ++i)
-	{
-		QueuedEvent* qe = &(queuedEventsToProcess[i]);
-		--qe->numberOfFramesToWait;
-		if (qe->numberOfFramesToWait <= 0)
-		{
-			SendEvent(qe->recipient, qe->e);
-		}
-		size_t qs = queuedEventsToProcess.size();
-		size_t tlsz = 1;
-	}
-
-	for (I32 i = queuedEventsToProcess.size() - 1; i >= 0; --i)
-	{
-		QueuedEvent* qe = &(queuedEventsToProcess[i]);
-		if (qe->numberOfFramesToWait <= 0)
-		{
-			queuedEventsToProcess.erase(queuedEventsToProcess.begin() + i);
-		}
-	}
-}
 
 
 
 /*
- * Physics Updating
- */
-/* NOTE: Probably include this in GameObject. */
-void IntegratePhysicsObjects(F32 dt)
-{
-	for (size_t i = 0; i < GameObject::physicsGameObjects.size(); ++i)
-	{
-		GameObject* go = GameObject::physicsGameObjects[i];
-		go->rigidbody->SetPosition(go->transform.position);
-		go->rigidbody->Integrate(dt);
-		go->transform.position = go->rigidbody->position;
-	}
-}
-
-
-
-GameObject* RaycastFirst_Line_2D(vec2 position, vec2 direction, F32 distance)
-{
-	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
-	return collisionWorld->RaycastFirst(position, direction);
-}
-
-vector<GameObject*> RaycastAll(vec2 position, vec2 direction, F32 distance)
-{
-	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
-	return collisionWorld->RaycastAll(position, direction);
-}
-
-vector<GameObject*> RaycastAll(GameObjectType type,vec2 position, vec2 direction, F32 distance)
-{
-	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
-	return collisionWorld->RaycastAll(position, direction, type);
-}
-
-vector<GameObject*> Shapecast_Rectangle(vec2 position, vec2 halfDim, F32 rotationAngle)
-{
-	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
-	return collisionWorld->Shapecast_Rectangle(position, halfDim, rotationAngle);
-}
-
-vector<GameObject*> Shapecast_Rectangle(GameObjectType type, vec2 position, vec2 halfDim, F32 rotationAngle)
-{
-	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
-	return collisionWorld->Shapecast_Rectangle(position, halfDim, rotationAngle, type);
-}
-
-
-
-/*
- * Generate Prefab
+ * Gameplay GameObject API Implementation
  */
 GameObject* CreateGameObject(GameObjectType type)
 {
@@ -291,13 +147,47 @@ void DestroyGameObject(GameObject* gameObject)
 }
 
 
+vector<GameObject*> FindGameObjectByType(GameObjectType type)
+{
+	vector<GameObject*> result;
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		GameObjectType goType = go->GetType();
+		if (goType == type)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
+
+vector<GameObject*> FindGameObjectByTag(GameObjectTags tag)
+{
+	vector<GameObject*> result;
+
+	for (size_t i = 0; i < GameObject::gameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::gameObjects[i];
+		bool hasTag = go->HasTag(tag);
+		if (hasTag)
+		{
+			result.push_back(go);
+		}
+	}
+
+	return result;
+}
 
 
 
 
 
-
-
+/*
+ * Gameplay World Manipulation API Implementation
+ */
 void CreateMap(const char* name, vec2 size, vec2 numberOfScreens, vec2 originOffset = vec2(0.0f, 0.0f), vec2 screenCountOffset = vec2(0.0f, 0.0f))
 {
 	vec2 screenDimensions = VVD(size, numberOfScreens);
@@ -329,12 +219,125 @@ void CreateMap(const char* name, vec2 size, vec2 numberOfScreens, vec2 originOff
 
 
 
-/*
- * Global Game State
- */
-bool globalDebugDraw = true;
-bool resetDebugStatePerFrame = false;
 
+
+/*
+ * Gameplay Event API Implementation
+ */
+void SendEvent(GameObject* gameObject, Event* e)
+{
+	//gameObject->HandleEvent(e);
+	gameObject->DoEvent(gameObject, e);
+}
+
+struct QueuedEvent
+{
+	GameObject* recipient;
+	Event* e;
+	U32 numberOfFramesToWait;
+
+	QueuedEvent(GameObject* recipient, Event* e, U32 numberOfFramesToWait)
+	{
+		this->recipient = recipient;
+		this->e = new Event(e);
+		this->numberOfFramesToWait = numberOfFramesToWait;
+	}
+};
+vector<QueuedEvent> queuedEventsToProcess;
+vector<QueuedEvent> queuedEventsFromThisFrame;
+void QueueEvent(GameObject* gameObject, Event* e, U32 numberOfFramesToWait)
+{
+	queuedEventsFromThisFrame.push_back(QueuedEvent(gameObject, e, numberOfFramesToWait));
+}
+
+void AddThisFramesQueuedEventsToProcessingQueue()
+{
+	for (size_t i = 0; i < queuedEventsFromThisFrame.size(); ++i)
+	{
+		queuedEventsToProcess.push_back(queuedEventsFromThisFrame[i]);
+	}
+	queuedEventsFromThisFrame.clear();
+}
+
+void SendQueuedEvents()
+{
+	for (size_t i = 0; i < queuedEventsToProcess.size(); ++i)
+	{
+		QueuedEvent* qe = &(queuedEventsToProcess[i]);
+		--qe->numberOfFramesToWait;
+		if (qe->numberOfFramesToWait <= 0)
+		{
+			SendEvent(qe->recipient, qe->e);
+		}
+		size_t qs = queuedEventsToProcess.size();
+		size_t tlsz = 1;
+	}
+
+	for (I32 i = queuedEventsToProcess.size() - 1; i >= 0; --i)
+	{
+		QueuedEvent* qe = &(queuedEventsToProcess[i]);
+		if (qe->numberOfFramesToWait <= 0)
+		{
+			queuedEventsToProcess.erase(queuedEventsToProcess.begin() + i);
+		}
+	}
+}
+
+
+
+
+
+/*
+ * Gameplay Collision API Implementation
+ */
+CollisionWorld_2D collisionWorld;
+
+CollisionWorld_2D*  GetCollisionWorld()
+{
+	CollisionWorld_2D* result;
+
+	result = &collisionWorld;
+
+	return result;
+}
+
+GameObject* RaycastFirst(vec2 position, vec2 direction, F32 distance)
+{
+	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
+	return collisionWorld->RaycastFirst(position, direction);
+}
+
+vector<GameObject*> RaycastAll(vec2 position, vec2 direction, F32 distance)
+{
+	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
+	return collisionWorld->RaycastAll(position, direction);
+}
+
+vector<GameObject*> RaycastAll(GameObjectType type,vec2 position, vec2 direction, F32 distance)
+{
+	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
+	return collisionWorld->RaycastAll(position, direction, type);
+}
+
+vector<GameObject*> Shapecast_Rectangle(vec2 position, vec2 halfDim, F32 rotationAngle)
+{
+	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
+	return collisionWorld->Shapecast_Rectangle(position, halfDim, rotationAngle);
+}
+
+vector<GameObject*> Shapecast_Rectangle(GameObjectType type, vec2 position, vec2 halfDim, F32 rotationAngle)
+{
+	CollisionWorld_2D* collisionWorld = GetCollisionWorld();
+	return collisionWorld->Shapecast_Rectangle(position, halfDim, rotationAngle, type);
+}
+
+
+
+
+
+/*
+ * Gameplay Control API Implementation
+ */
 bool pauseAnimations = false;
 bool AreAllAnimationsPaused()
 {
@@ -417,33 +420,6 @@ void FreezeGame(U32 milliseconds)
 
 
 
-//#define NUMGAMEOBJECTS 1 // NOTE: LUL
-GameObject* heroGO;
-GameObject* cameraGO;
-
-GameObject* flowerGO;
-GameObject* treeGO;
-GameObject* weedGO1;
-GameObject* weedGO2;
-GameObject* buttonGO;
-GameObject* spooks;
-
-CollisionWorld_2D collisionWorld;
-vector<CollisionChunkRectangle> debug_collisionWorldChunks;
-vector<CollisionChunkRectangle> debug_cwgoAddChunks;
-
-CollisionWorld_2D*  GetCollisionWorld()
-{
-	CollisionWorld_2D* result;
-
-	result = &collisionWorld;
-
-	return result;
-}
-
-
-
-// Simulation Space
 Rectangle_2D simSpace_Rect;
 Transform simSpace_Transform;
 
@@ -457,7 +433,7 @@ vec2 GetSimulationSpacePosition()
 	vec2 result;
 
 	result = simSpace_Transform.position;
-	
+
 	return result;
 }
 
@@ -581,22 +557,24 @@ void SetSimulationSpace(GameObject* target)
 	vector<GameObject*> rayResults_xNeg = RaycastAll(GameObjectType::TransitionBar, rayOrigin, vec2(-1.0f, 0.0f), 20.0f);
 	vector<GameObject*> rayResults_yPos = RaycastAll(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, 1.0f), 20.0f);
 	vector<GameObject*> rayResults_yNeg = RaycastAll(GameObjectType::TransitionBar, rayOrigin, vec2(0.0f, -1.0f), 20.0f);
-	
+
 	GameObject* transitionBar_xPos = FindWithSmallestX(rayResults_xPos._Myfirst, rayResults_xPos.size());
 	GameObject* transitionBar_xNeg = FindWithLargestX(rayResults_xNeg._Myfirst, rayResults_xNeg.size());
 	GameObject* transitionBar_yPos = FindWithSmallestY(rayResults_yPos._Myfirst, rayResults_yPos.size());
 	GameObject* transitionBar_yNeg = FindWithLargestY(rayResults_yNeg._Myfirst, rayResults_yNeg.size());
-	
+
 	vec2 simulationSpaceDimensions;
 	simulationSpaceDimensions.x = transitionBar_xPos->transform.position.x - transitionBar_xNeg->transform.position.x;
 	simulationSpaceDimensions.y = transitionBar_yPos->transform.position.y - transitionBar_yNeg->transform.position.y;
-	
+
 	vec2 simulationSpaceCenter;
 	simulationSpaceCenter.x = transitionBar_xPos->transform.position.x - (simulationSpaceDimensions.x / 2.0f);
 	simulationSpaceCenter.y = transitionBar_yPos->transform.position.y - (simulationSpaceDimensions.y / 2.0f);
 
 	SetSimulationSpace(simulationSpaceCenter, simulationSpaceDimensions);
 }
+
+
 
 vec2 GetLoadSpacePosition()
 {
@@ -627,8 +605,10 @@ vec2 GetLoadSpaceHalfDimensions()
 
 
 
+
+
 /*
- * Rendering
+ * Gameplay Rendering API Implementation
  */
 Camera* renderCamera;
 void SetRenderCamera(Camera* camera)
@@ -642,6 +622,102 @@ Camera* GetRenderCamera()
 	result = renderCamera;
 	return result;
 }
+
+
+
+
+
+/*
+* Gameplay Debug API Implementation
+*/
+// NOTE: DebugDraw functions are shell functions that draw into the world without needing to supply the rendering camera.
+//	the default rendering view is assumed
+void DebugDrawPoint(vec2 p, F32 pointSize, vec4 color)
+{
+	Camera* renderCamera = GetRenderCamera();
+	DrawPoint(p, pointSize, color, renderCamera);
+}
+
+void DebugDrawLine(vec2 a, vec2 b, vec4 color)
+{
+	Camera* renderCamera = GetRenderCamera();
+	DrawLine(a, b, color, renderCamera);
+}
+
+void DebugDrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset)
+{
+	Camera* renderCamera = GetRenderCamera();
+	DrawRectangleOutline(upperLeft, dimensions, color, renderCamera, offset);
+}
+
+void DebugDrawRectangleSolidColor(vec2 halfDim, Transform transform, vec4 color)
+{
+	Camera* renderCamera = GetRenderCamera();
+	DrawRectangle(halfDim, transform, color, renderCamera);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+* Physics Updating
+*/
+/* NOTE: Probably include this in GameObject. */
+// NOTE: Should be relative to world
+void IntegratePhysicsObjects(F32 dt)
+{
+	for (size_t i = 0; i < GameObject::physicsGameObjects.size(); ++i)
+	{
+		GameObject* go = GameObject::physicsGameObjects[i];
+		go->rigidbody->SetPosition(go->transform.position);
+		go->rigidbody->Integrate(dt);
+		go->transform.position = go->rigidbody->position;
+	}
+}
+
+
+
+
+
+
+
+/*
+ * Global Game State
+ */
+bool globalDebugDraw = true;
+bool resetDebugStatePerFrame = false;
+
+
+GameObject* heroGO;
+GameObject* cameraGO;
+
+GameObject* flowerGO;
+GameObject* treeGO;
+GameObject* weedGO1;
+GameObject* weedGO2;
+GameObject* buttonGO;
+GameObject* spooks;
+
+vector<CollisionChunkRectangle> debug_collisionWorldChunks;
+vector<CollisionChunkRectangle> debug_cwgoAddChunks;
+
+
+
+
+/*
+ * Rendering
+ */
 
 void DrawCameraGrid()
 {
@@ -667,28 +743,6 @@ void DrawCameraGrid()
 
 	DrawLine(vec2(0.0f, posY), vec2(0.0f, negY), vec4(0.09f, 0.52f, 0.09f, 1.0f), renderCamera);
 	DrawLine(vec2(posX, 0.0f), vec2(negX, 0.0f), vec4(0.52f, 0.09f, 0.09f, 1.0f), renderCamera);
-}
-
-// NOTE: DebugDraw functions are shell functions that draw into the world without needing to supply the rendering camera.
-//	the default rendering view is assumed
-void DebugDrawPoint(vec2 p, F32 pointSize, vec4 color)
-{
-	DrawPoint(p, pointSize, color, renderCamera);
-}
-
-void DebugDrawLine(vec2 a, vec2 b, vec4 color)
-{
-	DrawLine(a, b, color, renderCamera);
-}
-
-void DebugDrawRectangleOutline(vec2 upperLeft, vec2 dimensions, vec4 color, F32 offset)
-{
-	DrawRectangleOutline(upperLeft, dimensions, color, renderCamera, offset);
-}
-
-void DebugDrawRectangleSolidColor(vec2 halfDim, Transform transform, vec4 color)
-{
-	DrawRectangle(halfDim, transform, color, renderCamera);
 }
 
 bool CompareYPosition(GameObject* a, GameObject* b)
@@ -889,6 +943,14 @@ void DrawGameObjects(F32 dt)
 
 
 
+
+
+
+
+
+
+
+
 /*
  * Core Game API Functions
  */
@@ -899,15 +961,11 @@ bool GameInitialize()
 
 	SetWindowTitle("Oracle of Ages Clone");
 	SetClientWindowDimensions(vec2(600, 540));
-	//SetClearColor(vec4(0.32f, 0.18f, 0.66f, 0.0f));
 	SetClearColor(vec4(0.2235f, 0.2235f, 0.2235f, 1.0f));
 
 	spriteAssetFilepathTable.Initialize(60);
 	ReadInSpriteAssets(&spriteAssetFilepathTable, "Assets.txt");
 
-
-	//CollisionWorld_2D cw = CollisionWorld_2D();
-	//cw.Initialize(vec2(30.0f, 24.0f), vec2(3, 3), vec2(-5.0f, -4.0f));
 
 
 	bool debugDraw = globalDebugDraw;
@@ -1305,6 +1363,8 @@ void GameUpdate(F32 dt)
 		UpdateGameObjects_PrePhysics(gameObjectsToUpdate, dt);
 
 
+		HighResolutionTimer cwt = HighResolutionTimer("Collision World Things");
+		cwt.Start();
 		IntegratePhysicsObjects(dt);
 		collisionWorld.FixupActives();
 		vector<PenetrationInfo_2D> interpenetrationsFixed = collisionWorld.ResolveInterpenetrations(GetSimulationSpacePosition(), GetSimulationSpaceHalfDimensions());
@@ -1328,7 +1388,8 @@ void GameUpdate(F32 dt)
 		SendCollisionEvents(events_OnCollisionEnter);
 		SendCollisionEvents(events_OnCollision);
 		SendCollisionEvents(events_OnCollisionExit);
-
+		cwt.End();
+		cwt.Report();
 
 		SendQueuedEvents();
 
