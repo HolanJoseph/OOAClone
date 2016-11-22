@@ -9,9 +9,9 @@
 #include <vector>
 using std::vector;
 
+extern GameState global;
 
-
-GameObject* CreateFire(vec2 position, bool debugDraw);
+GameObject* CreateFire(vec2 position);
 
 
 
@@ -254,7 +254,7 @@ inline void Update_PostPhysics_Hero(GameObject* go, F32 dt)
 	//
 	if (GetKeyDown(KeyCode_Spacebar))
 	{
-		CreateFire(go->transform.position + go->facing, true);
+		CreateFire(go->transform.position + go->facing);
 	}
 }
 
@@ -297,7 +297,7 @@ inline void DoEvent_Hero(GameObject* go, Event* e)
 	}
 }
 
-inline GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+inline GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f))
 {
 	GameObject* hero = CreateGameObject(GameObjectType::PlayerCharacter);
 
@@ -319,7 +319,7 @@ inline GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw =
 	// NOTE: hero position as bottom of feet
 	//hero->animator->SetSpriteOffset(vec2(0.0f, 0.4375f)); 
 	//hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f), vec2(0.0f, 4.5f/16.0f)));
-	hero->AddCollisionShape(Rectangle_2D(vec2(TileDimensions.x * 0.5f, TileDimensions.y * 0.5625f), vec2(0.0f, -2.5f / 16.0f)));
+	hero->AddCollisionShape(Rectangle_2D(vec2(global.TileDimensions.x * 0.5f, global.TileDimensions.y * 0.5625f), vec2(0.0f, -2.5f / 16.0f)));
 
 	// State
 	hero->facing = vec2(0.0f, -1.0f);
@@ -328,14 +328,11 @@ inline GameObject* CreateHero(vec2 position = vec2(0.0f, 0.0f), bool debugDraw =
 	hero->slowPercentage = 0.5f;
 	hero->isSlowed = false;
 	hero->pushingForward = false;
-	hero->showRay = debugDraw;
 	hero->frozen = false;
 
 	hero->Update_Pre = Update_PrePhysics_Hero;
 	hero->Update_Post = Update_PostPhysics_Hero;
 	hero->DoEvent = DoEvent_Hero;
-
-	hero->SetDebugState(debugDraw);
 
 	return hero;
 }
@@ -396,7 +393,7 @@ inline void Update_PrePhysics_PlayerCamera(GameObject* go, F32 dt)
 			F32  closeness = closenesses[i];
 			//HighResolutionTimer cameraRayTimer = HighResolutionTimer("Camera Ray", 1);
 			//cameraRayTimer.Start();
-			vector<GameObject*> gameObjectsInDirection = RaycastAll(go->transform.position, direction, 20.0f); // NOTE: arbitrary number
+			vector<GameObject*> gameObjectsInDirection = global.GetCurrentGameMap()->collisionWorld.RaycastAll(go->transform.position, direction); // NOTE: arbitrary number
 			//cameraRayTimer.End();
 			//cameraRayTimer.Report();
 			GameObject* closestTransitionBarInDirection = NULL;
@@ -428,17 +425,16 @@ inline void Update_PrePhysics_PlayerCamera(GameObject* go, F32 dt)
 	}
 }
 
-inline GameObject* CreatePlayerCamera(vec2 position, bool debugDraw = true)
+inline GameObject* CreatePlayerCamera(vec2 position)
 {
 	GameObject* camera = CreateGameObject(GameObjectType::PlayerCamera);
 
 	camera->ForceUpdates(true);
 	camera->transform.position = position;
-	camera->AddCamera(ScreenDimensions);
-	camera->SetDebugState(debugDraw);
+	camera->AddCamera(global.ScreenSize / 2.0f);
 
 	camera->bound = true;
-	vector<GameObject*> playerCharacters = FindGameObjectByType(GameObjectType::PlayerCharacter);
+	vector<GameObject*> playerCharacters = global.GetCurrentGameMap()->FindGameObjectByType(GameObjectType::PlayerCharacter);
 	if (playerCharacters.size() > 0)
 	{
 		camera->target = playerCharacters[0];
@@ -461,21 +457,21 @@ inline void Update_PostPhysics_Fire(GameObject* go, F32 dt)
 	{
 		// Do a rectangle cast the size of our collision shape
 		// Destroy every burnable GameObject returned by the cast.
-		vector<GameObject*> inMe = Shapecast_Rectangle(go->transform.position, ((Rectangle_2D*)go->collisionShape)->halfDim, go->transform.rotationAngle);
+		vector<GameObject*> inMe = global.GetCurrentGameMap()->collisionWorld.Shapecast_Rectangle(go->transform.position, ((Rectangle_2D*)go->collisionShape)->halfDim, go->transform.rotationAngle);
 		for (size_t i = 0; i < inMe.size(); ++i)
 		{
 			GameObject* g = inMe[i];
 			if (g->HasTag(Burnable))
 			{
-				DestroyGameObject(g);
+				global.GetCurrentGameMap()->RemoveGameObject(g);
 			}
 		}
 
-		DestroyGameObject(go);
+		global.GetCurrentGameMap()->RemoveGameObject(go);
 	}
 }
 
-inline GameObject* CreateFire(vec2 position, bool debugDraw = true)
+inline GameObject* CreateFire(vec2 position)
 {
 	GameObject* fire = CreateGameObject(GameObjectType::Fire);
 	fire->AddTag(GameObjectTags::Effect);
@@ -483,8 +479,7 @@ inline GameObject* CreateFire(vec2 position, bool debugDraw = true)
 	fire->AddAnimator();
 	fire->animator->AddAnimation("fire", "fire_Effect", 3, 0.30f);
 	fire->animator->StartAnimation("fire");
-	fire->AddCollisionShape(Rectangle_2D(TileDimensions, vec2(0.0f, 0.0f), true));
-	fire->SetDebugState(debugDraw);
+	fire->AddCollisionShape(Rectangle_2D(global.TileDimensions, vec2(0.0f, 0.0f), true));
 
 	fire->lifetime = 0.0f;
 
@@ -509,9 +504,9 @@ inline void DoEvent_TransitionBar(GameObject* transitionBar, Event* e)
 
 													  if (go->GetType() == PlayerCharacter)
 													  {
-														  vector<GameObject*> playerCameras = FindGameObjectByType(PlayerCamera);
+														  vector<GameObject*> playerCameras = global.GetCurrentGameMap()->FindGameObjectByType(PlayerCamera);
 														  GameObject* playerCamera = playerCameras[0];
-														  vec2 endPoint = transitionBar->transform.position + VVM(TileDimensions, -collisionNormal);
+														  vec2 endPoint = transitionBar->transform.position + VVM(global.TileDimensions, -collisionNormal);
 
 														  vec2 playerEndPos = go->transform.position;
 														  vec2 cameraEndPos = playerCamera->transform.position;
@@ -525,12 +520,12 @@ inline void DoEvent_TransitionBar(GameObject* transitionBar, Event* e)
 
 															  if (collisionNormal.x > 0)
 															  {
-																  cameraEndPos.x -= ScreenDimensions.x * 2.0f;
+																  cameraEndPos.x -= global.ScreenSize.x * 2.0f;
 
 															  }
 															  else
 															  {
-																  cameraEndPos.x += ScreenDimensions.x * 2.0f;
+																  cameraEndPos.x += global.ScreenSize.x * 2.0f;
 															  }
 														  }
 														  if (collisionNormal.y != 0.0f)
@@ -539,11 +534,11 @@ inline void DoEvent_TransitionBar(GameObject* transitionBar, Event* e)
 
 															  if (collisionNormal.y > 0)
 															  {
-																  cameraEndPos.y -= ScreenDimensions.y * 2.0f;
+																  cameraEndPos.y -= global.ScreenSize.y * 2.0f;
 															  }
 															  else
 															  {
-																  cameraEndPos.y += ScreenDimensions.y * 2.0f;
+																  cameraEndPos.y += global.ScreenSize.y * 2.0f;
 															  }
 														  }
 														  // 												   inRaycast = RaycastAll_Line_2D(playerCamera->tetherPoint->transform.position, -collisionNormal, 20.0f);
@@ -576,8 +571,8 @@ inline void DoEvent_TransitionBar(GameObject* transitionBar, Event* e)
 														  playerCamera->bound = false;
 
 														  U32 freezeLength = 250;
-														  FreezeGame(freezeLength);
-														  PauseAllAnimations();
+														  global.FreezeGame(freezeLength);
+														  global.PauseAllAnimations();
 
 														  // Queue an event to handle the transition.
 														  Event e;
@@ -591,12 +586,12 @@ inline void DoEvent_TransitionBar(GameObject* transitionBar, Event* e)
 														  e.arguments[6] = EventArgument((void*)go);
 														  e.arguments[7] = EventArgument((void*)(playerCamera));
 														  e.arguments[8] = EventArgument((void*)NULL/*(newCameraTether)*/);
-														  QueueEvent(transitionBar, &e, 2); // NOTE: Watch to see if this causes jumps again.
+														  global.QueueEvent(transitionBar, &e, 2); // NOTE: Watch to see if this causes jumps again.
 
 														  // Queue an even to freeze the player
 														  Event freezeE;
 														  freezeE.SetType(ET_Freeze);
-														  QueueEvent(go, &freezeE, 2);
+														  global.QueueEvent(go, &freezeE, 2);
 													  }
 						  }
 						  break;
@@ -626,21 +621,21 @@ inline void DoEvent_TransitionBar(GameObject* transitionBar, Event* e)
 												if (percentageTime < 1.0f)
 												{
 													// Send this event again.
-													QueueEvent(transitionBar, e, 1);
+													global.QueueEvent(transitionBar, e, 1);
 												}
 												else
 												{
 													// Queue an event to the player to unfreeze
 													Event unfreezeE;
 													unfreezeE.SetType(ET_Unfreeze);
-													QueueEvent(player, &unfreezeE, 1);
+													global.QueueEvent(player, &unfreezeE, 1);
 
 													//camera->tetherPoint = newCameraTether;
 													camera->bound = true;
 
-													UnpauseAllAnimations(); // Note: This should be done on the same frame as the unfreeze.
+													global.UnpauseAllAnimations(); // Note: This should be done on the same frame as the unfreeze.
 
-													SetSimulationSpace(player);
+													global.SetSimulationSpaceTarget(player);
 												}
 						  }
 						  break;
@@ -650,7 +645,7 @@ inline void DoEvent_TransitionBar(GameObject* transitionBar, Event* e)
 }
 }
 
-inline GameObject* CreateHorizontalTransitionBar(vec2 position, F32 length = 10.0f, bool debugDraw = true)
+inline GameObject* CreateHorizontalTransitionBar(vec2 position, F32 length = 10.0f)
 {
 	GameObject* ctb = CreateGameObject(GameObjectType::TransitionBar);
 
@@ -658,14 +653,13 @@ inline GameObject* CreateHorizontalTransitionBar(vec2 position, F32 length = 10.
 	ctb->transform.scale = vec2(1.0f, 1.0f); // vec2(10.0f, 0.5f);
 	ctb->AddTag(GameObjectTags::Environment);
 	ctb->AddCollisionShape(Rectangle_2D(vec2(length / 2.0f, 0.125f), vec2(0.0f, -0.125f), true));
-	ctb->SetDebugState(debugDraw);
 
 	ctb->DoEvent = DoEvent_TransitionBar;
 
 	return ctb;
 }
 
-inline GameObject* CreateVerticalTransitionBar(vec2 position, F32 length = 8.0f, bool debugDraw = true)
+inline GameObject* CreateVerticalTransitionBar(vec2 position, F32 length = 8.0f)
 {
 	GameObject* ctb = CreateGameObject(GameObjectType::TransitionBar);
 
@@ -673,7 +667,6 @@ inline GameObject* CreateVerticalTransitionBar(vec2 position, F32 length = 8.0f,
 	ctb->transform.scale = vec2(1.0f, 1.0f); // vec2(10.0f, 0.5f);
 	ctb->AddTag(GameObjectTags::Environment);
 	ctb->AddCollisionShape(Rectangle_2D(vec2(0.125f, length / 2.0f), vec2(0.0f, 0.0f), true));
-	ctb->SetDebugState(debugDraw);
 
 	ctb->DoEvent = DoEvent_TransitionBar;
 
@@ -685,7 +678,7 @@ inline GameObject* CreateVerticalTransitionBar(vec2 position, F32 length = 8.0f,
 
 
 
-inline GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0.0f, 0.0f), vec2 scale = vec2(10.0f, 8.0f), bool debugDraw = true)
+inline GameObject* CreateBackground(const char * backgroundName, vec2 position = vec2(0.0f, 0.0f), vec2 scale = vec2(10.0f, 8.0f))
 {
 	GameObject* bg = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 	bg->AddTag(GameObjectTags::Background);
@@ -693,12 +686,10 @@ inline GameObject* CreateBackground(const char * backgroundName, vec2 position =
 	bg->transform.scale = scale;
 	bg->AddSprite(backgroundName);
 
-	bg->SetDebugState(debugDraw);
-
 	return bg;
 }
 
-inline GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+inline GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f))
 {
 	GameObject* tree = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 
@@ -706,14 +697,12 @@ inline GameObject* CreateTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw =
 	tree->transform.scale = vec2(2.0f, 2.0f);
 	tree->AddTag(GameObjectTags::Environment);
 	tree->AddSprite("tree_Generic");
-	tree->AddCollisionShape(Rectangle_2D(TileDimensions));
-
-	tree->SetDebugState(debugDraw);
+	tree->AddCollisionShape(Rectangle_2D(global.TileDimensions));
 
 	return tree;
 }
 
-inline GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+inline GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f))
 {
 	GameObject* df = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 
@@ -723,12 +712,10 @@ inline GameObject* CreateDancingFlowers(vec2 position = vec2(0.0f, 0.0f), bool d
 	df->animator->AddAnimation("dance", "dancing_Flower", 4, 1.0f);
 	df->animator->StartAnimation("dance");
 
-	df->SetDebugState(debugDraw);
-
 	return df;
 }
 
-inline GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+inline GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f))
 {
 	GameObject* weed = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 
@@ -737,14 +724,12 @@ inline GameObject* CreateWeed(vec2 position = vec2(0.0f, 0.0f), bool debugDraw =
 	weed->AddTag(GameObjectTags::Cutable);
 	weed->AddTag(GameObjectTags::Burnable);
 	weed->AddSprite("weed");
-	weed->AddCollisionShape(Rectangle_2D(TileDimensions));
-
-	weed->SetDebugState(debugDraw);
+	weed->AddCollisionShape(Rectangle_2D(global.TileDimensions));
 
 	return weed;
 }
 
-inline GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debugDraw = true)
+inline GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f))
 {
 	GameObject* spooky = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 
@@ -752,77 +737,65 @@ inline GameObject* CreateSpookyTree(vec2 position = vec2(0.0f, 0.0f), bool debug
 	spooky->transform.scale = vec2(2.0f, 2.0f);
 	spooky->AddTag(GameObjectTags::Environment);
 	spooky->AddSprite("tree_Spooky");
-	spooky->AddCollisionShape(Rectangle_2D(TileDimensions));
-
-	spooky->SetDebugState(debugDraw);
+	spooky->AddCollisionShape(Rectangle_2D(global.TileDimensions));
 
 	return spooky;
 }
 
-inline GameObject* CreateBlocker(vec2 position = vec2(0.0f, 0.0f), vec2 scale = vec2(1.0f, 1.0f), bool debugDraw = true)
+inline GameObject* CreateBlocker(vec2 position = vec2(0.0f, 0.0f), vec2 scale = vec2(1.0f, 1.0f))
 {
 	GameObject* blocker = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 	blocker->transform.position = position;
 	blocker->transform.scale = scale;
 	blocker->AddTag(GameObjectTags::Environment);
-	blocker->AddCollisionShape(Rectangle_2D(TileDimensions));
-
-	blocker->SetDebugState(debugDraw);
+	blocker->AddCollisionShape(Rectangle_2D(global.TileDimensions));
 
 	return blocker;
 }
 
-inline GameObject* CreateButton(vec2 position, bool debugDraw = true)
+inline GameObject* CreateButton(vec2 position)
 {
 	GameObject* button = CreateGameObject(GameObjectType::Button);
 
 	button->AddTag(GameObjectTags::Environment);
 	button->transform.position = position;
-	button->AddCollisionShape(Rectangle_2D(TileDimensions, vec2(0.0f, 0.0f), true));
-
-	button->SetDebugState(debugDraw);
+	button->AddCollisionShape(Rectangle_2D(global.TileDimensions, vec2(0.0f, 0.0f), true));
 
 	return button;
 }
 
-inline GameObject* CreateMiniWall_2x1(vec2 position, bool debugDraw)
+inline GameObject* CreateMiniWall_2x1(vec2 position)
 {
 	GameObject* mw = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 	mw->transform.position = position;
 	mw->transform.scale = vec2(1.0f, 0.5f);
 	mw->AddSprite("blockers2x1");
 	mw->AddTag(GameObjectTags::Environment);
-	mw->AddCollisionShape(Rectangle_2D(TileDimensions));
-
-	mw->SetDebugState(debugDraw);
+	mw->AddCollisionShape(Rectangle_2D(global.TileDimensions));
 
 	return mw;
 }
 
-inline GameObject* CreateMiniWall_1x2(vec2 position, bool debugDraw)
+inline GameObject* CreateMiniWall_1x2(vec2 position)
 {
 	GameObject* mw = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 	mw->transform.position = position;
 	mw->transform.scale = vec2(0.5f, 1.0f);
 	mw->AddSprite("blockers1x2");
 	mw->AddTag(GameObjectTags::Environment);
-	mw->AddCollisionShape(Rectangle_2D(TileDimensions));
-
-	mw->SetDebugState(debugDraw);
+	mw->AddCollisionShape(Rectangle_2D(global.TileDimensions));
 
 	return mw;
 }
 
-inline GameObject* CreateMiniWall_1x1(vec2 position, bool debugDraw)
+inline GameObject* CreateMiniWall_1x1(vec2 position)
 {
 	GameObject* mw = CreateGameObject(GameObjectType::StaticEnvironmentPiece);
 	mw->transform.position = position;
 	mw->transform.scale = vec2(0.5f, 0.5f);
 	mw->AddSprite("blockers1x1");
 	mw->AddTag(GameObjectTags::Environment);
-	mw->AddCollisionShape(Rectangle_2D(TileDimensions));
-
-	mw->SetDebugState(debugDraw);
+	mw->AddCollisionShape(Rectangle_2D(global.TileDimensions));
 
 	return mw;
 }

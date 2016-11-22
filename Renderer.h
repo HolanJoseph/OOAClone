@@ -449,6 +449,9 @@ BasicShaderProgram2D singleColor2DProgram;
 BasicShaderProgram2D solidColorCircleInPointProgram; // NOTE: More accurate name?
 BasicShaderProgram2D singleColor3DProgram;
 
+Camera* defaultRenderCamera;
+Camera* renderCamera;
+
 #define unitCircleSize_px 160.0f
 
 inline vec2 WorldPointToScreenSpace(vec2 p, Camera* camera)
@@ -469,6 +472,27 @@ inline vec2 WorldPointToScreenSpace(vec2 p, Camera* camera)
 	return result;
 }
 
+inline void SetRenderCamera(Camera* camera)
+{
+	if (camera != NULL)
+	{
+		renderCamera = camera;
+	}
+	else
+	{
+		renderCamera = defaultRenderCamera;
+	}
+}
+
+inline Camera* GetRenderCamera()
+{
+	Camera* result;
+
+	result = renderCamera;
+
+	return result;
+}
+
 inline void InitializeRenderer()
 {
 	Initialize(&uvMapped2DProgram, "uvMapped2D.vert", "uvMapped2D.frag");
@@ -476,6 +500,8 @@ inline void InitializeRenderer()
 	Initialize(&solidColorCircleInPointProgram, "solidColorCircleInPoint.vert", "solidColorCircleInPoint.frag");
 	Initialize(&singleColor3DProgram, "singleColor3D.vert", "singleColor3D.frag");
 
+	defaultRenderCamera = new Camera();
+	SetRenderCamera(defaultRenderCamera);
 
 
 	// Circle

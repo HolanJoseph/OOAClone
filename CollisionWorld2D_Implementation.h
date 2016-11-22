@@ -52,6 +52,12 @@ vector<CollisionChunkRectangle> CollisionWorld_2D::Add(GameObject* go)
 {
 	vector<CollisionChunkRectangle> result;
 
+	// If the GameObject has none of the necessary components exit.
+	if (go->collisionShape == NULL && go->rigidbody == NULL)
+	{
+		return result;
+	}
+
 	vec2 prospectiveChunk = this->GetChunkContainingPosition(go->transform.position);
 	AxisAlignedBoundingBox goAABB = go->collisionShape->GetAxisAlignedBoundingBox(go->transform);
 

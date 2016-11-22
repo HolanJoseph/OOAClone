@@ -83,3 +83,112 @@ inline vec2 LerpClamped(vec2 start, vec2 end, F32 t)
 	result = Lerp(start, end, clampedt);
 	return result;
 }
+
+struct Rect_CD;
+struct Rect_CHD;
+struct Rect_ULD;
+
+struct Rect_CD 
+{
+	vec2 center;
+	vec2 dimensions;
+
+	Rect_CD()
+	{
+		this->center = vec2(0.0f, 0.0f);
+		this->dimensions = vec2(1.0f, 1.0f);
+	}
+
+	Rect_CD(vec2 center, vec2 dimensions)
+	{
+		this->center = center;
+		this->dimensions = dimensions;
+	}
+
+	Rect_CD(Rect_CHD rect);
+	Rect_CD(Rect_ULD rect);
+};
+
+struct Rect_CHD
+{
+	vec2 center;
+	vec2 halfDimensions;
+
+	Rect_CHD()
+	{
+		this->center = vec2(0.0f, 0.0f);
+		this->halfDimensions = vec2(0.5f, 0.5f);
+	}
+
+	Rect_CHD(vec2 center, vec2 halfDimensions)
+	{
+		this->center = center;
+		this->halfDimensions = halfDimensions;
+	}
+
+	Rect_CHD(Rect_CD rect);
+	Rect_CHD(Rect_ULD rect);
+};
+
+struct Rect_ULD 
+{
+	vec2 upperLeft;
+	vec2 dimensions;
+
+	Rect_ULD()
+	{
+		this->upperLeft = vec2(-0.5f, 0.5f);
+		this->dimensions = vec2(1.0f, 1.0f);
+	}
+
+	Rect_ULD(vec2 upperLeft, vec2 dimensions)
+	{
+		this->upperLeft = upperLeft;
+		this->dimensions = dimensions;
+	}
+
+	Rect_ULD(Rect_CD rect);
+	Rect_ULD(Rect_CHD rect);
+};
+
+inline Rect_CD::Rect_CD(Rect_CHD rect)
+{
+	this->center = rect.center;
+	this->dimensions = rect.halfDimensions * 2.0f;
+}
+
+inline Rect_CD::Rect_CD(Rect_ULD rect)
+{
+	vec2 halfDimensions = rect.dimensions / 2.0f;
+
+	this->center = rect.upperLeft + vec2(halfDimensions.x, -halfDimensions.y);
+	this->dimensions = rect.dimensions;
+}
+
+inline Rect_CHD::Rect_CHD(Rect_CD rect)
+{
+	this->center = rect.center;
+	this->halfDimensions = rect.dimensions / 2.0f;
+} 
+
+inline Rect_CHD::Rect_CHD(Rect_ULD rect)
+{
+	vec2 halfDimensions = rect.dimensions / 2.0f;
+
+	this->center = rect.upperLeft + vec2(halfDimensions.x, -halfDimensions.y);
+	this->halfDimensions = halfDimensions;
+}
+
+inline Rect_ULD::Rect_ULD(Rect_CD rect)
+{
+	vec2 halfDimensions = rect.dimensions / 2.0f;
+
+	this->upperLeft = rect.center + vec2(-halfDimensions.x, halfDimensions.y);
+	this->dimensions = rect.dimensions;
+}
+
+inline Rect_ULD::Rect_ULD(Rect_CHD rect)
+{
+	this->upperLeft = rect.center + vec2(-rect.halfDimensions.x, rect.halfDimensions.y);
+	this->dimensions = rect.halfDimensions * 2.0f;
+}
